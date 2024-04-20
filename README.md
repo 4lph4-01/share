@@ -1,4 +1,4 @@
-Synopsis: Welcome to our private undertaking! This is an outline of a passive penetration test of a Web application created by waldronj. Users may view, copy from the share with ease and speed. Keeping the files organised and on top of their to-do list. We sincerely hope you enjoy it and we eagerly await your input!
+Synopsis: Welcome to our private undertaking! Keeping the files organised and on top of their to-do list. We sincerely hope you enjoy it and we eagerly await your input!
 
 Making a contribution: Any and all contributions are appreciated! Here are a few methods to get you going:
 
