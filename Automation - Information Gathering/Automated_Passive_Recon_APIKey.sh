@@ -1,5 +1,5 @@
 ########################################################################################################################################################################################################################
-# Nix Automated Information Gathering Script2 By: 4lph4-01 for simulation 11/04/2024
+# Nix Automated Information Gathering Script2 By: 41ph4-01 for simulation 11/04/2024
 # Bash script: Automated installation of Packages & Binaries Note: Eyewitness requires manual install & configuration,
 # Special thanks to RedSiege Infomration Security for Eyewitness. Requires URL; 
 # Addjustment to target & API required. 
