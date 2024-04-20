@@ -391,9 +391,9 @@ $erroractionpreference = "SilentlyContinue"
 
 #Gather info from user.
 Write-Host "********************************" 	-ForegroundColor Green
-Write-Host "Computer Inventory Script" 			-ForegroundColor Green
-Write-Host "Adapted By: 4lpha-01" 					-ForegroundColor Green
-Write-Host "Created: 05/08/2014" 				-ForegroundColor Green
+Write-Host "Computer Inventory Script" 		-ForegroundColor Green
+Write-Host "Adapted By: 4lpha-01" 		-ForegroundColor Green
+Write-Host "Created: 05/08/2014" 		-ForegroundColor Green
 Write-Host "********************************"   -ForegroundColor Green
 Write-Host                                  	-ForegroundColor Green
 Write-Host " "
