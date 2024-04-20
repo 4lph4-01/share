@@ -1,6 +1,6 @@
 ###############################################################################################
 #Automated Information Gathering Script By: 4lph4-01 for simulation 11/04/2024
-#Bash acript: Adjust the URL to run
+#Bash script: Adjust the URL to run
 ###############################################################################################
 
 
