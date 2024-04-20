@@ -1,5 +1,5 @@
 ###############################################################################################
-#Automated Information Gathering Script2 By: 4lph4-01 for simulation 11/04/2024
+# Nix Automated Information Gathering Script2 By: 4lph4-01 for simulation 11/04/2024
 # Bash script: Requires URL; Addjustment to target & API
 ###############################################################################################
 
