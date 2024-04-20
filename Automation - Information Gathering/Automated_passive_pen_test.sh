@@ -1,7 +1,8 @@
-###############################################################################################
-#Automated Information Gathering Script By: 4lph4-01 for simulation 11/04/2024
-#Bash script: Ensure required packaages and binaries are installed; Adjust the URL to run
-###############################################################################################
+################################################################################################################
+# Automated Information Gathering Script By: 4lph4-01 for simulation 11/04/2024
+# Bash script: Ensure required packages and binaries are installed; Adjust the URL to run.
+# Eyewitness requires manual configuration, Dirctions to GitHub page for installation.
+################################################################################################################
 
 
 #!/bin/bash
