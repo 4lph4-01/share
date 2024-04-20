@@ -1,15 +1,32 @@
-###############################################################################################
+#####################################################################################################################################################
 # Nix Automated Information Gathering Script2 By: 4lph4-01 for simulation 11/04/2024
-# Bash script: Requires URL; Addjustment to target & API
-###############################################################################################
+# Bash script: Automated installation of Packages & Binaries Note: Eyewitness requires manual install & configuration,
+# Special thanks to RedSiege Infomration Security for Eyewitness. Requires URL; 
+# Addjustment to target & API. 
+#####################################################################################################################################################
 
 #!/bin/bash
 
-# Check if the required tools are installed
-command -v lynx >/dev/null 2>&1 || { echo >&2 "lynx is required but not installed. Aborting."; exit 1; }
-command -v whois >/dev/null 2>&1 || { echo >&2 "whois is required but not installed. Aborting."; exit 1; }
-command -v curl >/dev/null 2>&1 || { echo >&2 "curl is required but not installed. Aborting."; exit 1; }
-command -v eyewitness >/dev/null 2>&1 || { echo >&2 "EyeWitness is required but not installed. Aborting."; exit 1; }
+# Check if the required tools are installed and install missing ones if necessary
+check_installation() {
+    local missing=0
+    for tool in "$@"; do
+        command -v "$tool" >/dev/null 2>&1 || {
+            echo >&2 "$tool is required but not installed. Installing..."
+            if [ "$tool" = "lynx" ]; then
+                sudo apt-get install -y lynx
+            elif [ "$tool" = "whois" ]; then
+                sudo apt-get install -y whois
+            elif [ "$tool" = "curl" ]; then
+                sudo apt-get install -y curl
+            elif [ "$tool" = "eyewitness" ]; then
+                echo "EyeWitness installation: https://github.com/FortyNorthSecurity/EyeWitness"
+                missing=1
+            fi
+        }
+    done
+    return $missing
+}
 
 # Target website URL
 TARGET_URL="https://example.com"
@@ -20,6 +37,14 @@ mkdir -p "$OUTPUT_DIR"
 
 # Passive Reconnaissance
 echo "=== Passive Reconnaissance ==="
+
+# Check and install missing tools
+if check_installation lynx whois curl eyewitness; then
+    echo "Missing software installed. Continuing..."
+else
+    echo "Failed to install missing software. Exiting."
+    exit 1
+fi
 
 # Google Dorks
 echo "[*] Gathering information using Google Dorks..."
