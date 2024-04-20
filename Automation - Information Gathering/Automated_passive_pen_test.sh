@@ -6,12 +6,36 @@
 
 #!/bin/bash
 
-# Check if the required tools are installed
-command -v theHarvester >/dev/null 2>&1 || { echo >&2 "theHarvester is required but not installed. Aborting."; exit 1; }
-command -v wget >/dev/null 2>&1 || { echo >&2 "wget is required but not installed. Aborting."; exit 1; }
-command -v curl >/dev/null 2>&1 || { echo >&2 "curl is required but not installed. Aborting."; exit 1; }
-command -v openssl >/dev/null 2>&1 || { echo >&2 "openssl is required but not installed. Aborting."; exit 1; }
-command -v eyewitness >/dev/null 2>&1 || { echo >&2 "EyeWitness is required but not installed. Aborting."; exit 1; }
+# Function to install required software
+install_required() {
+    local package=$1
+    echo "Installing $package..."
+    # Check the package manager and install the package
+    if command -v apt-get &>/dev/null; then
+        sudo apt-get install -y $package
+    elif command -v yum &>/dev/null; then
+        sudo yum install -y $package
+    elif command -v brew &>/dev/null; then
+        brew install $package
+    else
+        echo "Error: Package manager not found. Please install $package manually."
+        exit 1
+    fi
+}
+
+# Check if the required tools are installed and install them if necessary
+check_and_install() {
+    local tool=$1
+    local package=$2
+    command -v $tool >/dev/null 2>&1 || { echo >&2 "$tool is required but not installed. Installing $tool..."; install_required $package; }
+}
+
+# Check and install required tools
+check_and_install theHarvester theHarvester
+check_and_install wget wget
+check_and_install curl curl
+check_and_install openssl openssl
+check_and_install eyewitness EyeWitness
 
 # Check if target URL is provided
 if [ -z "$1" ]; then
@@ -66,5 +90,3 @@ curl -s "$TARGET_URL" | grep -i "jquery" > "$OUTPUT_DIR/jquery_usage.txt"
 echo "=== EyeWitness Screenshots ==="
 echo "[*] Taking screenshots using EyeWitness..."
 eyewitness -f "$TARGET_URL" --web --timeout 30 -d "$OUTPUT_DIR/eyewitness"
-
-echo "=== Passive Penetration Testing Script Completed ==="
