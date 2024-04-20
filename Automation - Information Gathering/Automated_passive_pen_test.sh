@@ -2,6 +2,8 @@
 # Nix automated Information Gathering Script By: 4lph4-01 for simulation 11/04/2024
 # Bash script: Ensure required packages and binaries are installed; Adjust the URL to run.
 # Eyewitness requires manual configuration, Dirctions to GitHub page for installation.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, 
+# ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ################################################################################################################
 
 
