@@ -1,4 +1,4 @@
-############################################################################################################################
+#########################################################################################################################################################################################################################
 # Azure Identity Access Management Script (IAM) PS Script (Included examples, IAM 1, IAM 2, IAM 3, and IAM 4  Controls only)
 # Expand as required. It's getting late - Apologies for any fat finger mistakes! 21/04/2024
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software 
