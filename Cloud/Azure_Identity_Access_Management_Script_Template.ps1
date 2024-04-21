@@ -1,7 +1,10 @@
 ############################################################################################################################
 # Azure Identity Access Management Script (IAM) PS Script (Included examples, IAM 1, IAM 2, IAM 3, and IAM 4  Controls only)
-# Expand as required
+# Expand as required. It's getting late - Apologies for any fat finger mistakes!
 ############################################################################################################################
+
+
+
 
 # Import common functions
 . ".\CommonFunctions.ps1"
