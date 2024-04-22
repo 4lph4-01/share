@@ -83,7 +83,7 @@ def generate_payloads(form_fields):
         # Add more payload generation logic for other types of fields and vulnerabilities
     return payloads
 
-# Function to analyze response for indications of vulnerabilities
+# Function to analyse response for indications of vulnerabilities
 def analyze_response(response):
     if re.search(r"error in your SQL syntax|mysql_fetch_array", response.text, re.IGNORECASE):
         print("SQL Injection vulnerability found in response:", response.url)
