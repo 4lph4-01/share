@@ -1,6 +1,6 @@
 #########################################################################################################################################################################################
-# Basic Python script for possible vulnerabilities in a web application. (Under Construction)
-# python vulnerability_tester.py. Note, script require BeautifulSoup Ref:https://beautiful-soup-4.readthedocs.io/en/latest/
+# Basic Python script for possible vulnerabilities in a web application, and define the scope of allowed domains.
+# python vulnerability_tester.py. Note, script require BeautifulSoup Ref:https://beautiful-soup-4.readthedocs.io/en/latest/. 
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software 
 # without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons 
 # to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice and this permission notice shall be included in all copies or substantial 
@@ -15,8 +15,8 @@ import requests
 from bs4 import BeautifulSoup
 import re
 
-# Function to crawl the website and discover URLs and forms
-def crawl_website(base_url):
+# Function to crawl the website and discover URLs and forms within the scope
+def crawl_website(base_url, scope):
     discovered_urls = set()
     discovered_forms = []
 
@@ -43,12 +43,13 @@ def crawl_website(base_url):
                 form_details['fields'].append({'type': field_type, 'name': field_name})
             discovered_forms.append(form_details)
 
-        # Recursively crawl links
+        # Recursively crawl links within the scope
         links = soup.find_all('a', href=True)
         for link in links:
             href = link['href']
             if href.startswith(base_url) and href not in discovered_urls:
-                crawl(href)
+                if any(domain in href for domain in scope):
+                    crawl(href)
 
     crawl(base_url)
     return discovered_forms
@@ -90,11 +91,12 @@ def analyze_response(response):
     # Add more checks for other vulnerabilities
 
 # Main function to initiate crawling, form field testing, and reporting
-def main(base_url):
-    discovered_forms = crawl_website(base_url)
+def main(base_url, scope):
+    discovered_forms = crawl_website(base_url, scope)
     test_form_fields(discovered_forms)
     # Log and report results
 
 if __name__ == "__main__":
     base_url = "http://example.com"  # Change to the target website's base URL
-    main(base_url)
+    scope = ["example.com"]  # Define the scope of allowed domains
+    main(base_url, scope)
