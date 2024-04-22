@@ -11,17 +11,26 @@
 
 import subprocess
 
-# Function to discover wireless access points
+# Function to discover wireless access points with encryption type and encryption level
 def discover_access_points(interface):
     print("[+] Discovering Access Points...")
     access_points = []
     try:
         result = subprocess.check_output(["iwlist", interface, "scan"])
         result = result.decode("utf-8")
+        ap_info = {}
         for line in result.split("\n"):
             if "ESSID:" in line:
-                ssid = line.split('"')[1]
-                access_points.append(ssid)
+                if ap_info:
+                    access_points.append(ap_info)
+                ap_info = {"ESSID": line.split('"')[1]}
+            elif "Encryption key:" in line:
+                if "off" in line:
+                    ap_info["Encryption"] = "Open"
+                else:
+                    ap_info["Encryption"] = "Encrypted"
+            elif "Pairwise Ciphers" in line:
+                ap_info["Encryption Level"] = line.split(": ")[1].split(" ")[0]
     except subprocess.CalledProcessError:
         print("[-] Error: Failed to execute iwlist command.")
     return access_points
@@ -47,7 +56,9 @@ def scan_network():
 def main():
     wireless_interface = "wlan0"  # Change this to your wireless interface
     access_points = discover_access_points(wireless_interface)
-    print("[+] Found Access Points:", access_points)
+    print("[+] Found Access Points:")
+    for ap in access_points:
+        print(f"  ESSID: {ap['ESSID']}, Encryption: {ap.get('Encryption', 'Unknown')}, Encryption Level: {ap.get('Encryption Level', 'Unknown')}")
     
     active_hosts = scan_network()
     print("[+] Found Active Hosts:", active_hosts)
