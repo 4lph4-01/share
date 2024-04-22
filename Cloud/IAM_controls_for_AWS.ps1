@@ -77,7 +77,7 @@ function AuditIAMControls {
     # Add more controls checks as needed...
 }
 
-# Execute the IAM controls audit
+# Execute the IAM controls Audit
 try {
     InitializeLog
     AuditIAMControls
