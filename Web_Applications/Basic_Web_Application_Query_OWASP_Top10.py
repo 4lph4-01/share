@@ -36,6 +36,7 @@ def crawl_website(base_url, scope):
                 'method': form.get('method'),
                 'fields': []
             }
+            # Discover all input fields within forms, including hidden fields
             inputs = form.find_all('input')
             for input_tag in inputs:
                 field_type = input_tag.get('type')
