@@ -9,27 +9,46 @@
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #########################################################################################################################################################################################################################
 
-Get-ChildItem 'C:\' -File -Recurse -PipelineVariable File | ForEach-Object {
-       
+# Define your VirusTotal API key
+$apiKey = "YOUR_API_KEY_HERE"
+
+# Function to submit a hash to VirusTotal
+function Get-VirusTotalHash($hash) {
+    $url = "https://www.virustotal.com/api/v3/files/$hash"
+    $headers = @{
+        "x-apikey" = $apiKey
+    }
+
+    $response = Invoke-RestMethod -Uri $url -Headers $headers
+
+    if ($response.data.attributes.last_analysis_stats.malicious > 0) {
+        Write-Host "Malicious: $($response.data.attributes.last_analysis_stats.malicious) / $($response.data.attributes.last_analysis_stats.total)"
+    } else {
+        Write-Host "Not detected as malicious"
+    }
+}
+
+# Iterate through files and calculate hashes
+Get-ChildItem 'C:\' -File -Recurse | ForEach-Object {
     $stream = try {
-        [IO.FileStream]::new( $File.FullName, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read )
-    }
-    catch {
+        [IO.FileStream]::new($File.FullName, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
+    } catch {
         # Fallback in case another process has opened the file with FileShare.ReadWrite flag.
-        [IO.FileStream]::new( $File.FullName, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite )
+        [IO.FileStream]::new($File.FullName, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite)
     }
 
-    if( $stream ) {
+    if ($stream) {
         try {
-            Get-FileHash -InputStream $stream -Algorithm SHA256 
-                Select-Object Algorithm, Hash, @{ Name = 'Path'; Expression = { $File.Fullname } }
-        }
-        finally {
-            $stream.Close() 
-
+            $hashInfo = Get-FileHash -InputStream $stream -Algorithm SHA256
+            Write-Host "File: $($File.FullName)"
+            Write-Host "SHA256 Hash: $($hashInfo.Hash)"
+            Get-VirusTotalHash $hashInfo.Hash
+        } finally {
+            $stream.Close()
         }
     }
 }
+
 
 #SHA1
 #SHA256
