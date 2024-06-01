@@ -44,5 +44,6 @@ public class AMSIBypass
 ######################################################################################################################################################################################################################
 # Compile with C# using msbuild //msbuild AMSIBypass.csproj
 # Execute compiled binary AMSIBypass.exe
+# Run the adjacent/related reverseshell PowerShell script
 # This code is intended for educational purposes only. Unauthorized use of this code is prohibited. Use responsibly and ensure you have proper authorization before testing any security measures.
 ######################################################################################################################################################################################################################
