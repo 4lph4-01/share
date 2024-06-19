@@ -1,3 +1,7 @@
+Disclaimer
+This tool is intended for educational purposes only. Unauthorised use of this tool is prohibited. Use responsibly and ensure you have proper authorisation before testing any security measures.
+
+
 Synopsis: Welcome to our public endeavour! Keeping the files organised and on top of the to-do list. We sincerely hope you enjoy it and we eagerly await your input!
 
 Making a contribution: Any and all contributions are appreciated! Here are a few methods to get you going:
