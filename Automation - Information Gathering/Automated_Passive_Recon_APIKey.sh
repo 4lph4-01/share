@@ -103,7 +103,7 @@ sudo tcpdump -i any -w "$OUTPUT_DIR/network_traffic.pcap" -v & sleep 10; sudo pk
 # File Type Analysis
 echo "[*] Analyzing file types..."
 # Example: Find potentially sensitive files hosted on the target website
-lynx --dump "https://automationintesting.online/" | grep -Eo "href=\"[^ ]+\.conf\"" > "$OUTPUT_DIR/sensitive_files.txt"
+lynx --dump "$TARGET_URL" | grep -Eo "href=\"[^ ]+\.conf\"" > "$OUTPUT_DIR/sensitive_files.txt"
 
 # EyeWitness for Screenshots
 echo "=== EyeWitness Screenshots ==="
