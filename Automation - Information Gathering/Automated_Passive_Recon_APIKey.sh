@@ -1,7 +1,7 @@
 ########################################################################################################################################################################################################################
 # Nix Automated Information Gathering Script2 By: 41ph4-01 for simulation 11/04/2024
 # Bash script: Automated installation of Packages & Binaries Note: Eyewitness requires manual install & configuration,
-# Special thanks to RedSiege Infomration Security for Eyewitness. Requires URL; 
+# Special thanks to RedSiege Infomration Security for Eyewitness. EyeWitness installation: https://github.com/FortyNorthSecurity/EyeWitness; 
 # Addjustment to target & API required. 
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software 
 # without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons 
