@@ -62,7 +62,7 @@ def test_form_fields(forms):
         method = form['method']
         form_fields = form['fields']
         payloads = generate_payloads(form_fields)
-        # Send requests with payloads and analyze responses
+        # Send requests with payloads and analyse responses
         # Example: send requests to action endpoint with payloads injected into form fields
         for payload in payloads:
             # Send request
@@ -70,7 +70,7 @@ def test_form_fields(forms):
                 response = requests.get(action, params=payload)
             else:
                 response = requests.post(action, data=payload)
-            # Analyze response for indications of vulnerabilities
+            # Analyse response for indications of vulnerabilities
             analyze_response(response)
 
 # Function to generate payloads for form fields
