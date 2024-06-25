@@ -44,7 +44,7 @@ def display_splash_screen():
 """
 
     print(splash)
-    print("Wifi Attack Tool 41PH4-01\n")
+    print("Simple Python Scanner 41PH4-01\n")
 
 def scan_network(target_ip):
     # Create ARP request packet
