@@ -42,6 +42,10 @@ def display_splash_screen():
  
 """
 
+    print(splash)
+    print("Wireless Audit Tool 41PH4-01\n")
+
+
 # Function to discover wireless access points with encryption type and encryption level
 def discover_access_points(interface):
     print("[+] Discovering Access Points...")
