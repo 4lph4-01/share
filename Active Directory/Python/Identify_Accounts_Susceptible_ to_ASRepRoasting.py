@@ -43,7 +43,7 @@ ___________.__            .___    _____                                   __    
 """
 
     print(splash)
-    print("Web Application Tool 41PH4-01\n")
+    print("Accounts Susceptible to ASRepRoasting 41PH4-01\n")
 
 def audit_asreproast(domain):
     # Connect to Active Directory
