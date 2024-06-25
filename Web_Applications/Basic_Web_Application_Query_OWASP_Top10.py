@@ -46,7 +46,7 @@ def display_splash_screen():
 """
 
     print(splash)
-    print("Wifi Attack Tool 41PH4-01\n")
+    print("Web Application Tool 41PH4-01\n")
 
 # Function to crawl the website and discover URLs and forms within the scope
 def crawl_website(base_url, scope):
