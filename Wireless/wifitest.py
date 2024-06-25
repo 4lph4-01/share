@@ -1,5 +1,5 @@
 ###########################################################################################################################################################################################################
-# Run using python3 wifitest.py: The script includes checking and installing necessary tools, setting the interface to monitor mode, 
+# Under Build... Run using python3 wifitest.py: The script includes checking and installing necessary tools, setting the interface to monitor mode, 
 # scanning for networks, capturing handshakes, and cracking the handshake using a wordlist.
 # This script includes necessary error handling and guides users through the process with clear feedback. It provides an interactive menu for network scanning, handshake capturing, and password cracking, 
 # making it more user-friendly and functional for real-world use.
