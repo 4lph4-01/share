@@ -1,15 +1,4 @@
 
-   
-   
-   _____ ____.__         .__        _____           _______  ____  __________                           .__  __                       
-  /  |  /_   |  | ______ |  |__    /  |  |          \   _  \/_   | \______   \ ____ ______   ____  _____|__|/  |_  ___________ ___.__.
- /   |  ||   |  | \____ \|  |  \  /   |  |_  ______ /  /_\  \|   |  |       _// __ \\____ \ /  _ \/  ___/  \   __\/  _ \_  __ <   |  |
-/    ^   /   |  |_|  |_> >   Y  \/    ^   / /_____/ \  \_/   \   |  |    |   \  ___/|  |_> >  <_> )___ \|  ||  | (  <_> )  | \/\___  |
-\____   ||___|____/   __/|___|  /\____   |           \_____  /___|  |____|_  /\___  >   __/ \____/____  >__||__|  \____/|__|   / ____|
-     |__|         |__|        \/      |__|                 \/              \/     \/|__|              \/                       \/  
-
-
-
 Disclaimer:
 These tools are intended for educational purposes only. Unauthorised use of these tools are prohibited. Use responsibly and ensure you have proper authorisation before testing any security measures.
 
