@@ -2,7 +2,7 @@
 # Run using python3 wifitest.py Script uses scapy and pyric: The script includes checking and installing necessary tools, setting the interface to monitor mode, 
 # scanning for networks, capturing handshakes, and cracking the handshake using a wordlist, whilst sppofing the source MAC Address as part of the deauthenticate_clients function. Requires installation fo tcpdump, aircrack-ng, scapy, and pyric - pip install scapy pyric.
 # This script includes necessary error handling and guides users through the process with clear feedback. It provides an interactive menu for network scanning, handshake capturing, and password cracking, 
-# making it more user-friendly and functional for real-world use.
+# making it more user-friendly and functional for real-world use. You will also require a wireless USB/network card that supports thats supports monitor mode & frame injection.
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software 
 # without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons 
 # to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice and this permission notice shall be included in all copies or substantial 
