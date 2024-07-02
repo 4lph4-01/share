@@ -1,0 +1,2 @@
+chmod +x setup_environment.sh
+chmod +x phishing_setup.sh
