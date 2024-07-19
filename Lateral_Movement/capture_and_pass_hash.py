@@ -49,7 +49,7 @@ _________                __                                            .___ ____
 """
 
     print(splash)
-    print("Wifi Attack Tool 41PH4-01\n")
+    print("Capture & PTH Tool 41PH4-01\n")
 
 def install_responder():
     try:
