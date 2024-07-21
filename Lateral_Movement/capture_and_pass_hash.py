@@ -1,6 +1,6 @@
 ######################################################################################################################################################################################################################
 # Python script that installs required tools, checks for and attempts to install responder, hashcat, and crackmap, attempts to hijack net-ntlm hashes off the network attemps to recover using hashcat. Then correctly formats gleened representations to NTLM. 
-# And gives a count of successfully recovered passwords.
+# And gives a count of successfully recovered passwords. Permissions and dependencies are required to be installed on the Linux machine
 # Bash: python3 capture_and_pass_hash.py. Ensure wordlist & rule file is accessible in the same folder, or specify the paths. Special thanks to StealthSploit for the robust rule file. https://github.com/stealthsploit/OneRuleToRuleThemStill
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software 
 # without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons 
