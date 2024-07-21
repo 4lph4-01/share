@@ -125,9 +125,11 @@ def crack_hash(net_ntlm_hash):
     hashcat_command = [
         "hashcat",
         "-m", "5600",
+        "-w", "3",  # Workload profile 3
+        "-a", "0",  # Attack mode 0 (dictionary attack)
         hash_file,
-        "rockyou.txt",  # Path to your wordlist
-        "--rules-file", "one-rule-to-rule-them-all.rule",  # Path to your rules file
+        "./rockyou.txt",  # Path to your wordlist in the same directory
+        "--rules-file", "./one-rule-to-rule-them-all.rule",  # Path to your rules file in the same directory
         "--status",  # Enables status output
         "--status-timer", "10"  # Update status every 10 seconds
     ]
