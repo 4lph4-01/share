@@ -80,6 +80,8 @@ def install_tools():
             try:
                 if tool == "responder":
                     subprocess.check_call([sys.executable, "-m", "pip", "install", install_command])
+                elif tool == "hashcat":
+                    subprocess.check_call(["sudo", "apt-get", "install", "-y", "hashcat"])
                 else:
                     subprocess.check_call([sys.executable, "-m", "pip", "install", install_command])
                 print(f"[+] {tool} installed successfully.")
@@ -118,10 +120,13 @@ def extract_hashes():
 
 def crack_hash(net_ntlm_hash):
     print(f"[+] Cracking hash: {net_ntlm_hash}")
-    hash_file = "netntlmv2.hash"
+    
+    # Output file for captured hashes
+    hash_file = "netntlmv2.txt"
     with open(hash_file, "w") as file:
         file.write(net_ntlm_hash + "\n")
 
+    # Note: Adjust the paths to hashcat, wordlist, and rules file as needed
     hashcat_command = [
         "hashcat",
         "-m", "5600",
