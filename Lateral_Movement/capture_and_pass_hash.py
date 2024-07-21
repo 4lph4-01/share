@@ -171,10 +171,7 @@ def scan_subnet(subnet):
         command = [
             "crackmapexec",
             "smb",
-            ip,
-            "-u", "Administrator",
-            "-p", "password",  # Use a password that won't lock accounts
-            "--continue-on-success"
+            ip
         ]
         result = subprocess.run(command, capture_output=True, text=True)
         if "SMB" in result.stdout:
