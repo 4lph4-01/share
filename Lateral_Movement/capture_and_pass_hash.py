@@ -11,12 +11,13 @@
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ######################################################################################################################################################################################################################
 
-
-
 import subprocess
 import re
 import sys
 import os
+import hashlib
+import time
+from netaddr import IPNetwork
 
 def display_splash_screen():
     splash = """
@@ -52,13 +53,6 @@ _________                __                                            .___ ____
     print(splash)
     print("Capture & PTH Tool 41PH4-01\n")
 
-import subprocess
-import re
-import sys
-import os
-import hashlib
-import time
-from netaddr import IPNetwork
 
 def is_tool_installed(tool_name):
     """Check if a tool is installed by running 'which' command."""
