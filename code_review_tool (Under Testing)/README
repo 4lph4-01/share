@@ -1,0 +1,30 @@
+Separate environment for Kali to negate conflicts
+
+Update package list
+sudo apt-get update
+
+Install Python and pip:
+sudo apt-get install python3 python3-pip
+
+Install Node.js and npm:
+sudo apt-get install nodejs npm
+
+Create a virtual environment (optional but recommended):
+sudo apt-get install python3-venv
+python3 -m venv myenv
+source myenv/bin/activate
+
+Install dependencies:
+pip install -r requirements.txt
+
+
+Install JavaScript Analysis Tools
+npm install -g jshint eslint
+
+
+Create Project Directory Structure and Files:
+mkdir -p code_review_tool/analyzers code_review_tool/config code_review_tool/reports code_review_tool/utils code_review_tool/tests
+touch code_review_tool/analyzers/__init__.py code_review_tool/config/__init__.py code_review_tool/reports/__init__.py code_review_tool/utils/__init__.py code_review_tool/tests/__init__.py
+touch code_review_tool/analyzers/base_analyzer.py code_review_tool/analyzers/python_analyzer.py code_review_tool/analyzers/javascript_analyzer.py
+touch code_review_tool/config/config.py code_review_tool/reports/report_generator.py code_review_tool/utils/logger.py code_review_tool/utils/error_handler.py
+touch code_review_tool/main.py code_review_tool/config/config.json

@@ -1,0 +1,28 @@
+{
+    "PythonAnalyzer": {
+        "rules": [
+            {
+                "name": "os_import",
+                "pattern": "import os",
+                "message": "Potentially dangerous import of 'os' module",
+                "severity": "medium"
+            }
+        ]
+    },
+    "JavaScriptAnalyzer": {
+        "rules": [
+            {
+                "name": "eval_usage",
+                "pattern": "eval",
+                "message": "Use of eval detected",
+                "severity": "high"
+            },
+            {
+                "name": "document_write",
+                "pattern": "document.write",
+                "message": "Use of document.write detected",
+                "severity": "high"
+            }
+        ]
+    }
+}
