@@ -1,4 +1,4 @@
-Separate environment for Kali to negate conflicts
+Separate environment for Kali to negate dependancy conflicts
 
 Update package list
 sudo apt-get update
