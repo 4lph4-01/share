@@ -53,7 +53,7 @@ def display_splash_screen():
 """
 
     print(splash)
-    print("Get & Decrypt Kerberos 41PH4-01\n")
+    print("More_Mass for advanced network mapping and external asset discovery 41PH4-01\n")
 
 # Subdomain Enumeration
 async def fetch(session, url):
