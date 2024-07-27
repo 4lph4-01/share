@@ -1,5 +1,5 @@
 #####################################################################################################################################################################################################################################################################################################################################
-# This comprehensive python script integrates all necessary functionalities for advanced network mapping and external asset discovery, enhancing upon the capabilities of OWASP Amass. 
+# This comprehensive and superior python script integrates all necessary functionalities for advanced network mapping and external asset discovery, enhancing upon the capabilities of OWASP Amass. 
 # By leveraging asynchronous operations, multiple data sources, and real-time updates, it provides a more powerful and efficient tool for network security assessments.. 
 # Note, although in Information Gathering, this will also perform scanning of discovered assets. Only use with explicit permission fro mthose that own the assets.
 # Run using python3 more_mass.py example.com, ensuring requirements are met: pip install aiohttp requests beautifulsoup4 websockets whois
