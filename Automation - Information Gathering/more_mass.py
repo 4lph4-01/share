@@ -2,7 +2,7 @@
 # This comprehensive python script integrates all necessary functionalities for advanced network mapping and external asset discovery, enhancing upon the capabilities of OWASP Amass. 
 # By leveraging asynchronous operations, multiple data sources, and real-time updates, it provides a more powerful and efficient tool for network security assessments.. 
 # Note, although in Information Gathering, this will also perform scanning of discovered assets. Only use with explicit permission fro mthose that own the assets.
-# Run using python script.py example.com. 
+# Run using python3 more_mass.py example.com, ensuring requirements are met: pip install aiohttp requests beautifulsoup4 websockets whois
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the       
 # Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, # and to permit persons to whom the Software is furnished to do
 # so, subject to the following conditions: The above copyright notice and this permission notice shall be
@@ -72,11 +72,11 @@ async def get_subdomains(domain):
         responses = await asyncio.gather(*tasks)
 
         for response in responses:
-            if "crt.sh" in response:
+            if response.startswith('['):  # Check if response is JSON from crt.sh
                 json_response = json.loads(response)
                 for item in json_response:
                     subdomains.add(item['name_value'])
-            else:
+            else:  # Process plain text response from hackertarget
                 lines = response.split('\n')
                 for line in lines:
                     if line:
@@ -89,9 +89,10 @@ def get_ip_ranges(domain):
     ip_ranges = []
     try:
         w = whois.whois(domain)
-        if w and 'nets' in w:
+        if w and hasattr(w, 'nets'):
             for net in w['nets']:
-                ip_ranges.append(net['range'])
+                if 'range' in net:
+                    ip_ranges.append(net['range'])
     except Exception as e:
         print(f"Error fetching IP ranges: {e}")
     return ip_ranges
@@ -193,7 +194,7 @@ async def start_server():
 if __name__ == "__main__":
     import sys
     if len(sys.argv) != 2:
-        print("Usage: python script.py <domain>")
+        print("Usage: python3 network_mapper.py <domain>")
         sys.exit(1)
     
     domain = sys.argv[1]
