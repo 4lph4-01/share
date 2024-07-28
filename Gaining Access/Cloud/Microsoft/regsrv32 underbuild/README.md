@@ -40,6 +40,7 @@ $encoded = [Convert]::ToBase64String($bytes)
 $encoded
 
 Copy the resulting Base64 string.
+
 3. Create the Batch File
 Create a file named run_reverse_shell.bat with the following content. Replace <Base64_encoded_string> with the Base64 string you copied:
 
