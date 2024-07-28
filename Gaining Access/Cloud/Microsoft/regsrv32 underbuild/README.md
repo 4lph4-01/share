@@ -1,4 +1,4 @@
-# Step-by-Step Simulation Guide. Note: Files available for adapting in repository.
+# Step-by-Step Simulation Guide. Note: Files available for adapting in the repository.
 
 1. Create the Reverse Shell PowerShell Script
 Create a file named reverse_shell.ps1 with the following content:
