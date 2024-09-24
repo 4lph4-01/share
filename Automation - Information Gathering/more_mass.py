@@ -1,4 +1,4 @@
-#####################################################################################################################################################################################################################################################################################################################################
+#####################################################################################################################################################################
 # This comprehensive and superior python script integrates all necessary functionalities for advanced network mapping and external asset discovery, enhancing upon the capabilities of OWASP Amass. 
 # By leveraging asynchronous operations, multiple data sources, and real-time updates, it provides a more powerful and efficient tool for network security assessments.. 
 # Note: Although in the Information Gathering folder, the script will also perform scanning of discovered assets. Only use with explicit permission from those that own the assets.
@@ -10,7 +10,7 @@
 # THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A  
 # PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, 
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-######################################################################################################################################################################
+#####################################################################################################################################################################
 
 import asyncio
 import aiohttp
