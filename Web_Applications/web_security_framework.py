@@ -157,7 +157,7 @@ def test_blind_ssrf(url, param_name):
 ### 8. Memory Corruption in Web Components ###
 def test_memory_corruption(url):
     # Placeholder - would need more application-specific and OS-level testing tools
-    print("Memory Corruption tests are complex and require specialized tools; manual follow-up is recommended")
+    print("Memory Corruption tests are complex and require specialised tools; manual follow-up is recommended")
 
 
 ### 9. Subdomain Takeover ###
