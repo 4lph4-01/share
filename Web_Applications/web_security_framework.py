@@ -46,6 +46,9 @@ def display_splash_screen():
  
 """
 
+    print(splash)
+    print("Web Security Framework 41PH4-01\n")
+    
 # Global settings
 TARGET_URL = "http://example.com"  # Replace with actual target
 SESSION = requests.Session()
