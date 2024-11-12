@@ -63,20 +63,6 @@ except FileNotFoundError:
     print("SpiderFoot not found. Installing SpiderFoot...")
     install_tool("SpiderFoot", "pip install spiderfoot")
 
-# OnionScan installation check
-try:
-    subprocess.check_call(['onionscan', '--help'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-except FileNotFoundError:
-    print("OnionScan not found. Installing OnionScan...")
-    install_tool("OnionScan", "go get github.com/s-rah/onionscan")  # Requires Go to be installed
-
-# Recon-NG installation check
-try:
-    subprocess.check_call(['recon-cli', '-h'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-except FileNotFoundError:
-    print("Recon-NG not found. Installing Recon-NG...")
-    install_tool("Recon-NG", "pip install recon-ng")
-
 # API and Tor configuration
 SPIDERFOOT_API_URL = 'http://localhost:5001'  # SpiderFoot API URL
 SPIDERFOOT_API_KEY = 'your_spiderfoot_api_key'  # SpiderFoot API Key
@@ -166,26 +152,27 @@ def pipl_search(domain):
         print(f"Error with Pipl API: {e}")
         return []
 
-# Dark Web Search with Tor
-def dark_web_search(domain):
-    onion_urls = [
-        "http://exampledarkweb.onion",  # Replace with actual .onion URLs
-    ]
-    session = create_session()
-    emails = set()
-    email_pattern = r'[a-zA-Z0-9._%+-]+@' + re.escape(domain)
-    
-    for url in onion_urls:
-        try:
-            headers = {'User-Agent': choice(USER_AGENTS)}
-            response = session.get(url, headers=headers, proxies=TOR_PROXY, timeout=15)
-            response.raise_for_status()
-            emails.update(re.findall(email_pattern, response.text))
-            time.sleep(3)
-        except requests.RequestException as e:
-            print(f"Error accessing {url} on dark web: {e}")
-
-    return list(emails)
+# Dark Web Search with Tor (optional, currently disabled)
+# Uncomment and add onion URLs if you have specific .onion sites you want to query.
+# onion_urls = [
+#     "http://exampledarkweb.onion",  # Replace with actual .onion URLs if needed
+# ]
+# def dark_web_search(domain):
+#     session = create_session()
+#     emails = set()
+#     email_pattern = r'[a-zA-Z0-9._%+-]+@' + re.escape(domain)
+#     
+#     for url in onion_urls:
+#         try:
+#             headers = {'User-Agent': choice(USER_AGENTS)}
+#             response = session.get(url, headers=headers, proxies=TOR_PROXY, timeout=15)
+#             response.raise_for_status()
+#             emails.update(re.findall(email_pattern, response.text))
+#             time.sleep(3)
+#         except requests.RequestException as e:
+#             print(f"Error accessing {url} on dark web: {e}")
+# 
+#     return list(emails)
 
 # Main function to combine all searches
 def find_emails(domain):
@@ -194,7 +181,8 @@ def find_emails(domain):
     emails.update(hunter_search(domain))
     emails.update(clearbit_search(domain))
     emails.update(pipl_search(domain))
-    emails.update(dark_web_search(domain))  # .onion sites with custom URLs
+    # Uncomment the following line if you have enabled dark_web_search
+    # emails.update(dark_web_search(domain))
     return list(emails)
 
 # Function to save results to CSV
