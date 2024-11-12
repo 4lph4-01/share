@@ -159,4 +159,3 @@ for email in emails:
 # Save the results to a CSV file
 save_to_csv(emails, "email_results.csv")
 print(f"Results saved to email_results.csv")
-
