@@ -35,6 +35,7 @@ def display_splash_screen():
     print(splash)
     print("AD_Attack_Surface_Management 41PH4-01\n")
 
+
 # Ensure required tools are installed
 def install_tools():
     print("\n[Setup] Installing necessary tools...")
@@ -48,10 +49,17 @@ def install_tools():
 
 # Mock data
 users = ["user1", "user2", "user3", "admin"]
-passwords = ["Password123!", "Welcome2024!", "Admin@123"]
-services = ["Service1", "Service2", "Service3"]
 seasons = ["Spring", "Summer", "Autumn", "Winter"]
 years = list(range(2000, 2025))
+services = ["Service1", "Service2", "Service3"]
+
+# Generate season-year based passwords
+def generate_passwords():
+    passwords = []
+    for season in seasons:
+        for year in years:
+            passwords.append(f"{season}{year}")
+    return passwords
 
 # Kerberoasting simulation
 def kerberoasting():
@@ -66,7 +74,8 @@ def kerberoasting():
 
 # Password spraying simulation
 def password_spraying(delay=30):
-    print("\n[Password Spraying] Trying common passwords...")
+    passwords = generate_passwords()
+    print("\n[Password Spraying] Trying season-based passwords...")
     for username in users:
         for password in passwords:
             print(f"Trying {username}:{password}")
@@ -163,4 +172,3 @@ def main():
 # Run the program
 if __name__ == "__main__":
     main()
-
