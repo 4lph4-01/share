@@ -1,7 +1,7 @@
 # Define default seasons, years, and services
 $seasons = @("Spring", "Summer", "Autumn", "Winter")
 $years = 2000..2024
-$services = @("AGMPServer", "MSSQL/MSSQLSvc", "FIMService", "STS/SecurityTokenService")
+$services = @("service1", "service2", "service3")
 
 # Generate season-based passwords
 $passwords = foreach ($season in $seasons) {
