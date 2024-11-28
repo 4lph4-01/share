@@ -4,12 +4,12 @@ import time
 def display_splash_screen():
     splash = """
     
-   _____  ________            _____   __    __                   __            _________              _____                                 _____                                                                 __                 _____  ____         .__       _____           _______  ____ 
-  /  _  \ \______ \          /  _  \_/  |__/  |______     ____  |  | __       /   _____/__ __________/ ____\_____     ____   ____          /     \ _____     ____ _____     ____    ____    _____   ____    _____/  |_              /  _  \/_   |______  |  |__   /  |  |          \   _  \/_   |
- /  /_\  \ |    |  \        /  /_\  \   __\   __\__  \  _/ ___\ |  |/ /       \_____  \|  |  \_  __ \   __\ \__  \  _/ ___\_/ __ \        /  \ /  \\__  \   /    \\__  \   / ___\ _/ __ \  /     \_/ __ \  /    \   __\   ______   /  /_\  \|   |\____ \ |  |  \ /   |  |_  ______ /  /_\  \|   |
-/    |    \|    `   \      /    |    \  |  |  |  / __ \_\  \___ |    <        /        \  |  /|  | \/|  |    / __ \_\  \___\  ___/       /    Y    \/ __ \_|   |  \/ __ \_/ /_/  >\  ___/ |  Y Y  \  ___/ |   |  \  |    /_____/  /    |    \   ||  |_> >|   Y  |    ^   / /_____/ \  \_/   \   |
-\____|__  /_______  /______\____|__  /__|  |__| (____  / \___  >|__|_ \______/_______  /____/ |__|   |__|   (____  / \___  >\___  >______\____|__  (____  /|___|  (____  /\___  /  \___  >|__|_|  /\___  >|___|  /__|             \____|__  /___||   __/ |___|  |____   |           \_____  /___|
-        \/        \//_____/        \/                \/      \/      \/_____/        \/                          \/      \/     \//_____/        \/     \/      \/     \//_____/       \/       \/     \/      \/                         \/     |__|         \/     |__|                 \/     
+   _____  ________               _____   __    __                   __               _________.__              .__           __  .__                             _____  ____         .__       _____           _______  ____  
+  /  _  \ \______ \             /  _  \_/  |__/  |______     ____  |  | __          /   _____/|__| _____  __ __|  | _____  _/  |_|__| ____   ____               /  |  |/_   |______  |  |__   /  |  |          \   _  \/_   | 
+ /  /_\  \ |    |  \   ______  /  /_\  \   __\   __\__  \  _/ ___\ |  |/ /  ______  \_____  \ |  |/     \|  |  \  | \__  \ \   __\  |/  _ \ /    \    ______   /   |  |_|   |\____ \ |  |  \ /   |  |_  ______ /  /_\  \|   | 
+/    |    \|    `   \ /_____/ /    |    \  |  |  |  / __ \_\  \___ |    <  /_____/  /        \|  |  Y Y  \  |  /  |__/ __ \_|  | |  (  <_> )   |  \  /_____/  /    ^   /|   ||  |_> >|   Y  |    ^   / /_____/ \  \_/   \   | 
+\____|__  /_______  /         \____|__  /__|  |__| (____  / \___  >|__|_ \         /_______  /|__|__|_|  /____/|____(____  /|__| |__|\____/|___|  /           \____   | |___||   __/ |___|  |____   |           \_____  /___| 
+        \/        \/                  \/                \/      \/      \/                 \/          \/                \/                     \/                 |__|      |__|         \/     |__|                 \/      
                                                      _:_
                                                     '-.-'
                                            ()      __.'.__
@@ -33,14 +33,27 @@ def display_splash_screen():
     print(splash)
     print("AD_Attack_Surface_Management 41PH4-01\n")
 
-# Define users, seasons, and years
-users = ["user1", "user2", "user3", "admin"]
+import random
+import time
+
+# Define seasons, years, and services for Kerberoasting
 seasons = ["Spring", "Summer", "Autumn", "Winter"]
 years = list(range(2000, 2025))
-services = ["Service1", "Service2", "Service3"]
+services = ["AGMPServer", "MSSQL/MSSQLSvc", "FIMService", "STSSecurity Token Service"]
 
-# Generate season-based passwords
+# Generate season-based passwords for user accounts
 passwords = [f"{season}{year}" for season in seasons for year in years]
+
+# Load users from a file
+def load_users_from_file(file_name):
+    try:
+        with open(file_name, "r") as file:
+            loaded_users = [line.strip() for line in file.readlines()]
+            print(f"[+] Loaded {len(loaded_users)} users from {file_name}")
+            return loaded_users
+    except FileNotFoundError:
+        print(f"[!] Error: File {file_name} not found. Using default users.")
+        return ["user1", "user2", "user3", "admin"]
 
 # Simulate Kerberoasting
 def kerberoasting():
@@ -48,12 +61,12 @@ def kerberoasting():
     for service in services:
         season = random.choice(seasons)
         year = random.choice(years)
-        ticket_hash = f"hash_{season}_{year}_{random.randint(1000,9999)}"
-        print(f"Captured ticket hash: {ticket_hash}")
+        ticket_hash = f"hash_{service}_{season}_{year}_{random.randint(1000,9999)}"
+        print(f"Captured ticket hash for {service}: {ticket_hash}")
         time.sleep(1)
 
 # Simulate Password Spraying with No Lockouts
-def password_spraying():
+def password_spraying(users):
     print("\n[Password Spraying] Trying season-based passwords...")
     for user in users:
         for password in passwords:
@@ -68,13 +81,13 @@ def password_spraying():
         time.sleep(60)  # Add delay between user attempts to prevent lockouts
 
 # Simulate AS-REP Roasting
-def asrep_roasting():
+def asrep_roasting(users):
     print("\n[AS-REP Roasting] Identifying accounts without pre-authentication...")
     for user in users:
         print(f"Checking {user}...")
         success = random.choice([True, False])
         if success:
-            ticket_hash = f"asrep_hash_{random.randint(1000,9999)}"
+            ticket_hash = f"asrep_hash_{user}_{random.randint(1000,9999)}"
             print(f"[+] Captured AS-REP hash for {user}: {ticket_hash}")
         else:
             print(f"[-] {user} is secure.")
@@ -127,15 +140,23 @@ def main():
     print("5. GPO Analysis")
     print("6. Privilege Escalation")
     print("7. Run All")
+    print("8. Load Users from File")
     
-    choice = input("Choose an attack to simulate (1-7): ")
+    choice = input("Choose an attack to simulate (1-8): ")
+
+    if choice == '8':
+        file_name = input("Enter the user file name (with extension): ")
+        users = load_users_from_file(file_name)
+        print(f"Loaded users: {users}")
+    else:
+        users = ["user1", "user2", "user3", "admin"]  # Default users
 
     if choice == '1':
         kerberoasting()
     elif choice == '2':
-        password_spraying()
+        password_spraying(users)
     elif choice == '3':
-        asrep_roasting()
+        asrep_roasting(users)
     elif choice == '4':
         ldap_enumeration()
     elif choice == '5':
@@ -144,8 +165,8 @@ def main():
         privilege_escalation()
     elif choice == '7':
         kerberoasting()
-        password_spraying()
-        asrep_roasting()
+        password_spraying(users)
+        asrep_roasting(users)
         ldap_enumeration()
         gpo_analysis()
         privilege_escalation()
