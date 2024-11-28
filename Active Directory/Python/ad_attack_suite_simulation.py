@@ -39,7 +39,7 @@ import time
 # Define seasons, years, and services for Kerberoasting
 seasons = ["Spring", "Summer", "Autumn", "Winter"]
 years = list(range(2000, 2025))
-services = ["AGMPServer", "MSSQL/MSSQLSvc", "FIMService", "STSSecurity Token Service"]
+services = ["service1", "service2", "service3"]
 
 # Generate season-based passwords for user accounts
 passwords = [f"{season}{year}" for season in seasons for year in years]
