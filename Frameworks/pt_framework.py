@@ -15,8 +15,19 @@ def check_tool(tool_name):
     except FileNotFoundError:
         return False
 
+# Define tool checks
+def check_tool(tool_name):
+    """Check if the tool is installed on the system."""
+    try:
+        subprocess.run([tool_name, '--help'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return True
+    except FileNotFoundError:
+        return False
+
 # Banner for the framework
 def display_splash_screen():
+    splash = """
+   def display_splash_screen():
     splash = """
     
  _____________________  ___________                                                  __                  _____  ____.____   __________  ___ ___    _____           _______  ____ 
@@ -45,23 +56,6 @@ def display_splash_screen():
  
 """
 
-    print(splash)
-    print("PT Framework 41PH4-01\n")
-
-# Define tool checks
-def check_tool(tool_name):
-    """Check if the tool is installed on the system."""
-    try:
-        subprocess.run([tool_name, '--help'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        return True
-    except FileNotFoundError:
-        return False
-
-# Banner for the framework
-def display_splash_screen():
-    splash = """
-    [Your splash screen here]
-    """
     print(splash)
     print("PT Framework 41PH4-01\n")
 
