@@ -18,8 +18,10 @@ def check_tool(tool_name):
     except FileNotFoundError:
         return False
 
-# Banner for the framework
+# Banner
 def display_splash_screen():
+    splash = """
+   def display_splash_screen():
     splash = """
 _____________________  ___________                                                  __                  _____  ____.____   __________  ___ ___    _____           _______  ____ 
 \______   \__    ___/  \_   _____/____________     _____   ______  _  _____________|  | __             /  |  |/_   |    |  \______   \/   |   \  /  |  |          \   _  \/_   |
