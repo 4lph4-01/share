@@ -18,10 +18,6 @@ import os
 import hashlib
 import time
 from netaddr import IPNetwork
-
-def display_splash_screen():
-    splash = """
-    
     
 # Banner
 def display_splash_screen():
