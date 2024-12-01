@@ -23,8 +23,7 @@ from requests.packages.urllib3.util.retry import Retry
 # Banner
 def display_splash_screen():
     splash = """
-   def display_splash_screen():
-    splash = """
+  
     
 ___________               .__.__          ___ ___                                        __  .__                             _____  ____.____   __________  ___ ___    _____           _______  ____ 
 \_   _____/ _____ _____   |__|  |        /   |   \_____  __________  __  ____    _______/  |_|__| ____   ____               /  |  |/_   |    |  \______   \/   |   \  /  |  |          \   _  \/_   |
