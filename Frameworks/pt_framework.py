@@ -56,11 +56,6 @@ def display_splash_screen():
 """
 
     print(splash)
-    print("More_Mass for advanced network mapping and external asset discovery 41PH4-01\n")
-
-    """
-
-    print(splash)
     print("PT Framework 41PH4-01\n")
 
 # Tools and their commands
