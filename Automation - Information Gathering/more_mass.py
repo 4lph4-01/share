@@ -21,11 +21,8 @@ from bs4 import BeautifulSoup
 import json
 import websockets
 import whois
-
-def display_splash_screen():
-    splash = """
     
-# Banner for the framework
+# Banner
 def display_splash_screen():
     splash = """
    def display_splash_screen():
