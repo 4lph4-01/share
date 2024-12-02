@@ -14,7 +14,7 @@
 import csv
 import requests
 import threading
-from urllib.parse import urljoin, urlencode
+from urllib.parse import urljoin, urlparse
 from datetime import datetime
 from colorama import Fore, Style
 from bs4 import BeautifulSoup
@@ -30,6 +30,10 @@ HEADERS = {
 
 # Report File
 REPORT_FILE = 'vulnerability_report.csv'
+
+# Allowed domains and paths
+ALLOWED_DOMAINS = ["example.com", "sub.example.com"]  # Add domains or subdomains to crawl
+ALLOWED_PATHS = ["/admin/", "/products/"]  # Add allowed paths to crawl
 
 # Initialize CSV Report with headers
 def initialize_report():
@@ -85,6 +89,57 @@ def display_in_columns(options):
     ]
     print("    ".join(formatted_options))
 
+# Extract all links from a page
+def extract_links(url, page_content):
+    soup = BeautifulSoup(page_content, 'html.parser')
+    links = set()
+    for anchor in soup.find_all('a', href=True):
+        link = anchor['href']
+        link = urljoin(url, link)  # Ensure absolute URL
+        links.add(link)
+    return links
+
+# Function to crawl the site and ensure links are within the allowed domains and paths
+def crawl_site(url, visited=None, depth=0, max_depth=3):
+    if visited is None:
+        visited = set()
+
+    # If we've reached the max depth, stop
+    if depth > max_depth:
+        return visited
+
+    if url in visited:
+        return visited
+
+    visited.add(url)
+    print(f"Crawling: {url}")
+
+    try:
+        response = SESSION.get(url, headers=HEADERS)
+        if response.status_code == 200:
+            links = extract_links(url, response.text)
+            for link in links:
+                # Check if the link fits within allowed domains and paths
+                if any(domain in link for domain in ALLOWED_DOMAINS) and any(path in link for path in ALLOWED_PATHS):
+                    # Recursively crawl discovered links
+                    visited.update(crawl_site(link, visited, depth + 1, max_depth))
+                else:
+                    print(f"Skipping link (out of scope): {link}")
+    except requests.RequestException as e:
+        print(f"Error crawling {url}: {e}")
+
+    return visited
+
+# Crawl and collect links in the target site
+def discover_links():
+    print(f"Starting to crawl {TARGET_URL}")
+    links = crawl_site(TARGET_URL)
+
+    print(f"Found {len(links)} links:")
+    for link in links:
+        print(link)
+    return links
+
 # Attack Modules
 
 def test_sql_injection(url, param_name):
@@ -124,97 +179,30 @@ def test_access_control(url, param_name):
     response = SESSION.get(unauthorized_url, headers=HEADERS)
 
     if response.status_code == 403:
-        log_report("Access Control", "Not Vulnerable", "Access control is functioning.")
+        log_report("Access Control", "Vulnerable", "Access Control vulnerability detected.")
     else:
-        log_report("Access Control", "Vulnerable", "Access control failure detected.")
-
-# Race Condition (TOCTOU)
-def test_race_condition(url, param_name, value):
-    def send_request():
-        data = {param_name: value}
-        response = SESSION.post(url, data=data, headers=HEADERS)
-        if response.status_code == 200:
-            log_report("Race Condition", "Vulnerable", "Race condition vulnerability detected.")
-        else:
-            log_report("Race Condition", "Not Vulnerable", "No race condition detected.")
-
-    threads = []
-    for _ in range(10):  # 10 simultaneous requests
-        thread = threading.Thread(target=send_request)
-        thread.start()
-        threads.append(thread)
-
-    for thread in threads:
-        thread.join()
-
-# Business Logic Test
-def test_business_logic(url, param_name):
-    params = {param_name: "discount_code"}
-    response = SESSION.get(url, params=params, headers=HEADERS)
-
-    if "discount applied" in response.text:
-        log_report("Business Logic", "Vulnerable", "Business logic vulnerability found")
-    else:
-        log_report("Business Logic", "Not Vulnerable", "No business logic vulnerability detected")
-
-# Test Form Fields
-def test_form_fields(url):
-    response = SESSION.get(url, headers=HEADERS)
-    
-    if response.status_code != 200:
-        log_report("Form Test", "Failed", f"Unable to access form at {url}")
-        return
-    
-    form_data = {'username': 'admin', 'password': 'adminpassword'}
-    
-    # Example of hidden fields, add your hidden field names as needed
-    hidden_fields = ['csrf_token', 'hidden_field_name']
-    for hidden_field in hidden_fields:
-        form_data[hidden_field] = 'dummy_value'
-
-    post_url = urljoin(url, "/submit_form")  # Adjust according to form action URL
-    post_response = SESSION.post(post_url, data=form_data, headers=HEADERS)
-    
-    if "success" in post_response.text:
-        log_report("Form Submission", "Successful", f"Form submitted successfully with hidden fields.")
-    else:
-        log_report("Form Submission", "Failed", "Form submission failed.")
-
-# Test Hidden Field Exposure
-def test_hidden_field_exposure(url):
-    response = SESSION.get(url, headers=HEADERS)
-    soup = BeautifulSoup(response.text, 'html.parser')
-    
-    hidden_fields = soup.find_all('input', {'type': 'hidden'})
-    if hidden_fields:
-        for field in hidden_fields:
-            log_report("Hidden Field Exposure", "Vulnerable", f"Hidden field exposed: {field.get('name')}")
-    else:
-        log_report("Hidden Field Exposure", "Not Vulnerable", "No hidden fields exposed.")
-
-# Main Menu
-def display_main_menu():
-    print(f"\n{Fore.TEAL}Main Menu:{Style.RESET_ALL}")
-    options = [
-        "SQL Injection", 
-        "Brute Force Login", 
-        "Reflected XSS", 
-        "Access Control", 
-        "Race Condition (TOCTOU)", 
-        "Business Logic Vulnerability", 
-        "Test Form Fields", 
-        "Test Hidden Field Exposure", 
-        "Exit"
-    ]
-    display_in_columns(options)
+        log_report("Access Control", "Not Vulnerable", "No Access Control issue detected.")
 
 # Main Script
 def main():
     display_splash_screen()
     initialize_report()  # Initialize the report file
 
+    options = [
+        "Test SQL Injection",
+        "Brute Force Login Test",
+        "Test Reflected XSS",
+        "Test Access Control",
+        "Test Race Condition",
+        "Test Business Logic",
+        "Test Form Fields",
+        "Test Hidden Field Exposure",
+        "Exit",
+        "Crawl and Discover Links"  # New option for crawling and discovering links
+    ]
+
     while True:
-        display_main_menu()
+        display_in_columns(options)
         try:
             choice = int(input(f"Choose an option (1-{len(options)}): "))
 
@@ -237,6 +225,8 @@ def main():
             elif choice == 9:
                 print("Exiting...")
                 break
+            elif choice == 10:
+                discover_links()  # New option for crawling and discovering links
             else:
                 print(f"Invalid option. Please choose a number between 1 and {len(options)}.")
         except ValueError:
