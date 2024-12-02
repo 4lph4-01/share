@@ -11,14 +11,17 @@
 # Replace teaget_url with the specific endpoints you want to test for each vulnerability. Replace "http://your_base_url" with the base URL of the application you're testing
 ######################################################################################################################################################################################################################
 
-import csv
+import os
+import time
 import requests
 import threading
-from urllib.parse import urljoin, urlparse
+import mimetypes
+from urllib.parse import urljoin
 from datetime import datetime
 from colorama import Fore, Style
 from bs4 import BeautifulSoup
 import re
+import csv
 
 # Global Settings
 TARGET_URL = "http://example.com"  # Replace with actual target
@@ -28,12 +31,11 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36"
 }
 
-# Report File
 REPORT_FILE = 'vulnerability_report.csv'
 
 # Allowed domains and paths
 ALLOWED_DOMAINS = ["example.com", "sub.example.com"]  # Add domains or subdomains to crawl
-ALLOWED_PATHS = ["/admin/", "/products/"]  # Add allowed paths to crawl
+ALLOWED_PATHS = ["/admin/", "/uploads/"]  # Add allowed paths to crawl
 
 # Initialize CSV Report with headers
 def initialize_report():
@@ -51,35 +53,12 @@ def log_report(test_name, outcome, details=""):
 # Banner
 def display_splash_screen():
     splash = """
-    
-__      __        ___.                                  _________                           .__   __                ___________                                                  __                  _____  ____.____   __________  ___ ___    _____           _______  ____ 
-/  \    /  \  ____ \_ |__ _____   ______  ______        /   _____/ ____   ____   __ _________|__|_/  |_  ___.__.     \_   _____/____________     _____   ______  _  _____________|  | __             /  |  |/_   |    |  \______   \/   |   \  /  |  |          \   _  \/_   |
-\   \/\/   /_/ __ \ | __ \\__  \  \____ \ \____ \       \_____  \_/ __ \_/ ___\ |  |  \_  __ \  |\   __\<   |  |      |    __)  \_  __ \__  \   /     \_/ __ \ \/ \/ /  _ \_  __ \  |/ /   ______   /   |  |_|   |    |   |     ___/    ~    \/   |  |_  ______ /  /_\  \|   |
- \        / \  ___/ | \_\ \/ __ \_|  |_> >|  |_> >      /        \  ___/\  \___ |  |  /|  | \/  | |  |   \___  |      |     \    |  | \// __ \_|  Y Y  \  ___/\     (  <_> )  | \/    <   /_____/  /    ^   /|   |    |___|    |   \    Y    /    ^   / /_____/ \  \_/   \   |
-  \__/\  /   \___  >|___  (____  /|   __/ |   __/______/_______  /\___  >\___  >|____/ |__|  |__| |__|   / ____|______\___  /    |__|  (____  /|__|_|  /\___  >\/\_/ \____/|__|  |__|_ \           \____   | |___|_______ \____|    \___|_  /\____   |           \_____  /___|
-       \/        \/     \/     \/ |__|    |__|  /_____/        \/     \/     \/                          \/    /_____/    \/                \/       \/     \/                        \/                |__|             \/               \/      |__|                 \/     
-
-                                                     _:_
-                                                    '-.-'
-                                           ()      __.'.__
-                                        .-:--:-.  |_______|
-                                 ()      \____/    \=====/
-                                 /\      {====}     )___(
-                      (\=,      //\\      )__(     /_____\
-      __    |'-'-'|  //  .\    (    )    /____\     |   |
-     /  \   |_____| (( \_  \    )__(      |  |      |   |
-     \__/    |===|   ))  `\_)  /____\     |  |      |   |
-    /____\   |   |  (/     \    |  |      |  |      |   |
-     |  |    |   |   | _.-'|    |  |      |  |      |   |
-     |__|    )___(    )___(    /____\    /____\    /_____\
-    (====)  (=====)  (=====)  (======)  (======)  (=======)
-   (______)(_______)(_______)(________)(________)(_________)
-
+    [Your Splash Here]
     """
     print(splash)
     print("Web_Application_Security_Framework 41PH4-01\n")
 
-# Columnar Display Helper Function (no row limit)
+# Columnar Display Helper Function
 def display_in_columns(options):
     max_length = max(len(option) for option in options)
     formatted_options = [
@@ -88,145 +67,116 @@ def display_in_columns(options):
     ]
     print("    ".join(formatted_options))
 
-# Extract all links from a page
-def extract_links(url, page_content):
-    soup = BeautifulSoup(page_content, 'html.parser')
-    links = set()
-    for anchor in soup.find_all('a', href=True):
-        link = anchor['href']
-        link = urljoin(url, link)  # Ensure absolute URL
-        links.add(link)
-    return links
-
-# Function to crawl the site and ensure links are within the allowed domains and paths
-def crawl_site(url, visited=None, depth=0, max_depth=3):
-    if visited is None:
-        visited = set()
-
-    # If we've reached the max depth, stop
-    if depth > max_depth:
-        return visited
-
-    if url in visited:
-        return visited
-
-    visited.add(url)
-    print(f"Crawling: {url}")
-
-    try:
-        response = SESSION.get(url, headers=HEADERS)
-        if response.status_code == 200:
-            links = extract_links(url, response.text)
-            for link in links:
-                # Check if the link fits within allowed domains and paths
-                if any(domain in link for domain in ALLOWED_DOMAINS) and any(path in link for path in ALLOWED_PATHS):
-                    # Recursively crawl discovered links
-                    visited.update(crawl_site(link, visited, depth + 1, max_depth))
-                else:
-                    print(f"Skipping link (out of scope): {link}")
-    except requests.RequestException as e:
-        print(f"Error crawling {url}: {e}")
-
-    return visited
-
-# Crawl and collect links in the target site
-def discover_links():
-    print(f"Starting to crawl {TARGET_URL}")
-    links = crawl_site(TARGET_URL)
-
-    print(f"Found {len(links)} links:")
-    for link in links:
-        print(link)
-    return links
-
 # Attack Modules
 
+# Time of Check to Time of Use (TOCTOU) Race Condition Testing
+def test_toctou_race_condition(url, param_name):
+    payload = "/tmp/testfile"
+    data = {param_name: payload}
+    
+    # Step 1: Check if the file exists before upload
+    initial_check = SESSION.get(url, headers=HEADERS)
+    initial_check_status = "File exists" if "testfile" in initial_check.text else "File does not exist"
+    
+    # Simulate race condition by waiting for a brief period
+    time.sleep(3)  # Adjust sleep to simulate a TOCTOU window
+    response = SESSION.post(url, data=data, headers=HEADERS)
+    
+    # Step 2: Check file status after "upload"
+    final_check = SESSION.get(url, headers=HEADERS)
+    final_check_status = "File exists" if "testfile" in final_check.text else "File does not exist"
+    
+    if initial_check_status != final_check_status:
+        log_report("TOCTOU Race Condition", "Vulnerable", f"TOCTOU detected with file upload payload.")
+        return "TOCTOU Race Condition: Vulnerable"
+    
+    log_report("TOCTOU Race Condition", "Not Vulnerable", "No TOCTOU vulnerability detected.")
+    return "TOCTOU Race Condition: Not Vulnerable"
+
+# File Upload and Webshell Testing
+def test_file_upload_webshell(url, param_name, file_path):
+    # Check if the file extension is allowed
+    allowed_extensions = ['.php', '.jsp', '.asp', '.sh']
+    file_name = os.path.basename(file_path)
+    file_extension = os.path.splitext(file_name)[1].lower()
+
+    if file_extension not in allowed_extensions:
+        log_report("File Upload", "Not Vulnerable", "File extension not allowed.")
+        return "File Upload: Not Vulnerable"
+
+    # Try uploading a web shell
+    files = {'file': (file_name, open(file_path, 'rb'), mimetypes.guess_type(file_path)[0])}
+    data = {param_name: "webshell"}
+    response = SESSION.post(url, files=files, data=data, headers=HEADERS)
+    
+    # Check if the file is uploaded and accessible
+    uploaded_file_url = urljoin(url, f"/uploads/{file_name}")
+    uploaded_response = SESSION.get(uploaded_file_url, headers=HEADERS)
+    
+    if uploaded_response.status_code == 200 and "webshell" in uploaded_response.text:
+        log_report("File Upload", "Vulnerable", f"Web shell uploaded successfully: {file_name}")
+        return f"File Upload: Vulnerable (Web shell uploaded)"
+    
+    log_report("File Upload", "Not Vulnerable", "File upload failed or not vulnerable.")
+    return "File Upload: Not Vulnerable"
+
+# SQL Injection Test (Non-destructive)
 def test_sql_injection(url, param_name):
-    payload = "' OR 1=1 --"
-    data = {param_name: payload}
-    response = SESSION.post(url, data=data, headers=HEADERS)
-
-    if "error" in response.text or "syntax" in response.text:
-        log_report("SQL Injection", "Vulnerable", "SQL Injection vulnerability detected.")
-        return "SQL Injection: Vulnerable"
-    else:
-        log_report("SQL Injection", "Not Vulnerable", "No SQL Injection detected.")
-        return "SQL Injection: Not Vulnerable"
-
-def test_brute_force_login(url, username_param, password_param):
-    common_passwords = ["123456", "password", "admin"]
-    for password in common_passwords:
-        data = {username_param: "admin", password_param: password}
+    payloads = [
+        "' OR 1=1 --",  # Classic SQL Injection
+        "' AND 1=1#",  # Another variation of injection
+    ]
+    
+    for payload in payloads:
+        data = {param_name: payload}
         response = SESSION.post(url, data=data, headers=HEADERS)
+        if "error" in response.text or "syntax" in response.text:
+            log_report("SQL Injection", "Vulnerable", f"SQL Injection detected with payload: {payload}")
+            return f"SQL Injection: Vulnerable (Payload: {payload})"
+    
+    log_report("SQL Injection", "Not Vulnerable", "No SQL Injection detected.")
+    return "SQL Injection: Not Vulnerable"
 
-        if "success" in response.text:  # Adjust based on the login success indicator
-            log_report("Brute Force", "Vulnerable", f"Login bypass with password: {password}")
-            return f"Brute Force: Vulnerable, Bypass with {password}"
-        else:
-            log_report("Brute Force", "Not Vulnerable", "No password bypass detected.")
-            return "Brute Force: Not Vulnerable"
-
-def test_reflected_xss(url, param_name):
-    payload = "<script>alert('XSS')</script>"
-    data = {param_name: payload}
-    response = SESSION.post(url, data=data, headers=HEADERS)
-
-    if payload in response.text:
-        log_report("Reflected XSS", "Vulnerable", "Reflected XSS vulnerability detected.")
-        return "Reflected XSS: Vulnerable"
-    else:
-        log_report("Reflected XSS", "Not Vulnerable", "No Reflected XSS detected.")
-        return "Reflected XSS: Not Vulnerable"
-
-def test_access_control(url, param_name):
-    response = SESSION.get(url + f"?{param_name}=admin", headers=HEADERS)
-    if "admin page" in response.text:  # Adjust based on the access control mechanism
-        log_report("Access Control", "Vulnerable", "Access Control vulnerability detected.")
-        return "Access Control: Vulnerable"
-    else:
-        log_report("Access Control", "Not Vulnerable", "No access control issues detected.")
-        return "Access Control: Not Vulnerable"
-
-# Main Execution Flow
+# Main Script
 def main():
     display_splash_screen()
     initialize_report()
-
+    print(Fore.CYAN + "Select a test to run: ")
+    
     options = [
-        "Crawl site and discover links",
+        "Discover Links",
         "Test SQL Injection",
-        "Test Brute Force Login",
+        "Test Blind SQL Injection",
+        "Test Stored XSS",
         "Test Reflected XSS",
-        "Test Access Control",
+        "Test Command Injection",
+        "Test Path Traversal",
+        "Test RFI",
+        "TOCTOU Race Condition",
+        "Test File Upload (Web Shell)",
         "Exit"
     ]
     
+    display_in_columns(options)
+    
     while True:
-        display_in_columns(options)
         selection = input(f"Select an option (1-{len(options)}): ")
-
+        
         try:
             selection = int(selection)
             if selection == 1:
-                discover_links()
+                # Placeholder for link discovery
+                print("Link discovery not implemented yet.")
             elif selection == 2:
                 url = input("Enter URL for SQL Injection test: ")
                 param_name = input("Enter parameter name for SQL Injection: ")
-                test_sql_injection(url, param_name)
-            elif selection == 3:
-                url = input("Enter URL for Brute Force Login test: ")
-                username_param = input("Enter username parameter: ")
-                password_param = input("Enter password parameter: ")
-                test_brute_force_login(url, username_param, password_param)
-            elif selection == 4:
-                url = input("Enter URL for Reflected XSS test: ")
-                param_name = input("Enter parameter name for XSS test: ")
-                test_reflected_xss(url, param_name)
-            elif selection == 5:
-                url = input("Enter URL for Access Control test: ")
-                param_name = input("Enter parameter name for Access Control test: ")
-                test_access_control(url, param_name)
-            elif selection == 6:
+                print(test_sql_injection(url, param_name))
+            elif selection == 10:
+                file_path = input("Enter file path for Web Shell test: ")
+                url = input("Enter URL for File Upload test: ")
+                param_name = input("Enter parameter name for file upload: ")
+                print(test_file_upload_webshell(url, param_name, file_path))
+            elif selection == 11:
                 print("Exiting the script.")
                 print("Tests completed. Review your report for findings.")
                 break
