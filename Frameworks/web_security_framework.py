@@ -53,31 +53,7 @@ def log_report(test_name, outcome, details=""):
 # Banner
 def display_splash_screen():
     splash = """
-
-_____________________  ___________                                                  __                  _____  ____.____   __________  ___ ___    _____           _______  ____ 
-\______   \__    ___/  \_   _____/____________     _____   ______  _  _____________|  | __             /  |  |/_   |    |  \______   \/   |   \  /  |  |          \   _  \/_   |
- |     ___/ |    |      |    __)  \_  __ \__  \   /     \_/ __ \ \/ \/ /  _ \_  __ \  |/ /   ______   /   |  |_|   |    |   |     ___/    ~    \/   |  |_  ______ /  /_\  \|   |
- |    |     |    |      |     \    |  | \// __ \_|  Y Y  \  ___/\     (  <_> )  | \/    <   /_____/  /    ^   /|   |    |___|    |   \    Y    /    ^   / /_____/ \  \_/   \   |
- |____|     |____|______\___  /    |__|  (____  /|__|_|  /\___  >\/\_/ \____/|__|  |__|_ \           \____   | |___|_______ \____|    \___|_  /\____   |           \_____  /___|
-                 /_____/    \/                \/       \/     \/                        \/                |__|             \/               \/      |__|                 \/  
-
-                                                     _:_
-                                                    '-.-'
-                                           ()      __.'.__
-                                        .-:--:-.  |_______|
-                                 ()      \____/    \=====/
-                                 /\      {====}     )___(
-                      (\=,      //\\      )__(     /_____\
-      __    |'-'-'|  //  .\    (    )    /____\     |   |
-     /  \   |_____| (( \_  \    )__(      |  |      |   |
-     \__/    |===|   ))  `\_)  /____\     |  |      |   |
-    /____\   |   |  (/     \    |  |      |  |      |   |
-     |  |    |   |   | _.-'|    |  |      |  |      |   |
-     |__|    )___(    )___(    /____\    /____\    /_____\
-    (====)  (=====)  (=====)  (======)  (======)  (=======)
-    }===={  }====={  }====={  }======{  }======{  }======={
-   (______)(_______)(_______)(________)(________)(_________)
-   
+    [Your Splash Here]
     """
     print(splash)
     print("Web_Application_Security_Framework 41PH4-01\n")
@@ -226,6 +202,34 @@ def test_command_injection(url, param_name):
     log_report("Command Injection", "Not Vulnerable", "No Command Injection detected.")
     return "Command Injection: Not Vulnerable"
 
+# Extract Forms and Hidden Fields
+def extract_forms_and_hidden_fields(url):
+    # Get the page content
+    response = SESSION.get(url, headers=HEADERS)
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    # Find all forms
+    forms = soup.find_all('form')
+
+    # Extract hidden fields from forms
+    form_data = []
+    for form in forms:
+        action = form.get('action')
+        method = form.get('method', 'GET').upper()
+
+        # Extract hidden fields
+        hidden_fields = {}
+        for input_tag in form.find_all('input', type='hidden'):
+            hidden_fields[input_tag.get('name')] = input_tag.get('value')
+
+        form_data.append({
+            'action': action,
+            'method': method,
+            'hidden_fields': hidden_fields
+        })
+
+    return form_data
+
 # Main Script
 def main():
     display_splash_screen()
@@ -243,6 +247,7 @@ def main():
         "Test RFI",
         "TOCTOU Race Condition",
         "Test File Upload (Web Shell)",
+        "Extract Forms and Hidden Fields",  # New option
         "Exit"
     ]
     
@@ -273,6 +278,12 @@ def main():
                 print("Exiting the script.")
                 print("Tests completed. Review your report for findings.")
                 break
+            elif selection == 12:
+                url = input("Enter URL to extract forms and hidden fields: ")
+                form_data = extract_forms_and_hidden_fields(url)
+                print("Extracted form data:")
+                for form in form_data:
+                    print(f"Action: {form['action']}, Method: {form['method']}, Hidden Fields: {form['hidden_fields']}")
             else:
                 print("Invalid selection, please try again.")
         except ValueError:
