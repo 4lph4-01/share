@@ -92,9 +92,9 @@ def display_splash_screen():
  |____|     |____|______\___  /    |__|  (____  /|__|_|  /\___  >\/\_/ \____/|__|  |__|_ \           \____   | |___||____|    \___|_  /\____   |           \_____  /___|
                  /_____/    \/                \/       \/     \/                        \/                |__|                      \/      |__|                 \/     
 
+"""
     print(splash)
     print("Welcome to the PT Framework!\n")
-"""
 
 # Tools and their commands
 TOOLS = {
