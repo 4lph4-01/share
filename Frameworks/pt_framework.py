@@ -94,7 +94,7 @@ def display_splash_screen():
 
     print(splash)
     print("Welcome to the PT Framework!\n")
-
+"""
 
 # Tools and their commands
 TOOLS = {
