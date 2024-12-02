@@ -73,7 +73,6 @@ __      __        ___.                                  _________               
      |  |    |   |   | _.-'|    |  |      |  |      |   |
      |__|    )___(    )___(    /____\    /____\    /_____\
     (====)  (=====)  (=====)  (======)  (======)  (=======)
-    }===={  }====={  }====={  }======{  }======{  }======={
    (______)(_______)(_______)(________)(________)(_________)
 
     """
@@ -149,8 +148,10 @@ def test_sql_injection(url, param_name):
 
     if "error" in response.text or "syntax" in response.text:
         log_report("SQL Injection", "Vulnerable", "SQL Injection vulnerability detected.")
+        return "SQL Injection: Vulnerable"
     else:
         log_report("SQL Injection", "Not Vulnerable", "No SQL Injection detected.")
+        return "SQL Injection: Not Vulnerable"
 
 def test_brute_force_login(url, username_param, password_param):
     common_passwords = ["123456", "password", "admin"]
@@ -160,9 +161,10 @@ def test_brute_force_login(url, username_param, password_param):
 
         if "success" in response.text:  # Adjust based on the login success indicator
             log_report("Brute Force", "Vulnerable", f"Login bypass with password: {password}")
-            break
+            return f"Brute Force: Vulnerable, Bypass with {password}"
         else:
             log_report("Brute Force", "Not Vulnerable", "No password bypass detected.")
+            return "Brute Force: Not Vulnerable"
 
 def test_reflected_xss(url, param_name):
     payload = "<script>alert('XSS')</script>"
@@ -171,66 +173,67 @@ def test_reflected_xss(url, param_name):
 
     if payload in response.text:
         log_report("Reflected XSS", "Vulnerable", "Reflected XSS vulnerability detected.")
+        return "Reflected XSS: Vulnerable"
     else:
-        log_report("Reflected XSS", "Not Vulnerable", "No reflected XSS detected.")
+        log_report("Reflected XSS", "Not Vulnerable", "No Reflected XSS detected.")
+        return "Reflected XSS: Not Vulnerable"
 
 def test_access_control(url, param_name):
-    unauthorized_url = f"{url}/{param_name}/restricted"
-    response = SESSION.get(unauthorized_url, headers=HEADERS)
-
-    if response.status_code == 403:
+    response = SESSION.get(url + f"?{param_name}=admin", headers=HEADERS)
+    if "admin page" in response.text:  # Adjust based on the access control mechanism
         log_report("Access Control", "Vulnerable", "Access Control vulnerability detected.")
+        return "Access Control: Vulnerable"
     else:
-        log_report("Access Control", "Not Vulnerable", "No Access Control issue detected.")
+        log_report("Access Control", "Not Vulnerable", "No access control issues detected.")
+        return "Access Control: Not Vulnerable"
 
-# Main Script
+# Main Execution Flow
 def main():
     display_splash_screen()
-    initialize_report()  # Initialize the report file
+    initialize_report()
 
     options = [
+        "Crawl site and discover links",
         "Test SQL Injection",
-        "Brute Force Login Test",
+        "Test Brute Force Login",
         "Test Reflected XSS",
         "Test Access Control",
-        "Test Race Condition",
-        "Test Business Logic",
-        "Test Form Fields",
-        "Test Hidden Field Exposure",
-        "Exit",
-        "Crawl and Discover Links"  # New option for crawling and discovering links
+        "Exit"
     ]
-
+    
     while True:
         display_in_columns(options)
-        try:
-            choice = int(input(f"Choose an option (1-{len(options)}): "))
+        selection = input(f"Select an option (1-{len(options)}): ")
 
-            if choice == 1:
-                test_sql_injection(TARGET_URL, "param_name")
-            elif choice == 2:
-                test_brute_force_login(TARGET_URL, "username", "password")
-            elif choice == 3:
-                test_reflected_xss(TARGET_URL, "param_name")
-            elif choice == 4:
-                test_access_control(TARGET_URL, "param_name")
-            elif choice == 5:
-                test_race_condition(TARGET_URL, "param_name", "value")
-            elif choice == 6:
-                test_business_logic(TARGET_URL, "param_name")
-            elif choice == 7:
-                test_form_fields(TARGET_URL)
-            elif choice == 8:
-                test_hidden_field_exposure(TARGET_URL)
-            elif choice == 9:
-                print("Exiting...")
+        try:
+            selection = int(selection)
+            if selection == 1:
+                discover_links()
+            elif selection == 2:
+                url = input("Enter URL for SQL Injection test: ")
+                param_name = input("Enter parameter name for SQL Injection: ")
+                test_sql_injection(url, param_name)
+            elif selection == 3:
+                url = input("Enter URL for Brute Force Login test: ")
+                username_param = input("Enter username parameter: ")
+                password_param = input("Enter password parameter: ")
+                test_brute_force_login(url, username_param, password_param)
+            elif selection == 4:
+                url = input("Enter URL for Reflected XSS test: ")
+                param_name = input("Enter parameter name for XSS test: ")
+                test_reflected_xss(url, param_name)
+            elif selection == 5:
+                url = input("Enter URL for Access Control test: ")
+                param_name = input("Enter parameter name for Access Control test: ")
+                test_access_control(url, param_name)
+            elif selection == 6:
+                print("Exiting the script.")
+                print("Tests completed. Review your report for findings.")
                 break
-            elif choice == 10:
-                discover_links()  # New option for crawling and discovering links
             else:
-                print(f"Invalid option. Please choose a number between 1 and {len(options)}.")
+                print("Invalid selection, please try again.")
         except ValueError:
-            print("Invalid input. Please enter a number.")
+            print("Please enter a valid number.")
 
 if __name__ == "__main__":
     main()
