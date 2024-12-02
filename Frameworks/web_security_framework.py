@@ -17,6 +17,8 @@ import threading
 from urllib.parse import urljoin, urlencode
 from datetime import datetime
 from colorama import Fore, Style
+from bs4 import BeautifulSoup
+import re
 
 # Global Settings
 TARGET_URL = "http://example.com"  # Replace with actual target
@@ -46,31 +48,15 @@ def log_report(test_name, outcome, details=""):
 def display_splash_screen():
     splash = """
 
- __      __        ___.                                  _________                           .__   __                ___________                                                  __                  _____  ____.____   __________  ___ ___    _____           _______  ____ 
+__      __        ___.                                  _________                           .__   __                ___________                                                  __                  _____  ____.____   __________  ___ ___    _____           _______  ____ 
 /  \    /  \  ____ \_ |__ _____   ______  ______        /   _____/ ____   ____   __ _________|__|_/  |_  ___.__.     \_   _____/____________     _____   ______  _  _____________|  | __             /  |  |/_   |    |  \______   \/   |   \  /  |  |          \   _  \/_   |
 \   \/\/   /_/ __ \ | __ \\__  \  \____ \ \____ \       \_____  \_/ __ \_/ ___\ |  |  \_  __ \  |\   __\<   |  |      |    __)  \_  __ \__  \   /     \_/ __ \ \/ \/ /  _ \_  __ \  |/ /   ______   /   |  |_|   |    |   |     ___/    ~    \/   |  |_  ______ /  /_\  \|   |
  \        / \  ___/ | \_\ \/ __ \_|  |_> >|  |_> >      /        \  ___/\  \___ |  |  /|  | \/  | |  |   \___  |      |     \    |  | \// __ \_|  Y Y  \  ___/\     (  <_> )  | \/    <   /_____/  /    ^   /|   |    |___|    |   \    Y    /    ^   / /_____/ \  \_/   \   |
   \__/\  /   \___  >|___  (____  /|   __/ |   __/______/_______  /\___  >\___  >|____/ |__|  |__| |__|   / ____|______\___  /    |__|  (____  /|__|_|  /\___  >\/\_/ \____/|__|  |__|_ \           \____   | |___|_______ \____|    \___|_  /\____   |           \_____  /___|
        \/        \/     \/     \/ |__|    |__|  /_____/        \/     \/     \/                          \/    /_____/    \/                \/       \/     \/                        \/                |__|             \/               \/      |__|                 \/     
 
-                                                     _:_
-                                                    '-.-'
-                                           ()      __.'.__
-                                        .-:--:-.  |_______|
-                                 ()      \____/    \=====/
-                                 /\      {====}     )___(
-                      (\=,      //\\      )__(     /_____\
-      __    |'-'-'|  //  .\    (    )    /____\     |   |
-     /  \   |_____| (( \_  \    )__(      |  |      |   |
-     \__/    |===|   ))  `\_)  /____\     |  |      |   |
-    /____\   |   |  (/     \    |  |      |  |      |   |
-     |  |    |   |   | _.-'|    |  |      |  |      |   |
-     |__|    )___(    )___(    /____\    /____\    /_____\
-    (====)  (=====)  (=====)  (======)  (======)  (=======)
-    }===={  }====={  }====={  }======{  }======{  }======={
-   (______)(_______)(_______)(________)(________)(_________)
-    
-        """
+
+    """
     print(splash)
     print("Web_Application_Security_Framework 41PH4-01\n")
 
@@ -155,6 +141,41 @@ def test_business_logic(url, param_name):
     else:
         log_report("Business Logic", "Not Vulnerable", "No business logic vulnerability detected")
 
+# Test Form Fields
+def test_form_fields(url):
+    response = SESSION.get(url, headers=HEADERS)
+    
+    if response.status_code != 200:
+        log_report("Form Test", "Failed", f"Unable to access form at {url}")
+        return
+    
+    form_data = {'username': 'admin', 'password': 'adminpassword'}
+    
+    # Example of hidden fields, add your hidden field names as needed
+    hidden_fields = ['csrf_token', 'hidden_field_name']
+    for hidden_field in hidden_fields:
+        form_data[hidden_field] = 'dummy_value'
+
+    post_url = urljoin(url, "/submit_form")  # Adjust according to form action URL
+    post_response = SESSION.post(post_url, data=form_data, headers=HEADERS)
+    
+    if "success" in post_response.text:
+        log_report("Form Submission", "Successful", f"Form submitted successfully with hidden fields.")
+    else:
+        log_report("Form Submission", "Failed", "Form submission failed.")
+
+# Test Hidden Field Exposure
+def test_hidden_field_exposure(url):
+    response = SESSION.get(url, headers=HEADERS)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    
+    hidden_fields = soup.find_all('input', {'type': 'hidden'})
+    if hidden_fields:
+        for field in hidden_fields:
+            log_report("Hidden Field Exposure", "Vulnerable", f"Hidden field exposed: {field.get('name')}")
+    else:
+        log_report("Hidden Field Exposure", "Not Vulnerable", "No hidden fields exposed.")
+
 # Main Menu
 def display_main_menu():
     print(f"\n{Fore.TEAL}Main Menu:{Style.RESET_ALL}")
@@ -165,6 +186,8 @@ def display_main_menu():
         "Access Control", 
         "Race Condition (TOCTOU)", 
         "Business Logic Vulnerability", 
+        "Test Form Fields", 
+        "Test Hidden Field Exposure", 
         "Exit"
     ]
     display_in_columns(options)
@@ -192,6 +215,10 @@ def main():
             elif choice == 6:
                 test_business_logic(TARGET_URL, "param_name")
             elif choice == 7:
+                test_form_fields(TARGET_URL)
+            elif choice == 8:
+                test_hidden_field_exposure(TARGET_URL)
+            elif choice == 9:
                 print("Exiting...")
                 break
             else:
