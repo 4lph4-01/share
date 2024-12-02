@@ -11,25 +11,26 @@ def install_tool(tool_name):
     print(f"\n[*] {tool_name} is not installed. Please choose an option to install it:")
 
     options = {
-        'sqlmap': [
-            '[1] Install using apt (Linux)', '[2] Install using pip (Python)',
-            '[3] Install using Homebrew (macOS)', '[4] Install from GitHub (latest version)'
-        ],
-        'xsstrike': [
-            '[1] Install using apt (Linux)', '[2] Install using pip (Python)',
-            '[3] Install from GitHub (latest version)'
-        ],
-        'aircrack-ng': [
-            '[1] Install using apt (Linux)', '[2] Install using brew (macOS)',
-            '[3] Install from GitHub (latest version)'
-        ]
+        'sqlmap': {
+            '1': 'Install using apt (Linux)',
+            '2': 'Install using pip (Python)',
+            '3': 'Install using Homebrew (macOS)',
+        },
+        'xsstrike': {
+            '1': 'Install using apt (Linux)',
+            '2': 'Install using pip (Python)',
+            '3': 'Install from GitHub (latest version)',
+        },
+        'aircrack-ng': {
+            '1': 'Install using apt (Linux)',
+            '2': 'Install using brew (macOS)',
+            '3': 'Install from GitHub (latest version)',
+        },
     }
 
     if tool_name in options:
-        for i in range(0, len(options[tool_name]), 2):
-            print(f"{options[tool_name][i]}    {options[tool_name][i+1]}")
-        if len(options[tool_name]) % 2 != 0:
-            print(options[tool_name][-1])
+        for key, value in options[tool_name].items():
+            print(f"{key}. {value}")
 
         choice = input("Enter your choice: ").strip()
 
@@ -62,6 +63,7 @@ def install_tool(tool_name):
     else:
         print(f"[*] No installation options available for {tool_name}.")
 
+
 def check_tool(tool_name):
     """Check if a tool is installed."""
     try:
@@ -80,34 +82,17 @@ def check_tools():
         else:
             print(f"[*] {tool} is already installed.")
 
+
 # Banner
 def display_splash_screen():
-    splash = """
-    _____________________  ___________                                                  __                  _____  ____.____   __________  ___ ___    _____           _______  ____ 
-    \______   \__    ___/  \_   _____/____________     _____   ______  _  _____________|  | __             /  |  |/_   |    |  \______   \/   |   \  /  |  |          \   _  \/_   |
-     |     ___/ |    |      |    __)  \_  __ \__  \   /     \_/ __ \ \/ \/ /  _ \_  __ \  |/ /   ______   /   |  |_|   |    |   |     ___/    ~    \/   |  |_  ______ /  /_\  \|   |
-     |    |     |    |      |     \    |  | \// __ \_|  Y Y  \  ___/\     (  <_> )  | \/    <   /_____/  /    ^   /|   |    |___|    |   \    Y    /    ^   / /_____/ \  \_/   \   |
-     |____|     |____|______\___  /    |__|  (____  /|__|_|  /\___  >\/\_/ \____/|__|  |__|_ \           \____   | |___|_______ \____|    \___|_  /\____   |           \_____  /___|
-                     /_____/    \/                \/       \/     \/                        \/                |__|             \/               \/      |__|                 \/     
-                                                     _:_
-                                                    '-.-'
-                                           ()      __.'.__
-                                        .-:--:-.  |_______|
-                                 ()      \____/    \=====/
-                                 /\      {====}     )___(
-                      (\=,      //\\      )__(     /_____\
-      __    |'-'-'|  //  .\    (    )    /____\     |   |
-     /  \   |_____| (( \_  \    )__(      |  |      |   |
-     \__/    |===|   ))  `\_)  /____\     |  |      |   |
-    /____\   |   |  (/     \    |  |      |  |      |   |
-     |  |    |   |   | _.-'|    |  |      |  |      |   |
-     |__|    )___(    )___(    /____\    /____\    /_____\
-    (====)  (=====)  (=====)  (======)  (======)  (=======)
-   }===={  }====={  }====={  }======{  }======{  }======={
-   (______)(_______)(_______)(________)(________)(_________)
-   """
-    print(splash)
-    print("Capture & PTH 41PH4-01\n")
+    print("""
+    ***********************************************
+    *           Welcome to My Custom Toolkit    *
+    *      Ready to assist in ethical hacking   *
+    *      Developed by [Your Name/Username]    *
+    ***********************************************
+    """)
+
 
 # Tools and their commands
 TOOLS = {
@@ -171,47 +156,60 @@ def metasploit_payload():
 
 # Subdomain Enumeration using custom script
 async def fetch(session, url):
-    """Fetch URL asynchronously."""
+    """Fetch data from a URL."""
     async with session.get(url) as response:
         return await response.text()
 
-async def subdomain_enumeration():
-    """Enumerate subdomains asynchronously."""
-    url = input("[*] Enter the base URL to enumerate subdomains: ").strip()
+async def subdomain_enum(domain):
+    """Fetch subdomains."""
+    url = f"https://crt.sh/?q={domain}"
     async with aiohttp.ClientSession() as session:
-        subdomains = await fetch(session, url)
-        print(f"[*] Subdomains found: {subdomains}")
+        page = await fetch(session, url)
+        print(page)  # You can improve this part to process and extract subdomains
 
-# Main entry point
 def main():
     display_splash_screen()
+
+    # Check for tools and prompt to install missing ones
     check_tools()
 
+    # Main loop
     while True:
-        display_menu()
-        choice = input("Enter your choice: ").strip()
+        print("\nSelect an option:")
+        print("1. Run SQL Injection Test     2. Run XSS Test")
+        print("3. Start Phishing Campaign    4. Run Network Scan")
+        print("5. Run Wi-Fi Deauth Attack    6. Generate Metasploit Payload")
+        print("7. Subdomain Enumeration      8. Data Exfiltration via DNS Tunneling")
+        print("9. Exit")
+
+        choice = input("Enter choice: ")
+
         if choice == '1':
-            metasploit_payload()
-        elif choice == '2':
-            target_url = input("Enter the URL for Metasploit Payload: ").strip()
-            sql_injection(target_url)
-        elif choice == '3':
-            url = input("Enter the URL for SQL Injection Test: ").strip()
+            url = input("Enter the target URL: ")
             sql_injection(url)
-        elif choice == '4':
-            url = input("Enter the URL for XSS Test: ").strip()
+        elif choice == '2':
+            url = input("Enter the target URL: ")
             test_xss(url)
-        elif choice == '5':
+        elif choice == '3':
             phishing_campaign()
-        elif choice == '6':
-            target = input("Enter the target IP for Network Scan: ").strip()
+        elif choice == '4':
+            target = input("Enter target IP/URL: ")
             network_scan(target)
+        elif choice == '5':
+            interface = input("Enter network interface: ")
+            wifi_attack(interface)
+        elif choice == '6':
+            metasploit_payload()
         elif choice == '7':
-            asyncio.run(subdomain_enumeration())
+            domain = input("Enter domain for subdomain enumeration: ")
+            asyncio.run(subdomain_enum(domain))
         elif choice == '8':
-            print("[*] Running Data Exfiltration...")
+            print("[*] Data Exfiltration via DNS Tunneling is under development...")
         elif choice == '9':
-            print("[*] Exiting...")
+            print("Exiting...")
             break
         else:
-            print("[!] Invalid choice, please try again.")
+            print("Invalid choice, please try again.")
+
+if __name__ == "__main__":
+    main()
