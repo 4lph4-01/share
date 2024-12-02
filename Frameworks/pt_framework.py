@@ -5,6 +5,7 @@ import asyncio
 import aiohttp
 import json
 from colorama import Fore, Style
+import time
 
 # Function to check if a command exists
 def check_command(command):
@@ -14,7 +15,7 @@ def check_command(command):
     except FileNotFoundError:
         return False
 
-# Function to install missing tools (this will be basic for illustration)
+# Function to install missing tools
 def install_tool(tool_name, install_command):
     print(f"{Fore.TEAL}Installing {tool_name}...\n{Style.RESET_ALL}")
     subprocess.run(install_command, shell=True)
@@ -23,8 +24,9 @@ def install_tool(tool_name, install_command):
 def display_menu():
     print(f"{Fore.TEAL}\n[1] MSFVenom    [2] Metasploit")
     print("[3] Veil        [4] Web Application Security Framework")
-    print("[5] Exploit API [6] Report & Save Results")
-    print("[7] Exit{Style.RESET_ALL}")
+    print("[5] Reconnaissance [6] Scanning & Enumeration")
+    print("[7] Proxies      [8] Exploit API")
+    print("[9] Report & Save Results [10] Exit{Style.RESET_ALL}")
 
 # Function to install tools if needed
 def install_tools():
@@ -97,7 +99,7 @@ def save_api_key(api_key):
         file.write(api_key)
     print(f"{Fore.GREEN}API Key saved for future use.{Style.RESET_ALL}")
 
-# Function to display the exploit API menu (Options in columns)
+# Function to display the exploit API menu
 def display_exploit_api_menu():
     print("\n[1] Get Exploits from Searchsploit    [2] Cross-Reference with Available Exploits")
     print("[3] Exit to Main Menu")
@@ -114,6 +116,18 @@ def process_bar(task_name):
         print(f"{Fore.YELLOW}[{'#' * (i // 10)}{' ' * ((100 - i) // 10)}] {i}%{Style.RESET_ALL}")
         time.sleep(0.5)
     print(f"{Fore.GREEN}{task_name} installation complete!{Style.RESET_ALL}")
+
+# Function to handle reconnaissance and footprinting tools
+def reconnaissance_menu():
+    print(f"\n[1] Use 'more_mass' for mass data gathering")
+    print("[2] Use 'email_address_harvester' for email harvesting")
+    print("[3] Exit to Main Menu")
+
+def scanning_enumeration_menu():
+    print(f"\n[1] Network Scan with Nmap")
+    print("[2] Vulnerability Scan")
+    print("[3] DNS Enumeration")
+    print("[4] Exit to Main Menu")
 
 # Main function to control the script
 def main():
@@ -139,6 +153,29 @@ def main():
             print(f"{Fore.TEAL}Launching Web Application Security Framework...{Style.RESET_ALL}")
             # Call your framework's main function here
         elif choice == "5":
+            # Start reconnaissance and footprinting
+            reconnaissance_choice = input(f"\n[1] Use 'more_mass'\n[2] Use 'email_address_harvester'\nSelect option: ")
+            if reconnaissance_choice == '1':
+                subprocess.run(['python3', 'more_mass.py'])  # Call 'more_mass' script
+            elif reconnaissance_choice == '2':
+                subprocess.run(['python3', 'email_address_harvester.py'])  # Call 'email_address_harvester' script
+            elif reconnaissance_choice == '3':
+                continue
+        elif choice == "6":
+            # Start scanning and enumeration
+            scanning_choice = input(f"\n[1] Network Scan with Nmap\n[2] Vulnerability Scan\n[3] DNS Enumeration\nSelect option: ")
+            if scanning_choice == '1':
+                subprocess.run(['nmap', '-sP', '192.168.1.0/24'])  # Example Nmap scan
+            elif scanning_choice == '2':
+                print("Starting vulnerability scan...")  # Add your vulnerability scanning logic here
+            elif scanning_choice == '3':
+                print("Performing DNS Enumeration...")  # Add your DNS enumeration logic here
+            elif scanning_choice == '4':
+                continue
+        elif choice == "7":
+            print(f"{Fore.CYAN}Proxy Setup...{Style.RESET_ALL}")
+            # Placeholder for proxy setup logic here
+        elif choice == "8":
             while True:
                 display_exploit_api_menu()
                 api_choice = input(f"{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}")
@@ -153,10 +190,10 @@ def main():
                     break
                 else:
                     print(f"{Fore.RED}Invalid choice, please try again.{Style.RESET_ALL}")
-        elif choice == "6":
+        elif choice == "9":
             print(f"{Fore.MAGENTA}Generating Report...{Style.RESET_ALL}")
             # Placeholder for reporting functionality
-        elif choice == "7":
+        elif choice == "10":
             print(f"{Fore.RED}Exiting...{Style.RESET_ALL}")
             break
         else:
