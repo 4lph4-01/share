@@ -14,7 +14,9 @@
 import subprocess
 import sys
 import os
+import shutil
 import time
+from pathlib import Path
 from colorama import Fore, Style
 
 # Splash Screen
@@ -25,7 +27,7 @@ _____________________  ___________                                              
 \______   \__    ___/  \_   _____/____________     _____   ______  _  _____________|  | __             /  |  |/_   \______   \/   |   \  /  |  |          \   _  \/_   |
  |     ___/ |    |      |    __)  \_  __ \__  \   /     \_/ __ \ \/ \/ /  _ \_  __ \  |/ /   ______   /   |  |_|   ||     ___/    ~    \/   |  |_  ______ /  /_\  \|   |
  |    |     |    |      |     \    |  | \// __ \_|  Y Y  \  ___/\     (  <_> )  | \/    <   /_____/  /    ^   /|   ||    |   \    Y    /    ^   / /_____/ \  \_/   \   |
- |____|     |____|______\___  /    |__|  (____  /|__|_|  /\___  >\/\_/ \____/|__|  |__|_ \           \____   | |___||____|    \___|_  /\____   |           \_____  /___|
+ |____|     |____|______\___  /    |__|  (____  /|__|_|  /\___  >\/\_/ \____/|__|  |__|_ \           \____   | |___||____|    \___|_ /\____   |           \_____  /___|
                  /_____/    \/                \/       \/     \/                        \/                |__|                      \/      |__|                 \/     
 
                                                      _:_
@@ -47,7 +49,7 @@ _____________________  ___________                                              
    
     
     """
-    print(f"{Fore.CYAN}{splash}{Style.RESET_ALL}")
+    print(f"{Fore.TEAL}{splash}{Style.RESET_ALL}")
 
 # Columnar Display Helper Function
 def display_in_columns(options, column_count=2):
@@ -59,71 +61,140 @@ def display_in_columns(options, column_count=2):
     for i in range(0, len(formatted_options), column_count):
         print("    ".join(formatted_options[i:i + column_count]))
 
-# SSH Port Forwarding
-def setup_ssh_port_forwarding():
-    print(f"\n{Fore.YELLOW}SSH Port Forwarding:{Style.RESET_ALL}")
-    local_port = input("Enter local port to forward: ")
-    target_host = input("Enter target host (e.g., 10.0.0.1): ")
-    target_port = input("Enter target port (e.g., 80): ")
-    try:
-        command = f"ssh -L {local_port}:{target_host}:{target_port} user@remote_host"
-        print(f"Executing: {command}")
-        subprocess.run(command, shell=True, check=True)
-    except Exception as e:
-        print(f"{Fore.RED}Error: {e}{Style.RESET_ALL}")
+# Methodology Layout
+def display_methodology():
+    methodology = """
+    Penetration Testing Methodology:
 
-# MSF Port Forwarding
-def setup_msf_port_forwarding():
-    print(f"\n{Fore.YELLOW}MSF Port Forwarding:{Style.RESET_ALL}")
-    print("To setup port forwarding in Metasploit, use:")
-    print("1. Use the 'portfwd' command.")
-    print("   Example: portfwd add -l [local_port] -r [remote_host] -p [remote_port]")
-    input(f"{Fore.GREEN}Press Enter to return to menu...{Style.RESET_ALL}")
+    1. Reconnaissance (Information Gathering)
+        - Network Discovery
+        - OS Fingerprinting
+        - Service Enumeration
+
+    2. Scanning & Enumeration
+        - Vulnerability Scanning
+        - Enumeration of SMB, DNS, HTTP, etc.
+        - Port Scanning with Nmap
+
+    3. Exploitation
+        - Web Application Exploits
+        - Network Exploits
+        - Social Engineering Attacks
+
+    4. Gaining Access
+        - Brute Force Attacks (SSH, HTTP, SMB, etc.)
+        - Remote Exploits
+        - Web Shells
+
+    5. Maintaining Access
+        - Creating Backdoors
+        - Installing Persistent Agents
+        - Privilege Escalation
+
+    6. Covering Tracks
+        - Log Clearing
+        - History Deletion
+        - Traffic Spoofing
+
+    7. Reporting & Results
+        - Documenting Findings
+        - Recommendations
+        - Executive Summary
+
+    """
+    print(f"{Fore.TEAL}{methodology}{Style.RESET_ALL}")
 
 # Main Menu
 def display_main_menu():
-    print(f"\n{Fore.CYAN}Main Menu:{Style.RESET_ALL}")
+    print(f"\n{Fore.TEAL}Main Menu:{Style.RESET_ALL}")
     options = [
         "Reconnaissance Tools", 
         "Scanning & Enumeration", 
-        "Exploitation Tools", 
-        "Proxies", 
         "Gaining Access", 
+        "Proxies", 
         "Maintaining Access", 
         "Covering Tracks", 
         "Reports & Results", 
+        "Methodology", 
         "Exit"
     ]
     display_in_columns(options, column_count=3)
 
-# Maintaining Access Menu
+# Sub-menus
+def reconnaissance_tools_menu():
+    print(f"\n{Fore.TEAL}Reconnaissance Tools:{Style.RESET_ALL}")
+    options = [
+        "Use 'more_mass' for mass data gathering",
+        "Use 'email_address_harvester' for email harvesting",
+        "Return to Main Menu"
+    ]
+    display_in_columns(options, column_count=2)
+
+def scanning_enumeration_menu():
+    print(f"\n{Fore.TEAL}Scanning & Enumeration:{Style.RESET_ALL}")
+    options = [
+        "Network Scan with Nmap",
+        "Vulnerability Scan",
+        "DNS Enumeration",
+        "Return to Main Menu"
+    ]
+    display_in_columns(options, column_count=2)
+
+def gaining_access_menu():
+    print(f"\n{Fore.TEAL}Gaining Access:{Style.RESET_ALL}")
+    options = [
+        "Launch MSFVenom",
+        "Launch Metasploit",
+        "Launch Veil",
+        "Brute Force with Hydra",
+        "Exploit SMB with EternalBlue",
+        "Web Shell Upload",
+        "Return to Main Menu"
+    ]
+    display_in_columns(options, column_count=2)
+
+def proxies_menu():
+    print(f"\n{Fore.TEAL}Proxies:{Style.RESET_ALL}")
+    options = [
+        "Configure Proxychains",
+        "Test Proxychains Setup",
+        "Setup Tor Network",
+        "Return to Main Menu"
+    ]
+    display_in_columns(options, column_count=2)
+
 def maintaining_access_menu():
-    print(f"\n{Fore.CYAN}Maintaining Access:{Style.RESET_ALL}")
+    print(f"\n{Fore.TEAL}Maintaining Access:{Style.RESET_ALL}")
     options = [
         "Set up Backdoors",
         "Install Persistent Agents",
         "Remote Access Tools",
         "Setup SSH Port Forwarding",
         "Setup MSF Port Forwarding",
+        "Apply AMSI Bypass",
         "Return to Main Menu"
     ]
     display_in_columns(options, column_count=2)
 
-    choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}")
-    if choice == "1":
-        print("Backdoors functionality coming soon...")
-    elif choice == "2":
-        print("Persistent agents functionality coming soon...")
-    elif choice == "3":
-        print("Remote access tools functionality coming soon...")
-    elif choice == "4":
-        setup_ssh_port_forwarding()
-    elif choice == "5":
-        setup_msf_port_forwarding()
-    elif choice == "6":
-        return
-    else:
-        print(f"{Fore.RED}Invalid choice, returning to main menu.{Style.RESET_ALL}")
+def covering_tracks_menu():
+    print(f"\n{Fore.TEAL}Covering Tracks:{Style.RESET_ALL}")
+    options = [
+        "Log File Removal",
+        "Clear Bash History",
+        "Spoof Network Traffic",
+        "Return to Main Menu"
+    ]
+    display_in_columns(options, column_count=2)
+
+def reports_results_menu():
+    print(f"\n{Fore.TEAL}Reports & Results:{Style.RESET_ALL}")
+    options = [
+        "Generate Summary Report",
+        "Export to CSV",
+        "View Detailed Logs",
+        "Return to Main Menu"
+    ]
+    display_in_columns(options, column_count=2)
 
 # Main Function
 def main():
@@ -134,21 +205,21 @@ def main():
         choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}")
         
         if choice == "1":
-            print("Reconnaissance Tools menu coming soon...")
+            reconnaissance_tools_menu()
         elif choice == "2":
-            print("Scanning & Enumeration menu coming soon...")
+            scanning_enumeration_menu()
         elif choice == "3":
-            print("Exploitation Tools menu coming soon...")
+            gaining_access_menu()
         elif choice == "4":
-            print("Proxies menu coming soon...")
+            proxies_menu()
         elif choice == "5":
-            print("Gaining Access menu coming soon...")
-        elif choice == "6":
             maintaining_access_menu()
+        elif choice == "6":
+            covering_tracks_menu()
         elif choice == "7":
-            print("Covering Tracks menu coming soon...")
+            reports_results_menu()
         elif choice == "8":
-            print("Reports & Results menu coming soon...")
+            display_methodology()
         elif choice == "9":
             print(f"{Fore.RED}Exiting...{Style.RESET_ALL}")
             break
