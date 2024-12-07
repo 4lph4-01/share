@@ -59,78 +59,34 @@ def display_in_columns(options, column_count=2):
     for i in range(0, len(formatted_options), column_count):
         print("    ".join(formatted_options[i:i + column_count]))
 
-# Tool Functions
-def launch_tool(command):
-    try:
-        subprocess.run(command, check=True)
-    except FileNotFoundError:
-        print(f"{Fore.RED}Error: Command not found - {command[0]}{Style.RESET_ALL}")
-    except Exception as e:
-        print(f"{Fore.RED}An error occurred: {e}{Style.RESET_ALL}")
-
-def launch_msfvenom():
-    print(f"{Fore.YELLOW}Launching MSFVenom...{Style.RESET_ALL}")
-    launch_tool(["msfvenom"])
-
+# SSH Port Forwarding
 def setup_ssh_port_forwarding():
-    print(f"{Fore.YELLOW}Setting up SSH port forwarding...{Style.RESET_ALL}")
-    source_port = input("Enter source port (e.g., 8080): ")
-    target_host = input("Enter target host (e.g., 192.168.1.100): ")
+    print(f"\n{Fore.YELLOW}SSH Port Forwarding:{Style.RESET_ALL}")
+    local_port = input("Enter local port to forward: ")
+    target_host = input("Enter target host (e.g., 10.0.0.1): ")
     target_port = input("Enter target port (e.g., 80): ")
-    remote_user = input("Enter remote username (e.g., user): ")
-    remote_host = input("Enter remote host (e.g., example.com): ")
     try:
-        command = [
-            "ssh",
-            "-L", f"{source_port}:{target_host}:{target_port}",
-            f"{remote_user}@{remote_host}"
-        ]
-        print(f"{Fore.GREEN}Executing: {' '.join(command)}{Style.RESET_ALL}")
-        subprocess.run(command, check=True)
+        command = f"ssh -L {local_port}:{target_host}:{target_port} user@remote_host"
+        print(f"Executing: {command}")
+        subprocess.run(command, shell=True, check=True)
     except Exception as e:
-        print(f"{Fore.RED}Failed to set up SSH port forwarding: {e}{Style.RESET_ALL}")
+        print(f"{Fore.RED}Error: {e}{Style.RESET_ALL}")
 
+# MSF Port Forwarding
 def setup_msf_port_forwarding():
-    print(f"{Fore.YELLOW}Setting up MSF port forwarding...{Style.RESET_ALL}")
-    print(f"{Fore.CYAN}To set up port forwarding in Metasploit, run the following:{Style.RESET_ALL}")
-    print(f"{Fore.GREEN}portfwd add -l <local_port> -p <remote_port> -r <remote_host>{Style.RESET_ALL}")
-
-# Sub-menus
-def proxies_menu():
-    print(f"\n{Fore.CYAN}Proxies:{Style.RESET_ALL}")
-    options = [
-        "Configure Proxychains",
-        "Test Proxychains Setup",
-        "Setup Tor Network",
-        "Setup MSF Port Forwarding",
-        "Setup SSH Port Forwarding",
-        "Return to Main Menu"
-    ]
-    display_in_columns(options, column_count=2)
-
-    choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}")
-    if choice == "1":
-        launch_tool(["proxychains", "firefox"])
-    elif choice == "2":
-        launch_tool(["proxychains", "curl", "http://ipinfo.io"])
-    elif choice == "3":
-        launch_tool(["tor"])
-    elif choice == "4":
-        setup_msf_port_forwarding()
-    elif choice == "5":
-        setup_ssh_port_forwarding()
-    elif choice == "6":
-        return
-    else:
-        print(f"{Fore.RED}Invalid choice, returning to main menu.{Style.RESET_ALL}")
+    print(f"\n{Fore.YELLOW}MSF Port Forwarding:{Style.RESET_ALL}")
+    print("To setup port forwarding in Metasploit, use:")
+    print("1. Use the 'portfwd' command.")
+    print("   Example: portfwd add -l [local_port] -r [remote_host] -p [remote_port]")
+    input(f"{Fore.GREEN}Press Enter to return to menu...{Style.RESET_ALL}")
 
 # Main Menu
 def display_main_menu():
     print(f"\n{Fore.CYAN}Main Menu:{Style.RESET_ALL}")
     options = [
-        "Exploitation Tools", 
         "Reconnaissance Tools", 
         "Scanning & Enumeration", 
+        "Exploitation Tools", 
         "Proxies", 
         "Gaining Access", 
         "Maintaining Access", 
@@ -140,23 +96,60 @@ def display_main_menu():
     ]
     display_in_columns(options, column_count=3)
 
+# Maintaining Access Menu
+def maintaining_access_menu():
+    print(f"\n{Fore.CYAN}Maintaining Access:{Style.RESET_ALL}")
+    options = [
+        "Set up Backdoors",
+        "Install Persistent Agents",
+        "Remote Access Tools",
+        "Setup SSH Port Forwarding",
+        "Setup MSF Port Forwarding",
+        "Return to Main Menu"
+    ]
+    display_in_columns(options, column_count=2)
+
+    choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}")
+    if choice == "1":
+        print("Backdoors functionality coming soon...")
+    elif choice == "2":
+        print("Persistent agents functionality coming soon...")
+    elif choice == "3":
+        print("Remote access tools functionality coming soon...")
+    elif choice == "4":
+        setup_ssh_port_forwarding()
+    elif choice == "5":
+        setup_msf_port_forwarding()
+    elif choice == "6":
+        return
+    else:
+        print(f"{Fore.RED}Invalid choice, returning to main menu.{Style.RESET_ALL}")
+
 # Main Function
 def main():
     display_splash_screen()
 
     while True:
         display_main_menu()
-        try:
-            choice = int(input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}"))
-        except ValueError:
-            print(f"{Fore.RED}Please enter a valid number.{Style.RESET_ALL}")
-            continue
-
-        if choice == 1:
-            launch_msfvenom()
-        elif choice == 4:
-            proxies_menu()
-        elif choice == 9:
+        choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}")
+        
+        if choice == "1":
+            print("Reconnaissance Tools menu coming soon...")
+        elif choice == "2":
+            print("Scanning & Enumeration menu coming soon...")
+        elif choice == "3":
+            print("Exploitation Tools menu coming soon...")
+        elif choice == "4":
+            print("Proxies menu coming soon...")
+        elif choice == "5":
+            print("Gaining Access menu coming soon...")
+        elif choice == "6":
+            maintaining_access_menu()
+        elif choice == "7":
+            print("Covering Tracks menu coming soon...")
+        elif choice == "8":
+            print("Reports & Results menu coming soon...")
+        elif choice == "9":
             print(f"{Fore.RED}Exiting...{Style.RESET_ALL}")
             break
         else:
