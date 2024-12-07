@@ -47,7 +47,7 @@ _____________________  ___________                                              
    
     
     """
-    print(f"{Fore.TEAL}{splash}{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}{splash}{Style.RESET_ALL}")
 
 # Columnar Display Helper Function
 def display_in_columns(options, column_count=2):
@@ -59,9 +59,74 @@ def display_in_columns(options, column_count=2):
     for i in range(0, len(formatted_options), column_count):
         print("    ".join(formatted_options[i:i + column_count]))
 
+# Tool Functions
+def launch_tool(command):
+    try:
+        subprocess.run(command, check=True)
+    except FileNotFoundError:
+        print(f"{Fore.RED}Error: Command not found - {command[0]}{Style.RESET_ALL}")
+    except Exception as e:
+        print(f"{Fore.RED}An error occurred: {e}{Style.RESET_ALL}")
+
+def launch_msfvenom():
+    print(f"{Fore.YELLOW}Launching MSFVenom...{Style.RESET_ALL}")
+    launch_tool(["msfvenom"])
+
+def setup_ssh_port_forwarding():
+    print(f"{Fore.YELLOW}Setting up SSH port forwarding...{Style.RESET_ALL}")
+    source_port = input("Enter source port (e.g., 8080): ")
+    target_host = input("Enter target host (e.g., 192.168.1.100): ")
+    target_port = input("Enter target port (e.g., 80): ")
+    remote_user = input("Enter remote username (e.g., user): ")
+    remote_host = input("Enter remote host (e.g., example.com): ")
+    try:
+        command = [
+            "ssh",
+            "-L", f"{source_port}:{target_host}:{target_port}",
+            f"{remote_user}@{remote_host}"
+        ]
+        print(f"{Fore.GREEN}Executing: {' '.join(command)}{Style.RESET_ALL}")
+        subprocess.run(command, check=True)
+    except Exception as e:
+        print(f"{Fore.RED}Failed to set up SSH port forwarding: {e}{Style.RESET_ALL}")
+
+def setup_msf_port_forwarding():
+    print(f"{Fore.YELLOW}Setting up MSF port forwarding...{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}To set up port forwarding in Metasploit, run the following:{Style.RESET_ALL}")
+    print(f"{Fore.GREEN}portfwd add -l <local_port> -p <remote_port> -r <remote_host>{Style.RESET_ALL}")
+
+# Sub-menus
+def proxies_menu():
+    print(f"\n{Fore.CYAN}Proxies:{Style.RESET_ALL}")
+    options = [
+        "Configure Proxychains",
+        "Test Proxychains Setup",
+        "Setup Tor Network",
+        "Setup MSF Port Forwarding",
+        "Setup SSH Port Forwarding",
+        "Return to Main Menu"
+    ]
+    display_in_columns(options, column_count=2)
+
+    choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}")
+    if choice == "1":
+        launch_tool(["proxychains", "firefox"])
+    elif choice == "2":
+        launch_tool(["proxychains", "curl", "http://ipinfo.io"])
+    elif choice == "3":
+        launch_tool(["tor"])
+    elif choice == "4":
+        setup_msf_port_forwarding()
+    elif choice == "5":
+        setup_ssh_port_forwarding()
+    elif choice == "6":
+        return
+    else:
+        print(f"{Fore.RED}Invalid choice, returning to main menu.{Style.RESET_ALL}")
+
 # Main Menu
 def display_main_menu():
-    print(f"\n{Fore.TEAL}Main Menu:{Style.RESET_ALL}")
+    print(f"\n{Fore.CYAN}Main Menu:{Style.RESET_ALL}")
     options = [
         "Exploitation Tools", 
         "Reconnaissance Tools", 
@@ -75,111 +140,23 @@ def display_main_menu():
     ]
     display_in_columns(options, column_count=3)
 
-# Sub-menus
-def exploitation_tools_menu():
-    print(f"\n{Fore.TEAL}Exploitation Tools:{Style.RESET_ALL}")
-    options = [
-        "Launch MSFVenom", 
-        "Launch Metasploit", 
-        "Launch Veil", 
-        "Return to Main Menu"
-    ]
-    display_in_columns(options, column_count=2)
-
-def reconnaissance_tools_menu():
-    print(f"\n{Fore.TEAL}Reconnaissance Tools:{Style.RESET_ALL}")
-    options = [
-        "Use 'more_mass' for mass data gathering",
-        "Use 'email_address_harvester' for email harvesting",
-        "Return to Main Menu"
-    ]
-    display_in_columns(options, column_count=2)
-
-def scanning_enumeration_menu():
-    print(f"\n{Fore.TEAL}Scanning & Enumeration:{Style.RESET_ALL}")
-    options = [
-        "Network Scan with Nmap",
-        "Vulnerability Scan",
-        "DNS Enumeration",
-        "Return to Main Menu"
-    ]
-    display_in_columns(options, column_count=2)
-
-def proxies_menu():
-    print(f"\n{Fore.TEAL}Proxies:{Style.RESET_ALL}")
-    options = [
-        "Configure Proxychains",
-        "Test Proxychains Setup",
-        "Setup Tor Network",
-        "Return to Main Menu"
-    ]
-    display_in_columns(options, column_count=2)
-
-def gaining_access_menu():
-    print(f"\n{Fore.TEAL}Gaining Access:{Style.RESET_ALL}")
-    options = [
-        "Brute Force with Hydra",
-        "Exploit SMB with EternalBlue",
-        "Web Shell Upload",
-        "Return to Main Menu"
-    ]
-    display_in_columns(options, column_count=2)
-
-def maintaining_access_menu():
-    print(f"\n{Fore.TEAL}Maintaining Access:{Style.RESET_ALL}")
-    options = [
-        "Set up Backdoors",
-        "Install Persistent Agents",
-        "Remote Access Tools",
-        "Return to Main Menu"
-    ]
-    display_in_columns(options, column_count=2)
-
-def covering_tracks_menu():
-    print(f"\n{Fore.TEAL}Covering Tracks:{Style.RESET_ALL}")
-    options = [
-        "Log File Removal",
-        "Clear Bash History",
-        "Spoof Network Traffic",
-        "Return to Main Menu"
-    ]
-    display_in_columns(options, column_count=2)
-
-def reports_results_menu():
-    print(f"\n{Fore.TEAL}Reports & Results:{Style.RESET_ALL}")
-    options = [
-        "Generate Summary Report",
-        "Export to CSV",
-        "View Detailed Logs",
-        "Return to Main Menu"
-    ]
-    display_in_columns(options, column_count=2)
-
 # Main Function
 def main():
     display_splash_screen()
 
     while True:
         display_main_menu()
-        choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}")
-        
-        if choice == "1":
-            exploitation_tools_menu()
-        elif choice == "2":
-            reconnaissance_tools_menu()
-        elif choice == "3":
-            scanning_enumeration_menu()
-        elif choice == "4":
+        try:
+            choice = int(input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}"))
+        except ValueError:
+            print(f"{Fore.RED}Please enter a valid number.{Style.RESET_ALL}")
+            continue
+
+        if choice == 1:
+            launch_msfvenom()
+        elif choice == 4:
             proxies_menu()
-        elif choice == "5":
-            gaining_access_menu()
-        elif choice == "6":
-            maintaining_access_menu()
-        elif choice == "7":
-            covering_tracks_menu()
-        elif choice == "8":
-            reports_results_menu()
-        elif choice == "9":
+        elif choice == 9:
             print(f"{Fore.RED}Exiting...{Style.RESET_ALL}")
             break
         else:
