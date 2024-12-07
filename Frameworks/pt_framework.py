@@ -182,6 +182,7 @@ def covering_tracks_menu():
         "Log File Removal",
         "Clear Bash History",
         "Spoof Network Traffic",
+        "Clear Metasploit Evidence",
         "Return to Main Menu"
     ]
     display_in_columns(options, column_count=2)
