@@ -61,6 +61,24 @@ def display_in_columns(options, column_count=2):
     for i in range(0, len(formatted_options), column_count):
         print("    ".join(formatted_options[i:i + column_count]))
 
+# Check Tool Installation
+def check_tool(tool_name):
+    return shutil.which(tool_name) is not None
+
+def install_tool(tool_name):
+    if sys.platform.startswith("linux"):
+        subprocess.run(["sudo", "apt-get", "install", "-y", tool_name])
+    else:
+        print(f"{Fore.RED}Automatic installation not supported on this OS.{Style.RESET_ALL}")
+
+def check_and_install_tools(tools):
+    for tool in tools:
+        if not check_tool(tool):
+            print(f"{Fore.RED}{tool} is not installed.{Style.RESET_ALL}")
+            choice = input(f"Do you want to install {tool}? (y/n): ").lower()
+            if choice == "y":
+                install_tool(tool)
+
 # Methodology Layout
 def display_methodology():
     methodology = """
@@ -104,10 +122,59 @@ def display_methodology():
     """
     print(f"{Fore.TEAL}{methodology}{Style.RESET_ALL}")
 
+# Sub-menus
+def gaining_access_menu():
+    print(f"\n{Fore.TEAL}Gaining Access:{Style.RESET_ALL}")
+    options = [
+        "Launch MSFVenom",
+        "Launch Metasploit",
+        "Launch Veil",
+        "Brute Force with Hydra",
+        "Exploit SMB with EternalBlue",
+        "Web Shell Upload",
+        "Yersinia Suite",
+        "Return to Main Menu"
+    ]
+    display_in_columns(options, column_count=2)
+
+    choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}")
+    if choice == "7":
+        yersinia_menu()
+
+def yersinia_menu():
+    print(f"\n{Fore.TEAL}Yersinia Suite:{Style.RESET_ALL}")
+    options = [
+        "Launch Yersinia Interactive Mode",
+        "Perform DHCP Attack",
+        "Perform STP Attack",
+        "Perform CDP Attack",
+        "Perform VLAN Attack",
+        "Return to Gaining Access Menu"
+    ]
+    display_in_columns(options, column_count=2)
+
+    choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}")
+    if choice == "1":
+        subprocess.run(["yersinia", "-I"])
+    elif choice == "2":
+        subprocess.run(["yersinia", "-G", "-A", "dhcp"])
+    elif choice == "3":
+        subprocess.run(["yersinia", "-G", "-A", "stp"])
+    elif choice == "4":
+        subprocess.run(["yersinia", "-G", "-A", "cdp"])
+    elif choice == "5":
+        subprocess.run(["yersinia", "-G", "-A", "vlan"])
+    elif choice == "6":
+        gaining_access_menu()
+    else:
+        print(f"{Fore.RED}Invalid choice, returning to Gaining Access Menu.{Style.RESET_ALL}")
+        gaining_access_menu()
+
 # Main Menu
 def display_main_menu():
     print(f"\n{Fore.TEAL}Main Menu:{Style.RESET_ALL}")
     options = [
+        "Check Required Tools",
         "Reconnaissance Tools", 
         "Scanning & Enumeration", 
         "Gaining Access", 
@@ -120,108 +187,20 @@ def display_main_menu():
     ]
     display_in_columns(options, column_count=3)
 
-# Sub-menus
-def reconnaissance_tools_menu():
-    print(f"\n{Fore.TEAL}Reconnaissance Tools:{Style.RESET_ALL}")
-    options = [
-        "Use 'more_mass' for mass data gathering",
-        "Use 'email_address_harvester' for email harvesting",
-        "Return to Main Menu"
-    ]
-    display_in_columns(options, column_count=2)
-
-def scanning_enumeration_menu():
-    print(f"\n{Fore.TEAL}Scanning & Enumeration:{Style.RESET_ALL}")
-    options = [
-        "Network Scan with Nmap",
-        "Vulnerability Scan",
-        "DNS Enumeration",
-        "Return to Main Menu"
-    ]
-    display_in_columns(options, column_count=2)
-
-def gaining_access_menu():
-    print(f"\n{Fore.TEAL}Gaining Access:{Style.RESET_ALL}")
-    options = [
-        "Launch MSFVenom",
-        "Launch Metasploit",
-        "Launch Veil",
-        "Brute Force with Hydra",
-        "Exploit SMB with EternalBlue",
-        "Web Shell Upload",
-        "Return to Main Menu"
-    ]
-    display_in_columns(options, column_count=2)
-
-def proxies_menu():
-    print(f"\n{Fore.TEAL}Proxies:{Style.RESET_ALL}")
-    options = [
-        "Configure Proxychains",
-        "Test Proxychains Setup",
-        "Setup Tor Network",
-        "Return to Main Menu"
-    ]
-    display_in_columns(options, column_count=2)
-
-def maintaining_access_menu():
-    print(f"\n{Fore.TEAL}Maintaining Access:{Style.RESET_ALL}")
-    options = [
-        "Set up Backdoors",
-        "Install Persistent Agents",
-        "Remote Access Tools",
-        "Setup SSH Port Forwarding",
-        "Setup MSF Port Forwarding",
-        "Apply AMSI Bypass",
-        "Return to Main Menu"
-    ]
-    display_in_columns(options, column_count=2)
-
-def covering_tracks_menu():
-    print(f"\n{Fore.TEAL}Covering Tracks:{Style.RESET_ALL}")
-    options = [
-        "Log File Removal",
-        "Clear Bash History",
-        "Spoof Network Traffic",
-        "Clear Metasploit Evidence",
-        "Return to Main Menu"
-    ]
-    display_in_columns(options, column_count=2)
-
-def reports_results_menu():
-    print(f"\n{Fore.TEAL}Reports & Results:{Style.RESET_ALL}")
-    options = [
-        "Generate Summary Report",
-        "Export to CSV",
-        "View Detailed Logs",
-        "Return to Main Menu"
-    ]
-    display_in_columns(options, column_count=2)
-
 # Main Function
 def main():
     display_splash_screen()
+    required_tools = ["nmap", "hydra", "yersinia", "metasploit"]
 
     while True:
         display_main_menu()
         choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}")
         
         if choice == "1":
-            reconnaissance_tools_menu()
-        elif choice == "2":
-            scanning_enumeration_menu()
+            check_and_install_tools(required_tools)
         elif choice == "3":
             gaining_access_menu()
-        elif choice == "4":
-            proxies_menu()
-        elif choice == "5":
-            maintaining_access_menu()
-        elif choice == "6":
-            covering_tracks_menu()
-        elif choice == "7":
-            reports_results_menu()
-        elif choice == "8":
-            display_methodology()
-        elif choice == "9":
+        elif choice == "10":
             print(f"{Fore.RED}Exiting...{Style.RESET_ALL}")
             break
         else:
