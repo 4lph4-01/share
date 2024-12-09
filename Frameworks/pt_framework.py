@@ -51,6 +51,7 @@ _____________________  ___________                                              
     """
     print(f"{Fore.YELLOW}{splash}{Style.RESET_ALL}")
 
+
 # Columnar Display Helper Function
 def display_in_columns(options, column_count=2):
     max_length = max(len(option) for option in options)
@@ -61,7 +62,7 @@ def display_in_columns(options, column_count=2):
     for i in range(0, len(formatted_options), column_count):
         print("    ".join(formatted_options[i:i + column_count]))
 
-# Run OSINT Tools (more_mass, Shodan, HackerTarget)
+# OSINT Tools (More_Mass, Shodan, HackerTarget)
 def run_osint_tools():
     print(f"{Fore.CYAN}Running OSINT Tools (More_Mass, Shodan, HackerTarget):{Style.RESET_ALL}")
 
@@ -91,13 +92,39 @@ def run_osint_tools():
     except Exception as e:
         print(f"{Fore.RED}Error running HackerTarget DNS Lookup: {e}{Style.RESET_ALL}")
 
+# Gaining Access Tools (Metasploit, SQLMap, Veil Evasion)
+def gaining_access_tools():
+    print(f"{Fore.CYAN}Running Gaining Access Tools:{Style.RESET_ALL}")
+    
+    # Metasploit Integration
+    try:
+        print(f"{Fore.GREEN}Running Metasploit...{Style.RESET_ALL}")
+        subprocess.run(["msfconsole", "-q"], check=True)
+    except Exception as e:
+        print(f"{Fore.RED}Error running Metasploit: {e}{Style.RESET_ALL}")
+    
+    # SQLMap Integration
+    try:
+        print(f"{Fore.GREEN}Running SQLMap for SQL Injection Testing...{Style.RESET_ALL}")
+        target = input("Enter target URL for SQLMap: ")
+        subprocess.run(["sqlmap", "-u", target, "--batch"], check=True)
+    except Exception as e:
+        print(f"{Fore.RED}Error running SQLMap: {e}{Style.RESET_ALL}")
+    
+    # Veil Evasion
+    try:
+        print(f"{Fore.GREEN}Running Veil Evasion for Payload Generation...{Style.RESET_ALL}")
+        subprocess.run(["veil-evasion"], check=True)
+    except Exception as e:
+        print(f"{Fore.RED}Error running Veil Evasion: {e}{Style.RESET_ALL}")
+
 # Main Menu
 def main_menu():
     display_splash_screen()
 
     options = [
-        "Penetration Test Methodology",
-        "Reconnaissance & Information Gathering (OSINT)",
+        "Methodology",
+        "OSINT (Recon)",
         "Scanning & Enumeration",
         "Gaining Access",
         "Reporting",
@@ -114,7 +141,7 @@ def main_menu():
     elif choice == "3":
         print(f"{Fore.RED}Scanning & Enumeration tools coming soon!{Style.RESET_ALL}")
     elif choice == "4":
-        print(f"{Fore.RED}Gaining Access tools coming soon!{Style.RESET_ALL}")
+        gaining_access_tools()
     elif choice == "5":
         generate_report()
     elif choice == "6":
