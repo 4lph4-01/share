@@ -1,6 +1,5 @@
 ######################################################################################################################################################################################################################
-# Python script Penetration Testing & Ethical Hacking Framework, Note: Be mindful of the scope of work, & rules of engagement. Ensure more_mass.py is in the same working directory or absolute
-# path for integration. 
+# Python script Penetration Testing & Ethical Hacking Framework, Note: Be mindful of the scope of work, & rules of engagement. Ensure more_mass.py is in the same working directory or absolutepath for integration. 
 # sudo python3 pt_framework.py. Optional API's, and subdomain bruteforce. 
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software 
 # without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons 
