@@ -23,34 +23,14 @@ from colorama import Fore, Style
 # Splash Screen
 def display_splash_screen():
     splash = """
-    
 _____________________  ___________                                                  __                  _____  ______________  ___ ___    _____           _______  ____ 
 \______   \__    ___/  \_   _____/____________     _____   ______  _  _____________|  | __             /  |  |/_   \______   \/   |   \  /  |  |          \   _  \/_   |
  |     ___/ |    |      |    __)  \_  __ \__  \   /     \_/ __ \ \/ \/ /  _ \_  __ \  |/ /   ______   /   |  |_|   ||     ___/    ~    \/   |  |_  ______ /  /_\  \|   |
  |    |     |    |      |     \    |  | \// __ \_|  Y Y  \  ___/\     (  <_> )  | \/    <   /_____/  /    ^   /|   ||    |   \    Y    /    ^   / /_____/ \  \_/   \   |
  |____|     |____|______\___  /    |__|  (____  /|__|_|  /\___  >\/\_/ \____/|__|  |__|_ \           \____   | |___||____|    \___|_ /\____   |           \_____  /___|
                  /_____/    \/                \/       \/     \/                        \/                |__|                      \/      |__|                 \/     
-
-                                                     _:_
-                                                    '-.-'
-                                           ()      __.'.__
-                                        .-:--:-.  |_______|
-                                 ()      \____/    \=====/
-                                 /\      {====}     )___(
-                      (\=,      //\\      )__(     /_____\
-      __    |'-'-'|  //  .\    (    )    /____\     |   |
-     /  \   |_____| (( \_  \    )__(      |  |      |   |
-     \__/    |===|   ))  `\_)  /____\     |  |      |   |
-    /____\   |   |  (/     \    |  |      |  |      |   |
-     |  |    |   |   | _.-'|    |  |      |  |      |   |
-     |__|    )___(    )___(    /____\    /____\    /_____\
-    (====)  (=====)  (=====)  (======)  (======)  (=======)
-   (______)(_______)(_______)(________)(________)(_________)
-   
-    
     """
-    print(f"{Fore.YELLOW}{splash}{Style.RESET_ALL}")
-
+    print(f"{Fore.GREEN}{splash}{Style.RESET_ALL}")
 
 # Columnar Display Helper Function
 def display_in_columns(options, column_count=2):
@@ -62,96 +42,25 @@ def display_in_columns(options, column_count=2):
     for i in range(0, len(formatted_options), column_count):
         print("    ".join(formatted_options[i:i + column_count]))
 
-# OSINT Tools (More_Mass, Shodan, HackerTarget)
-def run_osint_tools():
-    print(f"{Fore.CYAN}Running OSINT Tools (More_Mass, Shodan, HackerTarget):{Style.RESET_ALL}")
+# Check Tool Installation
+def check_tool(tool_name):
+    return shutil.which(tool_name) is not None
 
-    # OSINT: More_Mass
-    try:
-        print(f"{Fore.GREEN}Running More_Mass.py for OSINT...{Style.RESET_ALL}")
-        subprocess.run(["python3", "more_mass.py"], check=True)
-    except Exception as e:
-        print(f"{Fore.RED}Error running More_Mass: {e}{Style.RESET_ALL}")
-
-    # OSINT: Shodan
-    try:
-        print(f"{Fore.GREEN}Running Shodan for OSINT...{Style.RESET_ALL}")
-        shodan_api_key = input("Enter your Shodan API Key: ")
-        query = input("Enter Shodan query: ")
-        response = requests.get(f"https://api.shodan.io/shodan/host/search?key={shodan_api_key}&query={query}")
-        print(response.json())
-    except Exception as e:
-        print(f"{Fore.RED}Error running Shodan: {e}{Style.RESET_ALL}")
-
-    # OSINT: HackerTarget DNS Lookup
-    try:
-        print(f"{Fore.GREEN}Running HackerTarget DNS Lookup for OSINT...{Style.RESET_ALL}")
-        domain = input("Enter the domain for DNS lookup: ")
-        response = requests.get(f"https://api.hackertarget.com/dnslookup/?q={domain}")
-        print(response.text)
-    except Exception as e:
-        print(f"{Fore.RED}Error running HackerTarget DNS Lookup: {e}{Style.RESET_ALL}")
-
-# Gaining Access Tools (Metasploit, SQLMap, Veil Evasion)
-def gaining_access_tools():
-    print(f"{Fore.CYAN}Running Gaining Access Tools:{Style.RESET_ALL}")
-    
-    # Metasploit Integration
-    try:
-        print(f"{Fore.GREEN}Running Metasploit...{Style.RESET_ALL}")
-        subprocess.run(["msfconsole", "-q"], check=True)
-    except Exception as e:
-        print(f"{Fore.RED}Error running Metasploit: {e}{Style.RESET_ALL}")
-    
-    # SQLMap Integration
-    try:
-        print(f"{Fore.GREEN}Running SQLMap for SQL Injection Testing...{Style.RESET_ALL}")
-        target = input("Enter target URL for SQLMap: ")
-        subprocess.run(["sqlmap", "-u", target, "--batch"], check=True)
-    except Exception as e:
-        print(f"{Fore.RED}Error running SQLMap: {e}{Style.RESET_ALL}")
-    
-    # Veil Evasion
-    try:
-        print(f"{Fore.GREEN}Running Veil Evasion for Payload Generation...{Style.RESET_ALL}")
-        subprocess.run(["veil-evasion"], check=True)
-    except Exception as e:
-        print(f"{Fore.RED}Error running Veil Evasion: {e}{Style.RESET_ALL}")
-
-# Main Menu
-def main_menu():
-    display_splash_screen()
-
-    options = [
-        "Methodology",
-        "OSINT (Recon)",
-        "Scanning & Enumeration",
-        "Gaining Access",
-        "Reporting",
-        "Exit"
-    ]
-    display_in_columns(options)
-
-    choice = input(f"{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}")
-    
-    if choice == "1":
-        display_methodology()
-    elif choice == "2":
-        run_osint_tools()
-    elif choice == "3":
-        print(f"{Fore.RED}Scanning & Enumeration tools coming soon!{Style.RESET_ALL}")
-    elif choice == "4":
-        gaining_access_tools()
-    elif choice == "5":
-        generate_report()
-    elif choice == "6":
-        print(f"{Fore.RED}Exiting...{Style.RESET_ALL}")
-        sys.exit()
+def install_tool(tool_name):
+    if sys.platform.startswith("linux"):
+        subprocess.run(["sudo", "apt-get", "install", "-y", tool_name])
     else:
-        print(f"{Fore.RED}Invalid choice! Please try again.{Style.RESET_ALL}")
-        main_menu()
+        print(f"{Fore.RED}Automatic installation not supported on this OS.{Style.RESET_ALL}")
 
-# Display Penetration Test Methodology
+def check_and_install_tools(tools):
+    for tool in tools:
+        if not check_tool(tool):
+            print(f"{Fore.RED}{tool} is not installed.{Style.RESET_ALL}")
+            choice = input(f"Do you want to install {tool}? (y/n): ").lower()
+            if choice == "y":
+                install_tool(tool)
+
+# Methodology Layout
 def display_methodology():
     methodology = """
     Penetration Testing Methodology:
@@ -192,20 +101,126 @@ def display_methodology():
         - Executive Summary
     """
     print(f"{Fore.GREEN}{methodology}{Style.RESET_ALL}")
-    main_menu()
 
-# Generate Report
-def generate_report():
-    print(f"{Fore.GREEN}Generating Report...{Style.RESET_ALL}")
-    with open("penetration_test_report.txt", "w") as report_file:
-        report_file.write("Penetration Test Report\n")
-        report_file.write("======================\n")
-        report_file.write(f"Test Date: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
-        report_file.write(f"Test Summary: OSINT tools used, including More_Mass, Shodan, and HackerTarget DNS lookup.\n")
+# Reconnaissance & Information Gathering
+def run_more_mass():
+    subprocess.run(["python3", "more_mass.py"])
 
-    print(f"{Fore.GREEN}Report generated and saved as 'penetration_test_report.txt'.{Style.RESET_ALL}")
-    main_menu()
+def dns_lookup():
+    domain = input(f"{Fore.YELLOW}Enter Domain for DNS Lookup: {Style.RESET_ALL}")
+    subprocess.run(f"dig {domain}", shell=True)
 
-# Run the program
+# Scanning & Enumeration Tools
+def run_nmap():
+    ip = input(f"{Fore.YELLOW}Enter Target IP for Nmap Scan: {Style.RESET_ALL}")
+    scan_type = input(f"{Fore.YELLOW}Enter Scan Type (e.g. sS, sT, sU): {Style.RESET_ALL}")
+    subprocess.run(f"nmap -{scan_type} {ip}", shell=True)
+
+def run_nikto():
+    ip = input(f"{Fore.YELLOW}Enter Target IP for Nikto Scan: {Style.RESET_ALL}")
+    subprocess.run(f"nikto -h {ip}", shell=True)
+
+# Gaining Access Tools
+def metasploit_menu():
+    print(f"{Fore.GREEN}Launching Metasploit Framework...{Style.RESET_ALL}")
+    subprocess.run(["msfconsole"])
+
+def veil_evasion():
+    print(f"{Fore.GREEN}Launching Veil Evasion...{Style.RESET_ALL}")
+    subprocess.run(["veil"])
+
+# Main Menu
+def main_menu():
+    display_splash_screen()
+    check_and_install_tools(['nmap', 'nikto', 'metasploit', 'veil', 'more_mass'])
+
+    options = [
+        "Penetration Testing Methodology",
+        "Reconnaissance & Information Gathering",
+        "Scanning & Enumeration",
+        "Gaining Access Tools",
+        "Exit"
+    ]
+    display_in_columns(options)
+
+    choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}")
+    if choice == "1":
+        display_methodology()
+    elif choice == "2":
+        reconnaissance_menu()
+    elif choice == "3":
+        scanning_menu()
+    elif choice == "4":
+        gaining_access_menu()
+    elif choice == "5":
+        print(f"{Fore.RED}Exiting...{Style.RESET_ALL}")
+        sys.exit()
+    else:
+        print(f"{Fore.RED}Invalid choice! Please try again.{Style.RESET_ALL}")
+        main_menu()
+
+# Reconnaissance Menu
+def reconnaissance_menu():
+    print(f"\n{Fore.GREEN}Reconnaissance & Information Gathering:{Style.RESET_ALL}")
+    options = [
+        "Run More_Mass (OSINT)",
+        "DNS Lookup",
+        "Return to Main Menu"
+    ]
+    display_in_columns(options)
+
+    choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}")
+    if choice == "1":
+        run_more_mass()
+    elif choice == "2":
+        dns_lookup()
+    elif choice == "3":
+        main_menu()
+    else:
+        print(f"{Fore.RED}Invalid choice! Please try again.{Style.RESET_ALL}")
+        reconnaissance_menu()
+
+# Scanning Menu
+def scanning_menu():
+    print(f"\n{Fore.GREEN}Scanning & Enumeration Tools:{Style.RESET_ALL}")
+    options = [
+        "Run Nmap Scan",
+        "Run Nikto Scan",
+        "Return to Main Menu"
+    ]
+    display_in_columns(options)
+
+    choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}")
+    if choice == "1":
+        run_nmap()
+    elif choice == "2":
+        run_nikto()
+    elif choice == "3":
+        main_menu()
+    else:
+        print(f"{Fore.RED}Invalid choice! Please try again.{Style.RESET_ALL}")
+        scanning_menu()
+
+# Gaining Access Menu
+def gaining_access_menu():
+    print(f"\n{Fore.GREEN}Gaining Access Tools:{Style.RESET_ALL}")
+    options = [
+        "Metasploit Framework",
+        "Veil Evasion",
+        "Return to Main Menu"
+    ]
+    display_in_columns(options)
+
+    choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}")
+    if choice == "1":
+        metasploit_menu()
+    elif choice == "2":
+        veil_evasion()
+    elif choice == "3":
+        main_menu()
+    else:
+        print(f"{Fore.RED}Invalid choice! Please try again.{Style.RESET_ALL}")
+        gaining_access_menu()
+
 if __name__ == "__main__":
     main_menu()
