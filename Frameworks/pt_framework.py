@@ -19,9 +19,9 @@ import requests
 from pathlib import Path
 from colorama import Fore, Style
 
-# Splash Screen
 def display_splash_screen():
-    splash = """
+    splash = r"""
+    
    _____________________  ___________                                                  __                 _____  ____         .__       _____           _______  ____ 
 \______   \__    ___/  \_   _____/____________     _____   ______  _  _____________|  | __            /  |  |/_   |______  |  |__   /  |  |          \   _  \/_   |
  |     ___/ |    |      |    __)  \_  __ \__  \   /     \_/ __ \ \/ \/ /  _ \_  __ \  |/ /  ______   /   |  |_|   |\____ \ |  |  \ /   |  |_  ______ /  /_\  \|   |
@@ -47,6 +47,7 @@ def display_splash_screen():
    (______)(_______)(_______)(________)(________)(_________)
     """
     print(f"{Fore.CYAN}{splash}{Style.RESET_ALL}")
+
 
 # Check Tool Installation
 def check_tool(tool_name):
