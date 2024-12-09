@@ -54,7 +54,7 @@ _____________________  ___________                                              
    
     
     """
-    print(f"{Fore.TEAL}{splash}{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}{splash}{Style.RESET_ALL}")
 
 # Columnar Display Helper Function
 def display_in_columns(options, column_count=2):
@@ -125,7 +125,7 @@ def display_methodology():
         - Executive Summary
 
     """
-    print(f"{Fore.TEAL}{methodology}{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}{methodology}{Style.RESET_ALL}")
 
 # Reconnaissance Tools
 def run_reconnaissance_tools():
@@ -145,7 +145,7 @@ def run_scanning_tools():
     
 # Gaining Access Tools
 def gaining_access_menu():
-    print(f"\n{Fore.TEAL}Gaining Access:{Style.RESET_ALL}")
+    print(f"\n{Fore.CYAN}Gaining Access:{Style.RESET_ALL}")
     options = [
         "Launch MSFVenom",
         "Brute Force with Hydra",
@@ -190,12 +190,12 @@ def gaining_access_menu():
 # Main Menu
 def main_menu():
     display_splash_screen()
-    print(f"{Fore.TEAL}Welcome to the Penetration Testing Framework!{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}Welcome to the Penetration Testing Framework!{Style.RESET_ALL}")
     options = [
         "Penetration Test Methodology",
         "Reconnaissance & Scanning",
         "Gaining Access Tools",
-        "Setup Proxies",
+        "Setup Proxies (Placeholder)",
         "Maintaining Access (Placeholder)",
         "Covering Tracks (Placeholder)",
         "Exit"
