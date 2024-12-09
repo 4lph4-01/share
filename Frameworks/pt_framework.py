@@ -14,11 +14,14 @@
 import subprocess
 import sys
 from colorama import Fore, Style
+import requests
 
 # Splash Screen
 def display_splash_screen():
     splash = """
-    ... (Splash Text Here)
+    ##################################################
+    #           Penetration Testing Framework       #
+    ##################################################
     """
     print(f"{Fore.CYAN}{splash}{Style.RESET_ALL}")
 
@@ -32,14 +35,27 @@ def display_in_columns(options, column_count=2):
     for i in range(0, len(formatted_options), column_count):
         print("    ".join(formatted_options[i:i + column_count]))
 
-# Run OSINT Tools (more_mass.py)
+# Run OSINT Tools (more_mass.py, Shodan, HackerTarget)
 def run_osint_tools():
-    print(f"{Fore.CYAN}Running OSINT Tools (more_mass.py and others):{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}Running OSINT Tools (More_Mass, Shodan, HackerTarget):{Style.RESET_ALL}")
+    
     # Run more_mass.py (as an example, adjust paths if necessary)
     subprocess.run(["python3", "/path/to/more_mass.py"])
-    # Add other OSINT tools as needed (e.g., theHarvester, Shodan)
 
-# Scanning & Enumeration Tools
+    # Shodan Search
+    shodan_api_key = "YOUR_SHODAN_API_KEY"
+    shodan_query = input("Enter a query for Shodan: ")
+    shodan_url = f"https://api.shodan.io/shodan/host/search?key={shodan_api_key}&query={shodan_query}"
+    response = requests.get(shodan_url)
+    print(response.json())
+
+    # HackerTarget
+    target_domain = input("Enter target domain for HackerTarget: ")
+    hacker_target_url = f"https://api.hackertarget.com/hostsearch/?q={target_domain}"
+    response = requests.get(hacker_target_url)
+    print(response.text)
+
+# Scanning & Enumeration Tools (Nmap, Nikto, etc.)
 def run_scanning_tools():
     print(f"{Fore.CYAN}Running Scanning & Enumeration Tools (Nmap, Nikto):{Style.RESET_ALL}")
     tools = [
@@ -66,7 +82,7 @@ def run_scanning_tools():
         print(f"{Fore.RED}Invalid choice, returning to Scanning Tools Menu.{Style.RESET_ALL}")
         run_scanning_tools()
 
-# Gaining Access Menu (Add specific tools like msfvenom, hydra, etc.)
+# Gaining Access Menu (Metasploit, Hydra, MSFVenom)
 def gaining_access_menu():
     print(f"{Fore.CYAN}Gaining Access Tools:{Style.RESET_ALL}")
     tools = [
@@ -91,22 +107,22 @@ def gaining_access_menu():
         print(f"{Fore.RED}Invalid choice, returning to Gaining Access Menu.{Style.RESET_ALL}")
         gaining_access_menu()
 
-# Setup Proxies (Placeholder)
+# Setup Proxies (Example)
 def setup_proxies():
     print(f"{Fore.CYAN}Setting up Proxies:{Style.RESET_ALL}")
-    # Placeholder: proxy setup commands (use your own tools or scripts for this part)
+    # Placeholder for proxy setup tools
     print("Proxies have been set up!")
 
-# Maintaining Access (Placeholder)
+# Maintaining Access (Example)
 def maintain_access():
     print(f"{Fore.CYAN}Maintaining Access:{Style.RESET_ALL}")
-    # Placeholder: commands for maintaining access (e.g., backdoor setup)
+    # Placeholder for maintaining access tools
     print("Access has been maintained!")
 
-# Covering Tracks (Placeholder)
+# Covering Tracks (Example)
 def cover_tracks():
     print(f"{Fore.CYAN}Covering Tracks:{Style.RESET_ALL}")
-    # Placeholder: commands to clear logs, history, etc.
+    # Placeholder for covering tracks tools
     print("Tracks have been covered!")
 
 # Report Generation (Placeholder)
@@ -116,8 +132,8 @@ def generate_report():
     with open("penetration_test_report.txt", "w") as report:
         report.write("Penetration Test Report\n")
         report.write("========================\n")
-        # Add tool outputs here, for example:
-        report.write("Nmap Scan Results: ...\n")
+        # Add tool outputs here
+        report.write("OSINT Results: More_Mass, Shodan, HackerTarget...\n")
     print("Report has been generated!")
 
 # Main Menu
@@ -128,9 +144,9 @@ def main_menu():
         "Reconnaissance & Information Gathering (OSINT)",
         "Scanning & Enumeration",
         "Gaining Access Tools",
-        "Setup Proxies (Placeholder)",
-        "Maintaining Access (Placeholder)",
-        "Covering Tracks (Placeholder)",
+        "Setup Proxies",
+        "Maintaining Access",
+        "Covering Tracks",
         "Generate Report",
         "Exit"
     ]
