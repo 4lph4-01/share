@@ -173,15 +173,24 @@ def gaining_access_menu():
     ]
     display_in_columns(options, column_count=2)
 
-    choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}")
-    if choice == "8":
-        amsi_bypass_menu()
-    elif choice == "9":
-        target_ip = input("Enter target IP for NTLM relay: ")
-        target_port = input("Enter target port for NTLM relay: ")
-        ntlm_relay_attack(target_ip, target_port)
-    else:
-        print(f"{Fore.RED}Invalid choice, returning to Gaining Access Menu.{Style.RESET_ALL}")
+    try:
+        choice = int(input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}"))
+        if 1 <= choice <= len(options):
+            if choice == 8:
+                amsi_bypass_menu()
+            elif choice == 9:
+                target_ip = input("Enter target IP for NTLM relay: ")
+                target_port = input("Enter target port for NTLM relay: ")
+                ntlm_relay_attack(target_ip, target_port)
+            elif choice == 10:
+                main_menu()
+            else:
+                print(f"{Fore.RED}This option is under development.{Style.RESET_ALL}")
+        else:
+            print(f"{Fore.RED}Invalid choice!{Style.RESET_ALL}")
+            gaining_access_menu()
+    except ValueError:
+        print(f"{Fore.RED}Please enter a valid number.{Style.RESET_ALL}")
         gaining_access_menu()
 
 # Main Menu
@@ -196,18 +205,23 @@ def main_menu():
     ]
     display_in_columns(options)
 
-    choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}")
-    if choice == "1":
-        display_methodology()
-    elif choice == "2":
-        gaining_access_menu()
-    elif choice == "3":
-        print(f"{Fore.RED}Exiting...{Style.RESET_ALL}")
-        sys.exit()
-    else:
-        print(f"{Fore.RED}Invalid choice! Please try again.{Style.RESET_ALL}")
+    try:
+        choice = int(input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}"))
+        if choice == 1:
+            display_methodology()
+            main_menu()
+        elif choice == 2:
+            gaining_access_menu()
+        elif choice == 3:
+            print(f"{Fore.GREEN}Exiting the program. Goodbye!{Style.RESET_ALL}")
+            sys.exit(0)
+        else:
+            print(f"{Fore.RED}Invalid choice!{Style.RESET_ALL}")
+            main_menu()
+    except ValueError:
+        print(f"{Fore.RED}Please enter a valid number.{Style.RESET_ALL}")
         main_menu()
 
-# Run the program
+# Run Main Menu
 if __name__ == "__main__":
     main_menu()
