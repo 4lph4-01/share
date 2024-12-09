@@ -57,9 +57,32 @@ def run_tool(command, section="General"):
 # Reconnaissance Tools (Example: Nmap)
 def run_reconnaissance_tools():
     print(f"{Fore.CYAN}Running Reconnaissance Tools...{Style.RESET_ALL}")
-    target = input(f"{Fore.YELLOW}Enter target IP for Nmap scan: {Style.RESET_ALL}")
-    nmap_command = ["nmap", "-sV", target]
-    run_tool(nmap_command, section="Reconnaissance")
+    reconnaissance_options = [
+        "Nmap Scan",
+        "Nikto Scan",
+        "Return to Main Menu"
+    ]
+    for i, option in enumerate(reconnaissance_options, 1):
+        print(f"[{i}] {option}")
+
+    try:
+        choice = int(input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}"))
+        if choice == 1:
+            target = input(f"{Fore.YELLOW}Enter target IP for Nmap scan: {Style.RESET_ALL}")
+            nmap_command = ["nmap", "-sV", target]
+            run_tool(nmap_command, section="Reconnaissance")
+        elif choice == 2:
+            target = input(f"{Fore.YELLOW}Enter target URL for Nikto scan: {Style.RESET_ALL}")
+            nikto_command = ["nikto", "-h", target]
+            run_tool(nikto_command, section="Reconnaissance")
+        elif choice == 3:
+            main_menu()
+        else:
+            print(f"{Fore.RED}Invalid choice, please try again.{Style.RESET_ALL}")
+            run_reconnaissance_tools()
+    except ValueError:
+        print(f"{Fore.RED}Invalid input. Please enter a number.{Style.RESET_ALL}")
+        run_reconnaissance_tools()
 
 # Scanning & Enumeration Tools (Example: Nikto)
 def run_scanning_tools():
@@ -176,6 +199,6 @@ def main_menu():
         print(f"{Fore.RED}Invalid input. Please enter a number.{Style.RESET_ALL}")
         main_menu()
 
-# Run the program
+# Run the script
 if __name__ == "__main__":
     main_menu()
