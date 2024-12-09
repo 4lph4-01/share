@@ -20,7 +20,7 @@ def display_splash_screen():
     splash = """
     ... (Splash Text Here)
     """
-    print(f"{Fore.TEAL}{splash}{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}{splash}{Style.RESET_ALL}")
 
 # Display in Columns
 def display_in_columns(options, column_count=2):
@@ -34,14 +34,14 @@ def display_in_columns(options, column_count=2):
 
 # Run OSINT Tools (more_mass.py)
 def run_osint_tools():
-    print(f"{Fore.TEAL}Running OSINT Tools (more_mass.py and others):{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}Running OSINT Tools (more_mass.py and others):{Style.RESET_ALL}")
     # Run more_mass.py (as an example, adjust paths if necessary)
     subprocess.run(["python3", "/path/to/more_mass.py"])
     # Add other OSINT tools as needed (e.g., theHarvester, Shodan)
 
 # Scanning & Enumeration Tools
 def run_scanning_tools():
-    print(f"{Fore.TEAL}Running Scanning & Enumeration Tools (Nmap, Nikto):{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}Running Scanning & Enumeration Tools (Nmap, Nikto):{Style.RESET_ALL}")
     tools = [
         "Run Nmap Scan",
         "Run Nikto Scan",
@@ -68,7 +68,7 @@ def run_scanning_tools():
 
 # Gaining Access Menu (Add specific tools like msfvenom, hydra, etc.)
 def gaining_access_menu():
-    print(f"{Fore.TEAL}Gaining Access Tools:{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}Gaining Access Tools:{Style.RESET_ALL}")
     tools = [
         "Run MSFVenom",
         "Run Metasploit",
@@ -93,25 +93,25 @@ def gaining_access_menu():
 
 # Setup Proxies (Placeholder)
 def setup_proxies():
-    print(f"{Fore.TEAL}Setting up Proxies:{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}Setting up Proxies:{Style.RESET_ALL}")
     # Placeholder: proxy setup commands (use your own tools or scripts for this part)
     print("Proxies have been set up!")
 
 # Maintaining Access (Placeholder)
 def maintain_access():
-    print(f"{Fore.TEAL}Maintaining Access:{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}Maintaining Access:{Style.RESET_ALL}")
     # Placeholder: commands for maintaining access (e.g., backdoor setup)
     print("Access has been maintained!")
 
 # Covering Tracks (Placeholder)
 def cover_tracks():
-    print(f"{Fore.TEAL}Covering Tracks:{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}Covering Tracks:{Style.RESET_ALL}")
     # Placeholder: commands to clear logs, history, etc.
     print("Tracks have been covered!")
 
 # Report Generation (Placeholder)
 def generate_report():
-    print(f"{Fore.TEAL}Generating Report:{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}Generating Report:{Style.RESET_ALL}")
     # Placeholder for report generation (e.g., write output to file)
     with open("penetration_test_report.txt", "w") as report:
         report.write("Penetration Test Report\n")
