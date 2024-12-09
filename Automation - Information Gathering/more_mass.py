@@ -24,7 +24,7 @@ import whois
     
 # Banner
 def display_splash_screen():
-    splash = """
+    splash = r"""
   
     
    _____                                 _____                                      _____  ____.____   __________  ___ ___    _____           _______  ____ 
