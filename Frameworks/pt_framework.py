@@ -15,20 +15,18 @@ import subprocess
 import sys
 import os
 import shutil
-import time
-import requests
 from pathlib import Path
 from colorama import Fore, Style
 
 # Splash Screen
 def display_splash_screen():
     splash = """
-_____________________  ___________                                                  __                  _____  ______________  ___ ___    _____           _______  ____ 
-\______   \__    ___/  \_   _____/____________     _____   ______  _  _____________|  | __             /  |  |/_   \______   \/   |   \  /  |  |          \   _  \/_   |
- |     ___/ |    |      |    __)  \_  __ \__  \   /     \_/ __ \ \/ \/ /  _ \_  __ \  |/ /   ______   /   |  |_|   ||     ___/    ~    \/   |  |_  ______ /  /_\  \|   |
- |    |     |    |      |     \    |  | \// __ \_|  Y Y  \  ___/\     (  <_> )  | \/    <   /_____/  /    ^   /|   ||    |   \    Y    /    ^   / /_____/ \  \_/   \   |
- |____|     |____|______\___  /    |__|  (____  /|__|_|  /\___  >\/\_/ \____/|__|  |__|_ \           \____   | |___||____|    \___|_ /\____   |           \_____  /___|
-                 /_____/    \/                \/       \/     \/                        \/                |__|                      \/      |__|                 \/     
+_____________________  ___________                                                  
+\______   \__    ___/  \_   _____/____________     _____   ______  _  _____________|  | __             
+ |     ___/ |    |      |    __)  \_  __ \__  \   /     \_/ __ \ \/ \/ /  _ \_  __ \  |/ /   
+ |    |     |    |      |     \    |  | \// __ \_|  Y Y  \  ___/\     (  <_> )  | \/    <     
+ |____|     |____|______\___  /    |__|  (____  /|__|_|  /\___  >\/\_/ \____/|__|  |__|_ \         
+                 /_____/    \/                \/       \/     \/                        \/                 
     """
     print(f"{Fore.GREEN}{splash}{Style.RESET_ALL}")
 
@@ -110,6 +108,15 @@ def dns_lookup():
     domain = input(f"{Fore.YELLOW}Enter Domain for DNS Lookup: {Style.RESET_ALL}")
     subprocess.run(f"dig {domain}", shell=True)
 
+def run_shodan():
+    api_key = input(f"{Fore.YELLOW}Enter your Shodan API Key: {Style.RESET_ALL}")
+    query = input(f"{Fore.YELLOW}Enter Shodan Query: {Style.RESET_ALL}")
+    subprocess.run(f"shodan search {query} --apikey {api_key}", shell=True)
+
+def run_hacker_target():
+    ip = input(f"{Fore.YELLOW}Enter IP Address for HackerTarget Scan: {Style.RESET_ALL}")
+    subprocess.run(f"curl https://api.hackertarget.com/nmap/?q={ip}", shell=True)
+
 # Scanning & Enumeration Tools
 def run_nmap():
     ip = input(f"{Fore.YELLOW}Enter Target IP for Nmap Scan: {Style.RESET_ALL}")
@@ -132,13 +139,13 @@ def veil_evasion():
 # Main Menu
 def main_menu():
     display_splash_screen()
-    check_and_install_tools(['nmap', 'nikto', 'metasploit', 'veil', 'more_mass'])
+    check_and_install_tools(['nmap', 'nikto', 'metasploit', 'veil', 'shodan', 'curl'])
 
     options = [
-        "Penetration Testing Methodology",
-        "Reconnaissance & Information Gathering",
-        "Scanning & Enumeration",
-        "Gaining Access Tools",
+        "Methodology",
+        "Reconnaissance",
+        "Scanning",
+        "Gaining Access",
         "Exit"
     ]
     display_in_columns(options)
@@ -165,6 +172,8 @@ def reconnaissance_menu():
     options = [
         "Run More_Mass (OSINT)",
         "DNS Lookup",
+        "Shodan Search",
+        "HackerTarget Scan",
         "Return to Main Menu"
     ]
     display_in_columns(options)
@@ -175,6 +184,10 @@ def reconnaissance_menu():
     elif choice == "2":
         dns_lookup()
     elif choice == "3":
+        run_shodan()
+    elif choice == "4":
+        run_hacker_target()
+    elif choice == "5":
         main_menu()
     else:
         print(f"{Fore.RED}Invalid choice! Please try again.{Style.RESET_ALL}")
