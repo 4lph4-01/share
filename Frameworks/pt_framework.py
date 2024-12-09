@@ -14,37 +14,29 @@
 import subprocess
 import sys
 import os
-import shutil
+import shutil  # Added import
+import requests
 from pathlib import Path
 from colorama import Fore, Style
 
 # Splash Screen
 def display_splash_screen():
     splash = """
-_____________________  ___________                                                  
-\______   \__    ___/  \_   _____/____________     _____   ______  _  _____________|  | __             
- |     ___/ |    |      |    __)  \_  __ \__  \   /     \_/ __ \ \/ \/ /  _ \_  __ \  |/ /   
- |    |     |    |      |     \    |  | \// __ \_|  Y Y  \  ___/\     (  <_> )  | \/    <     
- |____|     |____|______\___  /    |__|  (____  /|__|_|  /\___  >\/\_/ \____/|__|  |__|_ \         
-                 /_____/    \/                \/       \/     \/                        \/                 
+    _____________________  ___________
+    \______   \__    ___/  \_   _____/
+     |     ___/ |    |      |    __)  
+     |    |     |    |      |     \   
+     |____|     |____|______\___  /   
+                          /_____/    
     """
-    print(f"{Fore.GREEN}{splash}{Style.RESET_ALL}")
-
-# Columnar Display Helper Function
-def display_in_columns(options, column_count=2):
-    max_length = max(len(option) for option in options)
-    formatted_options = [
-        f"[{index+1}] {option:<{max_length}}" 
-        for index, option in enumerate(options)
-    ]
-    for i in range(0, len(formatted_options), column_count):
-        print("    ".join(formatted_options[i:i + column_count]))
+    print(f"{Fore.CYAN}{splash}{Style.RESET_ALL}")
 
 # Check Tool Installation
 def check_tool(tool_name):
     return shutil.which(tool_name) is not None
 
 def install_tool(tool_name):
+    print(f"{Fore.YELLOW}Installing {tool_name}...{Style.RESET_ALL}")
     if sys.platform.startswith("linux"):
         subprocess.run(["sudo", "apt-get", "install", "-y", tool_name])
     else:
@@ -58,182 +50,136 @@ def check_and_install_tools(tools):
             if choice == "y":
                 install_tool(tool)
 
-# Methodology Layout
-def display_methodology():
-    methodology = """
-    Penetration Testing Methodology:
-
-    1. Reconnaissance (Information Gathering)
-        - Network Discovery
-        - OS Fingerprinting
-        - Service Enumeration
-
-    2. Scanning & Enumeration
-        - Vulnerability Scanning
-        - Enumeration of SMB, DNS, HTTP, etc.
-        - Port Scanning with Nmap
-
-    3. Exploitation
-        - Web Application Exploits
-        - Network Exploits
-        - Social Engineering Attacks
-
-    4. Gaining Access
-        - Brute Force Attacks (SSH, HTTP, SMB, etc.)
-        - Remote Exploits
-        - Web Shells
-
-    5. Maintaining Access
-        - Creating Backdoors
-        - Installing Persistent Agents
-        - Privilege Escalation
-
-    6. Covering Tracks
-        - Log Clearing
-        - History Deletion
-        - Traffic Spoofing
-
-    7. Reporting & Results
-        - Documenting Findings
-        - Recommendations
-        - Executive Summary
-    """
-    print(f"{Fore.GREEN}{methodology}{Style.RESET_ALL}")
-
 # Reconnaissance & Information Gathering
-def run_more_mass():
-    subprocess.run(["python3", "more_mass.py"])
+def reconnaissance():
+    print(f"{Fore.CYAN}Reconnaissance & Information Gathering{Style.RESET_ALL}")
+    options = [
+        "Run more_mass.py (OSINT)",
+        "Perform DNS Lookup",
+        "Perform Shodan Search",
+        "Back to Main Menu"
+    ]
+    for idx, option in enumerate(options, start=1):
+        print(f"[{idx}] {option}")
+    
+    choice = input(f"\n{Fore.YELLOW}Select an option: {Style.RESET_ALL}")
+    if choice == "1":
+        more_mass_path = "/path/to/more_mass.py"  # Update with the actual path
+        if os.path.exists(more_mass_path):
+            subprocess.run(["python3", more_mass_path])
+        else:
+            print(f"{Fore.RED}more_mass.py not found!{Style.RESET_ALL}")
+    elif choice == "2":
+        domain = input("Enter domain for DNS Lookup: ")
+        subprocess.run(["dig", domain])
+    elif choice == "3":
+        api_key = input("Enter your Shodan API Key: ")
+        target = input("Enter target (IP or domain): ")
+        response = requests.get(f"https://api.shodan.io/shodan/host/{target}?key={api_key}")
+        if response.status_code == 200:
+            print(response.json())
+        else:
+            print(f"{Fore.RED}Error: {response.json().get('error', 'Unknown error')}{Style.RESET_ALL}")
+    else:
+        main_menu()
 
-def dns_lookup():
-    domain = input(f"{Fore.YELLOW}Enter Domain for DNS Lookup: {Style.RESET_ALL}")
-    subprocess.run(f"dig {domain}", shell=True)
+# Scanning & Enumeration
+def scanning():
+    print(f"{Fore.CYAN}Scanning & Enumeration{Style.RESET_ALL}")
+    options = [
+        "Run Nmap Scan",
+        "Run Nikto Scan",
+        "Back to Main Menu"
+    ]
+    for idx, option in enumerate(options, start=1):
+        print(f"[{idx}] {option}")
 
-def run_shodan():
-    api_key = input(f"{Fore.YELLOW}Enter your Shodan API Key: {Style.RESET_ALL}")
-    query = input(f"{Fore.YELLOW}Enter Shodan Query: {Style.RESET_ALL}")
-    subprocess.run(f"shodan search {query} --apikey {api_key}", shell=True)
-
-def run_hacker_target():
-    ip = input(f"{Fore.YELLOW}Enter IP Address for HackerTarget Scan: {Style.RESET_ALL}")
-    subprocess.run(f"curl https://api.hackertarget.com/nmap/?q={ip}", shell=True)
-
-# Scanning & Enumeration Tools
-def run_nmap():
-    ip = input(f"{Fore.YELLOW}Enter Target IP for Nmap Scan: {Style.RESET_ALL}")
-    scan_type = input(f"{Fore.YELLOW}Enter Scan Type (e.g. sS, sT, sU): {Style.RESET_ALL}")
-    subprocess.run(f"nmap -{scan_type} {ip}", shell=True)
-
-def run_nikto():
-    ip = input(f"{Fore.YELLOW}Enter Target IP for Nikto Scan: {Style.RESET_ALL}")
-    subprocess.run(f"nikto -h {ip}", shell=True)
+    choice = input(f"\n{Fore.YELLOW}Select an option: {Style.RESET_ALL}")
+    if choice == "1":
+        target = input("Enter target for Nmap Scan: ")
+        scan_type = input("Enter scan type (e.g., -sS, -sT, etc.): ")
+        subprocess.run(["nmap", scan_type, target])
+    elif choice == "2":
+        target = input("Enter target for Nikto Scan: ")
+        subprocess.run(["nikto", "-h", target])
+    else:
+        main_menu()
 
 # Gaining Access Tools
-def metasploit_menu():
-    print(f"{Fore.GREEN}Launching Metasploit Framework...{Style.RESET_ALL}")
-    subprocess.run(["msfconsole"])
+def gaining_access():
+    print(f"{Fore.CYAN}Gaining Access Tools{Style.RESET_ALL}")
+    options = [
+        "Launch Metasploit",
+        "Launch SQLMap",
+        "Launch Veil",
+        "Back to Main Menu"
+    ]
+    for idx, option in enumerate(options, start=1):
+        print(f"[{idx}] {option}")
 
+    choice = input(f"\n{Fore.YELLOW}Select an option: {Style.RESET_ALL}")
+    if choice == "1":
+        subprocess.run(["msfconsole"])
+    elif choice == "2":
+        target = input("Enter target for SQLMap: ")
+        subprocess.run(["sqlmap", "-u", target])
+    elif choice == "3":
+        veil_evasion()
+    else:
+        main_menu()
+
+# Veil Evasion Integration
 def veil_evasion():
     print(f"{Fore.GREEN}Launching Veil Evasion...{Style.RESET_ALL}")
-    subprocess.run(["veil"])
+    try:
+        subprocess.run(["veil"], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"{Fore.RED}Veil encountered an error: {e}. Reconfiguring...{Style.RESET_ALL}")
+        subprocess.run(["sudo", "/usr/share/veil/config/setup.sh", "--force", "--silent"], check=True)
+        print(f"{Fore.YELLOW}Setup completed. Relaunching Veil...{Style.RESET_ALL}")
+        subprocess.run(["veil"])
 
 # Main Menu
 def main_menu():
     display_splash_screen()
-    check_and_install_tools(['nmap', 'nikto', 'metasploit', 'veil', 'shodan', 'curl'])
+    tools = ['nmap', 'nikto', 'msfconsole', 'sqlmap', 'veil']
+    check_and_install_tools(tools)
 
     options = [
-        "Methodology",
-        "Reconnaissance",
-        "Scanning",
+        "PenTest Methodology",
+        "Recon & Info Gathering",
+        "Scanning & Enumeration",
         "Gaining Access",
         "Exit"
     ]
-    display_in_columns(options)
+    for idx, option in enumerate(options, start=1):
+        print(f"[{idx}] {option}")
 
-    choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}")
+    choice = input(f"\n{Fore.YELLOW}Select an option: {Style.RESET_ALL}")
     if choice == "1":
-        display_methodology()
+        print("Penetration Testing Methodology Overview:")
+        print("""
+        1. Reconnaissance & Information Gathering
+        2. Scanning & Enumeration
+        3. Gaining Access
+        4. Setting Up Proxies
+        5. Maintaining Access
+        6. Covering Tracks
+        7. Reporting
+        """)
     elif choice == "2":
-        reconnaissance_menu()
+        reconnaissance()
     elif choice == "3":
-        scanning_menu()
+        scanning()
     elif choice == "4":
-        gaining_access_menu()
+        gaining_access()
     elif choice == "5":
         print(f"{Fore.RED}Exiting...{Style.RESET_ALL}")
         sys.exit()
     else:
-        print(f"{Fore.RED}Invalid choice! Please try again.{Style.RESET_ALL}")
+        print(f"{Fore.RED}Invalid choice!{Style.RESET_ALL}")
         main_menu()
 
-# Reconnaissance Menu
-def reconnaissance_menu():
-    print(f"\n{Fore.GREEN}Reconnaissance & Information Gathering:{Style.RESET_ALL}")
-    options = [
-        "Run More_Mass (OSINT)",
-        "DNS Lookup",
-        "Shodan Search",
-        "HackerTarget Scan",
-        "Return to Main Menu"
-    ]
-    display_in_columns(options)
-
-    choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}")
-    if choice == "1":
-        run_more_mass()
-    elif choice == "2":
-        dns_lookup()
-    elif choice == "3":
-        run_shodan()
-    elif choice == "4":
-        run_hacker_target()
-    elif choice == "5":
-        main_menu()
-    else:
-        print(f"{Fore.RED}Invalid choice! Please try again.{Style.RESET_ALL}")
-        reconnaissance_menu()
-
-# Scanning Menu
-def scanning_menu():
-    print(f"\n{Fore.GREEN}Scanning & Enumeration Tools:{Style.RESET_ALL}")
-    options = [
-        "Run Nmap Scan",
-        "Run Nikto Scan",
-        "Return to Main Menu"
-    ]
-    display_in_columns(options)
-
-    choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}")
-    if choice == "1":
-        run_nmap()
-    elif choice == "2":
-        run_nikto()
-    elif choice == "3":
-        main_menu()
-    else:
-        print(f"{Fore.RED}Invalid choice! Please try again.{Style.RESET_ALL}")
-        scanning_menu()
-
-# Gaining Access Menu
-def gaining_access_menu():
-    print(f"\n{Fore.GREEN}Gaining Access Tools:{Style.RESET_ALL}")
-    options = [
-        "Metasploit Framework",
-        "Veil Evasion",
-        "Return to Main Menu"
-    ]
-    display_in_columns(options)
-
-    choice = input(f"\n{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}")
-    if choice == "1":
-        metasploit_menu()
-    elif choice == "2":
-        veil_evasion()
-    elif choice == "3":
-        main_menu()
-    else:
-        print(f"{Fore.RED}Invalid choice! Please try again.{Style.RESET_ALL}")
-        gaining_access_menu()
-
+# Run the program
 if __name__ == "__main__":
     main_menu()
