@@ -46,129 +46,183 @@ _____________________  ___________                                              
     """
     print(f"{Fore.CYAN}{splash}{Style.RESET_ALL}")
 
-# Check and Install Tools
-def check_tool(tool_name, install_command):
-    if shutil.which(tool_name):
-        print(f"{Fore.GREEN}{tool_name} is already installed.{Style.RESET_ALL}")
-    else:
-        print(f"{Fore.RED}{tool_name} is not installed.{Style.RESET_ALL}")
-        choice = input(f"Do you want to install {tool_name}? (y/n): ").lower()
-        if choice == "y":
-            subprocess.run(install_command, shell=True)
-        else:
-            print(f"{Fore.YELLOW}Skipping installation of {tool_name}.{Style.RESET_ALL}")
 
-def install_required_tools():
-    tools = {
-        "nmap": "sudo apt-get install -y nmap",
-        "hydra": "sudo apt-get install -y hydra",
-        "msfvenom": "sudo apt-get install -y metasploit-framework",
-        "veil": "sudo apt-get install -y veil",
-        "impacket": "pip install impacket"
-    }
-    for tool, command in tools.items():
-        check_tool(tool, command)
-
-# Methodology Menu
-def penetration_test_methodology():
-    print("\nPenetration Testing Methodology:")
-    options = [
-        "Network Discovery",
-        "Port Scanning with Nmap",
-        "Vulnerability Scanning",
-        "Return to Main Menu"
-    ]
+# Column Display Helper
+def display_in_columns(options):
     for i, option in enumerate(options, 1):
         print(f"[{i}] {option}")
+
+
+# Main Methodology Menu
+def methodology_menu():
+    print(f"\n{Fore.CYAN}Penetration Testing Methodology:{Style.RESET_ALL}")
+    options = [
+        "Reconnaissance",
+        "Scanning and Enumeration",
+        "Gaining Access",
+        "Setup Proxies",
+        "Maintaining Access",
+        "Covering Tracks",
+        "Exit"
+    ]
+    display_in_columns(options)
+
     try:
-        choice = int(input(f"\n{Fore.YELLOW}Select an option: {Style.RESET_ALL}"))
+        choice = int(input(f"\n{Fore.YELLOW}Select a phase: {Style.RESET_ALL}"))
         if choice == 1:
-            network_discovery()
+            print("Reconnaissance tools (e.g., Nmap, Shodan, OSINT) will be here.")
         elif choice == 2:
-            port_scanning()
+            print("Scanning tools (e.g., Nmap, Nikto, enum4linux) will be here.")
         elif choice == 3:
-            vulnerability_scanning()
+            gaining_access_menu()
         elif choice == 4:
-            main_menu()
+            setup_proxies_menu()
+        elif choice == 5:
+            maintaining_access_menu()
+        elif choice == 6:
+            covering_tracks_menu()
+        elif choice == 7:
+            print(f"{Fore.RED}Exiting...{Style.RESET_ALL}")
+            sys.exit()
+        else:
+            print(f"{Fore.RED}Invalid choice! Please try again.{Style.RESET_ALL}")
+            methodology_menu()
+    except ValueError:
+        print(f"{Fore.RED}Invalid input. Please enter a number.{Style.RESET_ALL}")
+        methodology_menu()
+
+
+# Setup Proxies Menu
+def setup_proxies_menu():
+    print(f"\n{Fore.CYAN}Setup Proxies:{Style.RESET_ALL}")
+    options = [
+        "Configure Proxychains",
+        "Start Tor Service",
+        "Setup SSH Tunnel with Sshuttle",
+        "Return to Methodology Menu"
+    ]
+    display_in_columns(options)
+
+    try:
+        choice = int(input(f"\n{Fore.YELLOW}Select an action: {Style.RESET_ALL}"))
+        if choice == 1:
+            config_path = "/etc/proxychains.conf"
+            print(f"Editing Proxychains configuration at {config_path}...")
+            subprocess.run(["sudo", "nano", config_path])
+        elif choice == 2:
+            print("Starting Tor service...")
+            subprocess.run(["sudo", "systemctl", "start", "tor"])
+        elif choice == 3:
+            target = input("Enter target network (e.g., 192.168.0.0/24): ")
+            server = input("Enter SSH server address: ")
+            subprocess.run(["sshuttle", "-r", server, target])
+        elif choice == 4:
+            methodology_menu()
         else:
             print(f"{Fore.RED}Invalid choice!{Style.RESET_ALL}")
-            penetration_test_methodology()
+            setup_proxies_menu()
     except ValueError:
-        print(f"{Fore.RED}Please enter a valid number.{Style.RESET_ALL}")
-        penetration_test_methodology()
+        print(f"{Fore.RED}Invalid input. Please enter a number.{Style.RESET_ALL}")
+        setup_proxies_menu()
 
-# Example Methodology Actions
-def network_discovery():
-    print(f"{Fore.CYAN}Performing Network Discovery...{Style.RESET_ALL}")
-    subprocess.run(["nmap", "-sn", "192.168.0.0/24"])
-
-def port_scanning():
-    print(f"{Fore.CYAN}Performing Port Scanning...{Style.RESET_ALL}")
-    target = input("Enter target IP or domain: ")
-    subprocess.run(["nmap", "-sS", target])
-
-def vulnerability_scanning():
-    print(f"{Fore.CYAN}Performing Vulnerability Scanning...{Style.RESET_ALL}")
-    subprocess.run(["nmap", "--script", "vuln", "192.168.0.1"])
 
 # Gaining Access Menu
 def gaining_access_menu():
-    print("\nGaining Access:")
+    print(f"\n{Fore.CYAN}Gaining Access:{Style.RESET_ALL}")
     options = [
         "Launch MSFVenom",
         "Launch Metasploit",
+        "Launch Veil",
         "Brute Force with Hydra",
-        "Return to Main Menu"
+        "Web Shell Upload",
+        "NTLM Relay Attack",
+        "Return to Methodology Menu"
     ]
-    for i, option in enumerate(options, 1):
-        print(f"[{i}] {option}")
+    display_in_columns(options)
+
     try:
-        choice = int(input(f"\n{Fore.YELLOW}Select an option: {Style.RESET_ALL}"))
+        choice = int(input(f"\n{Fore.YELLOW}Select an action: {Style.RESET_ALL}"))
         if choice == 1:
-            subprocess.run(["msfvenom"])
+            print("Launching MSFVenom...")
         elif choice == 2:
-            subprocess.run(["msfconsole"])
+            print("Launching Metasploit...")
         elif choice == 3:
-            target = input("Enter target IP: ")
-            username = input("Enter username: ")
-            password_list = input("Enter path to password list: ")
-            subprocess.run(["hydra", "-l", username, "-P", password_list, target])
+            print("Launching Veil...")
         elif choice == 4:
-            main_menu()
+            print("Using Hydra for brute force attacks...")
+        elif choice == 5:
+            print("Uploading a web shell...")
+        elif choice == 6:
+            print("Executing NTLM relay attack...")
+        elif choice == 7:
+            methodology_menu()
         else:
             print(f"{Fore.RED}Invalid choice!{Style.RESET_ALL}")
             gaining_access_menu()
     except ValueError:
-        print(f"{Fore.RED}Please enter a valid number.{Style.RESET_ALL}")
+        print(f"{Fore.RED}Invalid input. Please enter a number.{Style.RESET_ALL}")
         gaining_access_menu()
 
-# Main Menu
-def main_menu():
-    display_splash_screen()
-    install_required_tools()
+
+# Maintaining Access Menu
+def maintaining_access_menu():
+    print(f"\n{Fore.CYAN}Maintaining Access:{Style.RESET_ALL}")
     options = [
-        "Penetration Testing Methodology",
-        "Gaining Access Menu",
-        "Exit"
+        "Use Metasploit Persistence Module",
+        "Upload Web Shell with Weevely",
+        "Inject SSH Key for Persistent Access",
+        "Return to Methodology Menu"
     ]
-    for i, option in enumerate(options, 1):
-        print(f"[{i}] {option}")
+    display_in_columns(options)
+
     try:
-        choice = int(input(f"\n{Fore.YELLOW}Select an option: {Style.RESET_ALL}"))
+        choice = int(input(f"\n{Fore.YELLOW}Select an action: {Style.RESET_ALL}"))
         if choice == 1:
-            penetration_test_methodology()
+            print("Launching Metasploit persistence module...")
         elif choice == 2:
-            gaining_access_menu()
+            print("Uploading web shell with Weevely...")
         elif choice == 3:
-            print(f"{Fore.GREEN}Exiting the program. Goodbye!{Style.RESET_ALL}")
-            sys.exit(0)
+            print("Injecting SSH key for persistent access...")
+        elif choice == 4:
+            methodology_menu()
         else:
             print(f"{Fore.RED}Invalid choice!{Style.RESET_ALL}")
-            main_menu()
+            maintaining_access_menu()
     except ValueError:
-        print(f"{Fore.RED}Please enter a valid number.{Style.RESET_ALL}")
-        main_menu()
+        print(f"{Fore.RED}Invalid input. Please enter a number.{Style.RESET_ALL}")
+        maintaining_access_menu()
 
-# Entry Point
+
+# Covering Tracks Menu
+def covering_tracks_menu():
+    print(f"\n{Fore.CYAN}Covering Tracks:{Style.RESET_ALL}")
+    options = [
+        "Clear Bash History",
+        "Modify File Timestamps (Timestomp)",
+        "Use Metasploit Anti-Forensics Tools",
+        "Return to Methodology Menu"
+    ]
+    display_in_columns(options)
+
+    try:
+        choice = int(input(f"\n{Fore.YELLOW}Select an action: {Style.RESET_ALL}"))
+        if choice == 1:
+            print("Clearing Bash history...")
+        elif choice == 2:
+            print("Modifying file timestamps...")
+        elif choice == 3:
+            print("Using Metasploit anti-forensics tools...")
+        elif choice == 4:
+            methodology_menu()
+        else:
+            print(f"{Fore.RED}Invalid choice!{Style.RESET_ALL}")
+            covering_tracks_menu()
+    except ValueError:
+        print(f"{Fore.RED}Invalid input. Please enter a number.{Style.RESET_ALL}")
+        covering_tracks_menu()
+
+
+# Main Execution
 if __name__ == "__main__":
-    main_menu()
+    display_splash_screen()
+    methodology_menu()
