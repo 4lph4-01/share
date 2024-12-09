@@ -13,19 +13,45 @@
 
 import subprocess
 import sys
-from colorama import Fore, Style
+import os
+import shutil
+import time
 import requests
+from pathlib import Path
+from colorama import Fore, Style
 
 # Splash Screen
 def display_splash_screen():
     splash = """
-    ##################################################
-    #           Penetration Testing Framework       #
-    ##################################################
-    """
-    print(f"{Fore.CYAN}{splash}{Style.RESET_ALL}")
+    
+_____________________  ___________                                                  __                  _____  ______________  ___ ___    _____           _______  ____ 
+\______   \__    ___/  \_   _____/____________     _____   ______  _  _____________|  | __             /  |  |/_   \______   \/   |   \  /  |  |          \   _  \/_   |
+ |     ___/ |    |      |    __)  \_  __ \__  \   /     \_/ __ \ \/ \/ /  _ \_  __ \  |/ /   ______   /   |  |_|   ||     ___/    ~    \/   |  |_  ______ /  /_\  \|   |
+ |    |     |    |      |     \    |  | \// __ \_|  Y Y  \  ___/\     (  <_> )  | \/    <   /_____/  /    ^   /|   ||    |   \    Y    /    ^   / /_____/ \  \_/   \   |
+ |____|     |____|______\___  /    |__|  (____  /|__|_|  /\___  >\/\_/ \____/|__|  |__|_ \           \____   | |___||____|    \___|_ /\____   |           \_____  /___|
+                 /_____/    \/                \/       \/     \/                        \/                |__|                      \/      |__|                 \/     
 
-# Display in Columns
+                                                     _:_
+                                                    '-.-'
+                                           ()      __.'.__
+                                        .-:--:-.  |_______|
+                                 ()      \____/    \=====/
+                                 /\      {====}     )___(
+                      (\=,      //\\      )__(     /_____\
+      __    |'-'-'|  //  .\    (    )    /____\     |   |
+     /  \   |_____| (( \_  \    )__(      |  |      |   |
+     \__/    |===|   ))  `\_)  /____\     |  |      |   |
+    /____\   |   |  (/     \    |  |      |  |      |   |
+     |  |    |   |   | _.-'|    |  |      |  |      |   |
+     |__|    )___(    )___(    /____\    /____\    /_____\
+    (====)  (=====)  (=====)  (======)  (======)  (=======)
+   (______)(_______)(_______)(________)(________)(_________)
+   
+    
+    """
+    print(f"{Fore.YELLOW}{splash}{Style.RESET_ALL}")
+
+# Columnar Display Helper Function
 def display_in_columns(options, column_count=2):
     max_length = max(len(option) for option in options)
     formatted_options = [
@@ -35,150 +61,124 @@ def display_in_columns(options, column_count=2):
     for i in range(0, len(formatted_options), column_count):
         print("    ".join(formatted_options[i:i + column_count]))
 
-# Run OSINT Tools (more_mass.py, Shodan, HackerTarget)
+# Run OSINT Tools (more_mass, Shodan, HackerTarget)
 def run_osint_tools():
     print(f"{Fore.CYAN}Running OSINT Tools (More_Mass, Shodan, HackerTarget):{Style.RESET_ALL}")
-    
-    # Run more_mass.py (as an example, adjust paths if necessary)
-    subprocess.run(["python3", "/path/to/more_mass.py"])
 
-    # Shodan Search
-    shodan_api_key = "YOUR_SHODAN_API_KEY"
-    shodan_query = input("Enter a query for Shodan: ")
-    shodan_url = f"https://api.shodan.io/shodan/host/search?key={shodan_api_key}&query={shodan_query}"
-    response = requests.get(shodan_url)
-    print(response.json())
+    # OSINT: More_Mass
+    try:
+        print(f"{Fore.GREEN}Running More_Mass.py for OSINT...{Style.RESET_ALL}")
+        subprocess.run(["python3", "more_mass.py"], check=True)
+    except Exception as e:
+        print(f"{Fore.RED}Error running More_Mass: {e}{Style.RESET_ALL}")
 
-    # HackerTarget
-    target_domain = input("Enter target domain for HackerTarget: ")
-    hacker_target_url = f"https://api.hackertarget.com/hostsearch/?q={target_domain}"
-    response = requests.get(hacker_target_url)
-    print(response.text)
+    # OSINT: Shodan
+    try:
+        print(f"{Fore.GREEN}Running Shodan for OSINT...{Style.RESET_ALL}")
+        shodan_api_key = input("Enter your Shodan API Key: ")
+        query = input("Enter Shodan query: ")
+        response = requests.get(f"https://api.shodan.io/shodan/host/search?key={shodan_api_key}&query={query}")
+        print(response.json())
+    except Exception as e:
+        print(f"{Fore.RED}Error running Shodan: {e}{Style.RESET_ALL}")
 
-# Scanning & Enumeration Tools (Nmap, Nikto, etc.)
-def run_scanning_tools():
-    print(f"{Fore.CYAN}Running Scanning & Enumeration Tools (Nmap, Nikto):{Style.RESET_ALL}")
-    tools = [
-        "Run Nmap Scan",
-        "Run Nikto Scan",
-        "Run DNS Lookup",
-        "Back to Main Menu"
-    ]
-    display_in_columns(tools)
-
-    choice = input(f"{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}")
-    if choice == "1":
-        target_ip = input("Enter target IP: ")
-        subprocess.run(["nmap", "-sS", target_ip])
-    elif choice == "2":
-        target_ip = input("Enter target IP: ")
-        subprocess.run(["nikto", "-h", target_ip])
-    elif choice == "3":
-        target_domain = input("Enter target domain: ")
-        subprocess.run(["dig", target_domain])
-    elif choice == "4":
-        main_menu()
-    else:
-        print(f"{Fore.RED}Invalid choice, returning to Scanning Tools Menu.{Style.RESET_ALL}")
-        run_scanning_tools()
-
-# Gaining Access Menu (Metasploit, Hydra, MSFVenom)
-def gaining_access_menu():
-    print(f"{Fore.CYAN}Gaining Access Tools:{Style.RESET_ALL}")
-    tools = [
-        "Run MSFVenom",
-        "Run Metasploit",
-        "Run Hydra Brute Force",
-        "Back to Main Menu"
-    ]
-    display_in_columns(tools)
-
-    choice = input(f"{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}")
-    if choice == "1":
-        subprocess.run(["msfvenom", "-p", "linux/x86/shell_reverse_tcp", "-f", "elf", "-o", "reverse_shell.elf"])
-    elif choice == "2":
-        subprocess.run(["msfconsole"])
-    elif choice == "3":
-        target_ip = input("Enter target IP for Hydra: ")
-        subprocess.run(["hydra", "-l", "admin", "-P", "/path/to/wordlist.txt", target_ip, "http-get"])
-    elif choice == "4":
-        main_menu()
-    else:
-        print(f"{Fore.RED}Invalid choice, returning to Gaining Access Menu.{Style.RESET_ALL}")
-        gaining_access_menu()
-
-# Setup Proxies (Example)
-def setup_proxies():
-    print(f"{Fore.CYAN}Setting up Proxies:{Style.RESET_ALL}")
-    # Placeholder for proxy setup tools
-    print("Proxies have been set up!")
-
-# Maintaining Access (Example)
-def maintain_access():
-    print(f"{Fore.CYAN}Maintaining Access:{Style.RESET_ALL}")
-    # Placeholder for maintaining access tools
-    print("Access has been maintained!")
-
-# Covering Tracks (Example)
-def cover_tracks():
-    print(f"{Fore.CYAN}Covering Tracks:{Style.RESET_ALL}")
-    # Placeholder for covering tracks tools
-    print("Tracks have been covered!")
-
-# Report Generation (Placeholder)
-def generate_report():
-    print(f"{Fore.CYAN}Generating Report:{Style.RESET_ALL}")
-    # Placeholder for report generation (e.g., write output to file)
-    with open("penetration_test_report.txt", "w") as report:
-        report.write("Penetration Test Report\n")
-        report.write("========================\n")
-        # Add tool outputs here
-        report.write("OSINT Results: More_Mass, Shodan, HackerTarget...\n")
-    print("Report has been generated!")
+    # OSINT: HackerTarget DNS Lookup
+    try:
+        print(f"{Fore.GREEN}Running HackerTarget DNS Lookup for OSINT...{Style.RESET_ALL}")
+        domain = input("Enter the domain for DNS lookup: ")
+        response = requests.get(f"https://api.hackertarget.com/dnslookup/?q={domain}")
+        print(response.text)
+    except Exception as e:
+        print(f"{Fore.RED}Error running HackerTarget DNS Lookup: {e}{Style.RESET_ALL}")
 
 # Main Menu
 def main_menu():
     display_splash_screen()
+
     options = [
         "Penetration Test Methodology",
         "Reconnaissance & Information Gathering (OSINT)",
         "Scanning & Enumeration",
-        "Gaining Access Tools",
-        "Setup Proxies",
-        "Maintaining Access",
-        "Covering Tracks",
-        "Generate Report",
+        "Gaining Access",
+        "Reporting",
         "Exit"
     ]
     display_in_columns(options)
 
     choice = input(f"{Fore.YELLOW}Enter your choice: {Style.RESET_ALL}")
-    try:
-        if choice == "1":
-            print("Penetration Test Methodology")
-        elif choice == "2":
-            run_osint_tools()
-        elif choice == "3":
-            run_scanning_tools()
-        elif choice == "4":
-            gaining_access_menu()
-        elif choice == "5":
-            setup_proxies()
-        elif choice == "6":
-            maintain_access()
-        elif choice == "7":
-            cover_tracks()
-        elif choice == "8":
-            generate_report()
-        elif choice == "9":
-            print(f"{Fore.RED}Exiting Penetration Testing Framework.{Style.RESET_ALL}")
-            sys.exit()
-        else:
-            print(f"{Fore.RED}Invalid choice, please try again.{Style.RESET_ALL}")
-            main_menu()
-    except ValueError:
-        print(f"{Fore.RED}Invalid input. Please enter a number.{Style.RESET_ALL}")
+    
+    if choice == "1":
+        display_methodology()
+    elif choice == "2":
+        run_osint_tools()
+    elif choice == "3":
+        print(f"{Fore.RED}Scanning & Enumeration tools coming soon!{Style.RESET_ALL}")
+    elif choice == "4":
+        print(f"{Fore.RED}Gaining Access tools coming soon!{Style.RESET_ALL}")
+    elif choice == "5":
+        generate_report()
+    elif choice == "6":
+        print(f"{Fore.RED}Exiting...{Style.RESET_ALL}")
+        sys.exit()
+    else:
+        print(f"{Fore.RED}Invalid choice! Please try again.{Style.RESET_ALL}")
         main_menu()
 
+# Display Penetration Test Methodology
+def display_methodology():
+    methodology = """
+    Penetration Testing Methodology:
+
+    1. Reconnaissance (Information Gathering)
+        - Network Discovery
+        - OS Fingerprinting
+        - Service Enumeration
+
+    2. Scanning & Enumeration
+        - Vulnerability Scanning
+        - Enumeration of SMB, DNS, HTTP, etc.
+        - Port Scanning with Nmap
+
+    3. Exploitation
+        - Web Application Exploits
+        - Network Exploits
+        - Social Engineering Attacks
+
+    4. Gaining Access
+        - Brute Force Attacks (SSH, HTTP, SMB, etc.)
+        - Remote Exploits
+        - Web Shells
+
+    5. Maintaining Access
+        - Creating Backdoors
+        - Installing Persistent Agents
+        - Privilege Escalation
+
+    6. Covering Tracks
+        - Log Clearing
+        - History Deletion
+        - Traffic Spoofing
+
+    7. Reporting & Results
+        - Documenting Findings
+        - Recommendations
+        - Executive Summary
+    """
+    print(f"{Fore.GREEN}{methodology}{Style.RESET_ALL}")
+    main_menu()
+
+# Generate Report
+def generate_report():
+    print(f"{Fore.GREEN}Generating Report...{Style.RESET_ALL}")
+    with open("penetration_test_report.txt", "w") as report_file:
+        report_file.write("Penetration Test Report\n")
+        report_file.write("======================\n")
+        report_file.write(f"Test Date: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+        report_file.write(f"Test Summary: OSINT tools used, including More_Mass, Shodan, and HackerTarget DNS lookup.\n")
+
+    print(f"{Fore.GREEN}Report generated and saved as 'penetration_test_report.txt'.{Style.RESET_ALL}")
+    main_menu()
+
+# Run the program
 if __name__ == "__main__":
     main_menu()
