@@ -16,7 +16,7 @@ import subprocess
 
 # Banner 
 def display_splash_screen():
-    splash = """
+    splash = r"""
    
     
  ___________          __                                .__    ________                  ___________                                           __  .__                            _____  ____.____   __________  ___ ___    _____           _______  ____ 
