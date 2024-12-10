@@ -22,7 +22,7 @@ from requests.packages.urllib3.util.retry import Retry
 
 # Banner
 def display_splash_screen():
-    splash = """
+    splash = r"""
   
     
 ___________               .__.__          ___ ___                                        __  .__                             _____  ____.____   __________  ___ ___    _____           _______  ____ 
