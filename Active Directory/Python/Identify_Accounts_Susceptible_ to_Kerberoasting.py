@@ -13,7 +13,7 @@ from pyad import adquery
 
 # Banner
 def display_splash_screen():
-    splash = """
+    splash = r"""
    
     
  ____  __.            ___.                                __  .__                   _____                                     __                       _____  ____.____   __________  ___ ___    _____           _______  ____ 
