@@ -21,7 +21,7 @@ from netaddr import IPNetwork
     
 # Banner
 def display_splash_screen():
-    splash = """
+    splash = r"""
  
     
 _________                  __                           ____    ________________________ ___               _____  ____.____   __________  ___ ___    _____           _______  ____ 
