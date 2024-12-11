@@ -72,7 +72,7 @@ def obfuscate_payload(payload, method='base64'):
     else:
         raise ValueError("Unsupported obfuscation method")
 
-# Payloads and Randomized List
+# Payloads and Randomised List
 def get_random_payload(payload_type):
     """Advanced Payload Generation"""
     if payload_type == 'sql':
