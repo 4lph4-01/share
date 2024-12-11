@@ -17,7 +17,7 @@ import sys
 import time
 from pyric import pyw
 from pyric.exceptions import PyRICError
-from scapy.all import *
+from scapy.all import
 
 # Banner
 def display_splash_screen():
