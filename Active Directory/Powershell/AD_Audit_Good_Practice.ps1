@@ -19,7 +19,7 @@ $outputFile = "C:\FullADAuditReport.html"
 
 # Function to check for weak passwords
 function Check-WeakPasswords {
-    $weakPasswordUsers = Search-ADAccount -PasswordNeverExpires:$false -UsersOnly | Where-Object { ($_ | Get-ADUser -Properties PasswordLastSet).PasswordLastSet -lt (Get-Date).AddDays(-90) }
+    $weakPasswordUsers = Search-ADAccount -PasswordNeverExpires:$false -UsersOnly | Where-Object { ($_ | Get-ADUser -Properties PasswordLastSet).PasswordLastSet -lt (Get-Date).AddDays(-90) } # Remember there is a delay with AD replication for this!
     return $weakPasswordUsers
 }
 
