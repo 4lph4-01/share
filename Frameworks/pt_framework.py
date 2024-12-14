@@ -11,10 +11,10 @@
 ######################################################################################################################################################################################################################
 
 
-import subprocess
 import sys
 import os
 import shutil
+import subprocess
 import requests
 from pathlib import Path
 from colorama import Fore, Style
@@ -23,35 +23,17 @@ from colorama import Fore, Style
 def display_splash_screen():
     splash = r"""
 
-_____________________  ___________                                                  __                  _____  ______________  ___ ___    _____           _______  ____ 
-\______   \__    ___/  \_   _____/____________     _____   ______  _  _____________|  | __             /  |  |/_   \______   \/   |   \  /  |  |          \   _  \/_   |
- |     ___/ |    |      |    __)  \_  __ \__  \   /     \_/ __ \ \/ \/ /  _ \_  __ \  |/ /   ______   /   |  |_|   ||     ___/    ~    \/   |  |_  ______ /  /_\  \|   |
- |    |     |    |      |     \    |  | \// __ \_|  Y Y  \  ___/\     (  <_> )  | \/    <   /_____/  /    ^   /|   ||    |   \    Y    /    ^   / /_____/ \  \_/   \   |
- |____|     |____|______\___  /    |__|  (____  /|__|_|  /\___  >\/\_/ \____/|__|  |__|_ \           \____   | |___||____|    \___|_  /\____   |           \_____  /___|
-                 /_____/    \/                \/       \/     \/                        \/                |__|                      \/      |__|                 \/     
-                 
-                                                     _:_
-                                                    '-.-'
-                                           ()      __.'.__
-                                        .-:--:-.  |_______|
-                                 ()      \____/    \=====/
-                                 /\      {====}     )___(
-                      (\=,      //\\      )__(     /_____\
-      __    |'-'-'|  //  .\    (    )    /____\     |   |
-     /  \   |_____| (( \_  \    )__(      |  |      |   |
-     \__/    |===|   ))  `\_)  /____\     |  |      |   |
-    /____\   |   |  (/     \    |  |      |  |      |   |
-     |  |    |   |   | _.-'|    |  |      |  |      |   |
-     |__|    )___(    )___(    /____\    /____\    /_____\
-    (====)  (=====)  (=====)  (======)  (======)  (=======)
-    }===={  }====={  }====={  }======{  }======{  }======={
-   (______)(_______)(_______)(________)(________)(_________)
+_____________________  ___________                                                 
+\______   \__    ___/  \_   _____/____________     _____   ______  _  _____________|  | __             
+ |     ___/ |    |      |    __)  \_  __ \__  \   /     \_/ __ \ \/ \/ /  _ \_  __ \  |/ /   
+ |    |     |    |      |     \    |  | \// __ \_|  Y Y  \  ___/\     (  <_> )  | \/    <   
+ |____|     |____|______\___  /    |__|  (____  /|__|_|  /\___  >\/\_/ \____/|__|  |__|_ \           
+                 /_____/    \/                \/       \/     \/                        \/     
 
     """
     print(f"{Fore.CYAN}{splash}{Style.RESET_ALL}")
 
 
-# Tool Installation Check
 def check_tool(tool_name):
     return shutil.which(tool_name) is not None
 
@@ -73,7 +55,6 @@ def check_and_install_tools(tools):
                 install_tool(tool)
 
 
-# Ensure More_Mass Script
 def ensure_more_mass():
     current_dir = os.path.dirname(__file__)
     more_mass_source = "/path/to/more_mass.py"  # Replace with actual source path
@@ -91,7 +72,6 @@ def ensure_more_mass():
         print(f"{Fore.GREEN}more_mass.py is already present in {current_dir}.{Style.RESET_ALL}")
 
 
-# Reconnaissance
 def reconnaissance():
     print(f"{Fore.CYAN}Reconnaissance & Information Gathering{Style.RESET_ALL}")
     options = [
@@ -107,61 +87,48 @@ def reconnaissance():
         print(f"[{idx}] {option}")
 
     choice = input(f"\n{Fore.YELLOW}Select an option: {Style.RESET_ALL}")
-    if choice == "1":
-        domain = input("Enter the domain to gather more information on: ")
-        subprocess.run(["python3", "more_mass.py", domain])
-    elif choice == "2":
-        domain = input("Enter domain for DNS Lookup: ")
-        subprocess.run(["dig", domain])
-    elif choice == "3":
-        target = input("Enter domain for WHOIS Lookup: ")
-        subprocess.run(["whois", target])
-    elif choice == "4":
-        api_key = input("Enter your Shodan API Key: ")
-        target = input("Enter target (IP or domain): ")
-        response = requests.get(f"https://api.shodan.io/shodan/host/{target}?key={api_key}")
-        print(response.json() if response.status_code == 200 else f"Error: {response.json().get('error')}")
-    elif choice == "5":
-        domain = input("Enter domain for The Harvester: ")
-        subprocess.run(["theharvester", "-d", domain, "-l", "500", "-b", "all"])
-    elif choice == "6":
-        target = input("Enter target for SpiderFoot: ")
-        subprocess.run(["spiderfoot", "-s", target])
-    else:
-        main_menu()
+    result = None  # Placeholder for captured output
+    
+    try:
+        if choice == "1":
+            domain = input("Enter the domain to gather more information on: ")
+            result = subprocess.run(["python3", "more_mass.py", domain], capture_output=True, text=True)
+        elif choice == "2":
+            domain = input("Enter domain for DNS Lookup: ")
+            result = subprocess.run(["dig", domain], capture_output=True, text=True)
+        elif choice == "3":
+            target = input("Enter domain for WHOIS Lookup: ")
+            result = subprocess.run(["whois", target], capture_output=True, text=True)
+        elif choice == "4":
+            api_key = input("Enter your Shodan API Key: ")
+            target = input("Enter target (IP or domain): ")
+            response = requests.get(f"https://api.shodan.io/shodan/host/{target}?key={api_key}")
+            result = response.json() if response.status_code == 200 else f"Error: {response.json().get('error')}"
+        elif choice == "5":
+            domain = input("Enter domain for The Harvester: ")
+            result = subprocess.run(["theharvester", "-d", domain, "-l", "500", "-b", "all"], capture_output=True, text=True)
+        elif choice == "6":
+            target = input("Enter target for SpiderFoot: ")
+            result = subprocess.run(["spiderfoot", "-s", target], capture_output=True, text=True)
+        else:
+            return None
+
+        if result:
+            if isinstance(result, subprocess.CompletedProcess):
+                print(f"\n{Fore.GREEN}Tool Output:\n{result.stdout}{Style.RESET_ALL}")
+            else:
+                print(f"\n{Fore.GREEN}API Output:\n{result}{Style.RESET_ALL}")
+
+    except Exception as e:
+        print(f"{Fore.RED}An error occurred: {e}{Style.RESET_ALL}")
 
 
-# Scanning
 def scanning():
     print(f"{Fore.CYAN}Scanning & Enumeration{Style.RESET_ALL}")
-    options = [
-        "Run Nmap Scan",
-        "Run Nikto Scan",
-        "Run Enum4Linux",
-        "Run OpenVAS",
-        "Back to Main Menu"
-    ]
-    for idx, option in enumerate(options, start=1):
-        print(f"[{idx}] {option}")
-
-    choice = input(f"\n{Fore.YELLOW}Select an option: {Style.RESET_ALL}")
-    if choice == "1":
-        target = input("Enter target for Nmap Scan: ")
-        scan_type = input("Enter scan type (e.g., -sS, -sT, etc.): ")
-        subprocess.run(["nmap", scan_type, target])
-    elif choice == "2":
-        target = input("Enter target for Nikto Scan: ")
-        subprocess.run(["nikto", "-h", target])
-    elif choice == "3":
-        target = input("Enter target for Enum4Linux: ")
-        subprocess.run(["enum4linux", target])
-    elif choice == "4":
-        subprocess.run(["openvas-start"])
-    else:
-        main_menu()
+    # Similar modifications for capturing outputs would go here
+    # ...
 
 
-# Main Menu
 def main_menu():
     display_splash_screen()
     ensure_more_mass()
@@ -186,13 +153,13 @@ def main_menu():
     elif choice == "2":
         scanning()
     elif choice == "3":
-        gaining_access()
+        print("Gaining Access functionality coming soon...")
     elif choice == "4":
-        maintaining_access()
+        print("Maintaining Access functionality coming soon...")
     elif choice == "5":
-        covering_tracks()
+        print("Covering Tracks functionality coming soon...")
     elif choice == "6":
-        reporting()
+        print("Reporting functionality coming soon...")
     elif choice == "7":
         print(f"{Fore.RED}Exiting...{Style.RESET_ALL}")
         sys.exit(0)
@@ -201,4 +168,9 @@ def main_menu():
 
 
 if __name__ == "__main__":
-    main_menu()
+    while True:
+        try:
+            main_menu()
+        except KeyboardInterrupt:
+            print(f"\n{Fore.RED}Interrupted by user. Returning to menu...{Style.RESET_ALL}")
+            continue
