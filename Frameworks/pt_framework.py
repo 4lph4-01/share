@@ -18,11 +18,20 @@ import shutil
 import requests
 from pathlib import Path
 from colorama import Fore, Style
+from datetime import datetime
+
+
+# Log Function to Save Output
+def log_output(tool_name, output):
+    log_filename = "penetration_testing_log.txt"
+    with open(log_filename, "a") as log_file:
+        log_file.write(f"\n\n[{datetime.now()}] {tool_name} Output:\n")
+        log_file.write(output)
+        log_file.write("\n\n")
 
 
 def display_splash_screen():
     splash = r"""
-
  _____________________  ___________                                                  __                  _____  ____.____   __________  ___ ___    _____           _______  ____ 
 \______   \__    ___/  \_   _____/____________     _____   ______  _  _____________|  | __             /  |  |/_   |    |  \______   \/   |   \  /  |  |          \   _  \/_   |
  |     ___/ |    |      |    __)  \_  __ \__  \   /     \_/ __ \ \/ \/ /  _ \_  __ \  |/ /   ______   /   |  |_|   |    |   |     ___/    ~    \/   |  |_  ______ /  /_\  \|   |
@@ -46,91 +55,60 @@ def display_splash_screen():
     (====)  (=====)  (=====)  (======)  (======)  (=======)
     }===={  }====={  }====={  }======{  }======{  }======={
    (______)(_______)(_______)(________)(________)(_________)
-
     """
     print(f"{Fore.CYAN}{splash}{Style.RESET_ALL}")
 
 
-# Global Log File
-LOG_FILE = "pentest_log.txt"
-
-# Write Logs
-def write_log(tool_name, output):
-    with open(LOG_FILE, "a") as log:
-        log.write(f"\n--- {tool_name} Output ---\n")
-        log.write(output)
-        log.write("\n-------------------------\n")
+# Tool Installation Check
+def check_tool(tool_name):
+    return shutil.which(tool_name) is not None
 
 
-# Tool Execution with Output Logging
-def execute_tool(command, tool_name):
-    print(f"{Fore.YELLOW}Running: {' '.join(command)}{Style.RESET_ALL}")
-    try:
-        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        captured_output = []  # To collect output for logging
-
-        while True:
-            output = process.stdout.readline()
-            if output == "" and process.poll() is not None:
-                break
-            if output:
-                print(f"{Fore.GREEN}{output.strip()}{Style.RESET_ALL}")
-                captured_output.append(output)
-
-        _, errors = process.communicate()
-        if errors:
-            error_message = f"{Fore.RED}Errors: {errors.strip()}{Style.RESET_ALL}"
-            print(error_message)
-            captured_output.append(f"Errors: {errors.strip()}\n")
-
-        # Save to log
-        write_log(tool_name, "".join(captured_output))
-    except Exception as e:
-        error_message = f"{Fore.RED}Failed to run {tool_name}: {e}{Style.RESET_ALL}"
-        print(error_message)
-        write_log(tool_name, error_message)
+def install_tool(tool_name):
+    print(f"{Fore.YELLOW}Installing {tool_name}...{Style.RESET_ALL}")
+    if sys.platform.startswith("linux"):
+        subprocess.run(["sudo", "apt-get", "install", "-y", tool_name])
+    else:
+        print(f"{Fore.RED}Automatic installation not supported on this OS.{Style.RESET_ALL}")
 
 
-# Tools Integration
-def metasploit():
-    print(f"{Fore.CYAN}Launching Metasploit...{Style.RESET_ALL}")
-    execute_tool(["msfconsole"], "Metasploit")
+def check_and_install_tools(tools):
+    for tool in tools:
+        if not check_tool(tool):
+            print(f"{Fore.RED}{tool} is not installed.{Style.RESET_ALL}")
+            choice = input(f"Do you want to install {tool}? (y/n): ").lower()
+            if choice == "y":
+                install_tool(tool)
 
 
-def veil():
-    print(f"{Fore.CYAN}Launching Veil Framework...{Style.RESET_ALL}")
-    execute_tool(["veil"], "Veil Framework")
+# Ensure More_Mass Script
+def ensure_more_mass():
+    current_dir = os.path.dirname(__file__)
+    more_mass_source = "/path/to/more_mass.py"  # Replace with actual source path
+    more_mass_dest = os.path.join(current_dir, "more_mass.py")
+
+    if not os.path.exists(more_mass_dest):
+        print(f"{Fore.YELLOW}Copying more_mass.py to {current_dir}...{Style.RESET_ALL}")
+        try:
+            shutil.copy(more_mass_source, more_mass_dest)
+            print(f"{Fore.GREEN}more_mass.py successfully added.{Style.RESET_ALL}")
+        except Exception as e:
+            print(f"{Fore.RED}Failed to copy more_mass.py: {e}{Style.RESET_ALL}")
+            sys.exit(1)
+    else:
+        print(f"{Fore.GREEN}more_mass.py is already present in {current_dir}.{Style.RESET_ALL}")
 
 
-def empire():
-    print(f"{Fore.CYAN}Launching Empire Framework...{Style.RESET_ALL}")
-    execute_tool(["python3", "/path/to/Empire/empire"], "Empire Framework")
-
-
-# Report Generation
-def generate_report():
-    if not os.path.exists(LOG_FILE):
-        print(f"{Fore.RED}No log file found. Run some tools first.{Style.RESET_ALL}")
-        return
-
-    print(f"{Fore.CYAN}Generating report...{Style.RESET_ALL}")
-    with open(LOG_FILE, "r") as log:
-        report = log.read()
-
-    report_file = "pentest_report.txt"
-    with open(report_file, "w") as report_output:
-        report_output.write(report)
-
-    print(f"{Fore.GREEN}Report saved to {report_file}{Style.RESET_ALL}")
-
-
-# Gaining Access
-def gaining_access():
-    print(f"{Fore.CYAN}Gaining Access Options{Style.RESET_ALL}")
+# Reconnaissance
+def reconnaissance():
+    print(f"{Fore.CYAN}Reconnaissance & Information Gathering{Style.RESET_ALL}")
     options = [
-        "Launch Metasploit",
-        "Launch Veil Framework",
-        "Launch Empire Framework",
+        "Run more_mass.py (OSINT)",
+        "Perform DNS Lookup",
+        "Perform WHOIS Lookup",
+        "Perform Shodan Search",
+        "Use The Harvester",
+        "Use SpiderFoot",
         "Back to Main Menu"
     ]
     for idx, option in enumerate(options, start=1):
@@ -138,11 +116,77 @@ def gaining_access():
 
     choice = input(f"\n{Fore.YELLOW}Select an option: {Style.RESET_ALL}")
     if choice == "1":
-        metasploit()
+        domain = input("Enter the domain to gather more information on: ")
+        result = subprocess.run(["python3", "more_mass.py", domain], capture_output=True, text=True)
+        log_output("more_mass.py", result.stdout)  # Log the output
+        print(result.stdout)  # Print the output to console
     elif choice == "2":
-        veil()
+        domain = input("Enter domain for DNS Lookup: ")
+        result = subprocess.run(["dig", domain], capture_output=True, text=True)
+        log_output("DNS Lookup", result.stdout)  # Log the output
+        print(result.stdout)
     elif choice == "3":
-        empire()
+        target = input("Enter domain for WHOIS Lookup: ")
+        result = subprocess.run(["whois", target], capture_output=True, text=True)
+        log_output("WHOIS Lookup", result.stdout)  # Log the output
+        print(result.stdout)
+    elif choice == "4":
+        api_key = input("Enter your Shodan API Key: ")
+        target = input("Enter target (IP or domain): ")
+        response = requests.get(f"https://api.shodan.io/shodan/host/{target}?key={api_key}")
+        if response.status_code == 200:
+            log_output("Shodan Search", response.text)  # Log the output
+            print(response.json())
+        else:
+            print(f"Error: {response.json().get('error')}")
+    elif choice == "5":
+        domain = input("Enter domain for The Harvester: ")
+        result = subprocess.run(["theharvester", "-d", domain, "-l", "500", "-b", "all"], capture_output=True, text=True)
+        log_output("The Harvester", result.stdout)  # Log the output
+        print(result.stdout)
+    elif choice == "6":
+        target = input("Enter target for SpiderFoot: ")
+        result = subprocess.run(["spiderfoot", "-s", target], capture_output=True, text=True)
+        log_output("SpiderFoot", result.stdout)  # Log the output
+        print(result.stdout)
+    else:
+        main_menu()
+
+
+# Scanning
+def scanning():
+    print(f"{Fore.CYAN}Scanning & Enumeration{Style.RESET_ALL}")
+    options = [
+        "Run Nmap Scan",
+        "Run Nikto Scan",
+        "Run Enum4Linux",
+        "Run OpenVAS",
+        "Back to Main Menu"
+    ]
+    for idx, option in enumerate(options, start=1):
+        print(f"[{idx}] {option}")
+
+    choice = input(f"\n{Fore.YELLOW}Select an option: {Style.RESET_ALL}")
+    if choice == "1":
+        target = input("Enter target for Nmap Scan: ")
+        scan_type = input("Enter scan type (e.g., -sS, -sT, etc.): ")
+        result = subprocess.run(["nmap", scan_type, target], capture_output=True, text=True)
+        log_output("Nmap Scan", result.stdout)  # Log the output
+        print(result.stdout)
+    elif choice == "2":
+        target = input("Enter target for Nikto Scan: ")
+        result = subprocess.run(["nikto", "-h", target], capture_output=True, text=True)
+        log_output("Nikto Scan", result.stdout)  # Log the output
+        print(result.stdout)
+    elif choice == "3":
+        target = input("Enter target for Enum4Linux: ")
+        result = subprocess.run(["enum4linux", target], capture_output=True, text=True)
+        log_output("Enum4Linux", result.stdout)  # Log the output
+        print(result.stdout)
+    elif choice == "4":
+        result = subprocess.run(["openvas-start"], capture_output=True, text=True)
+        log_output("OpenVAS", result.stdout)  # Log the output
+        print(result.stdout)
     else:
         main_menu()
 
@@ -150,13 +194,9 @@ def gaining_access():
 # Main Menu
 def main_menu():
     display_splash_screen()
-    tools = ['nmap', 'nikto', 'msfconsole', 'veil', 'python3']  # Include required tools
-    for tool in tools:
-        if shutil.which(tool) is None:
-            print(f"{Fore.RED}{tool} is not installed.{Style.RESET_ALL}")
-            choice = input(f"Do you want to install {tool}? (y/n): ").lower()
-            if choice == "y":
-                install_tool(tool)
+    ensure_more_mass()
+    tools = ['nmap', 'nikto', 'msfconsole', 'sqlmap', 'hydra', 'john', 'enum4linux', 'spiderfoot', 'theharvester', 'openvas']
+    check_and_install_tools(tools)
 
     options = [
         "Reconnaissance & Information Gathering",
@@ -182,7 +222,7 @@ def main_menu():
     elif choice == "5":
         covering_tracks()
     elif choice == "6":
-        generate_report()
+        reporting()
     elif choice == "7":
         print(f"{Fore.RED}Exiting...{Style.RESET_ALL}")
         sys.exit(0)
@@ -191,6 +231,4 @@ def main_menu():
 
 
 if __name__ == "__main__":
-    # Start with a fresh log file
-    open(LOG_FILE, "w").close()
     main_menu()
