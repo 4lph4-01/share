@@ -12,13 +12,12 @@
 ######################################################################################################################################################################################################################
 
 
-# Setup logging for advanced APT framework
-import requests
 import random
 import string
 from bs4 import BeautifulSoup
 import os
 from datetime import datetime
+import requests  # Added import for making HTTP requests
 
 # Banner
 def print_banner():
@@ -40,7 +39,7 @@ def print_banner():
                       (\=,      //\\      )__(     /_____\
       __    |'-'-'|  //  .\    (    )    /____\     |   |
      /  \   |_____| (( \_  \    )__(      |  |      |   |
-     \__/    |===|   ))  `\_)  /____\     |  |      |   |
+     \__/    |===|   ))  \_)  /____\     |  |      |   |
     /____\   |   |  (/     \    |  |      |  |      |   |
      |  |    |   |   | _.-'|    |  |      |  |      |   |
      |__|    )___(    )___(    /____\    /____\    /_____\
@@ -149,37 +148,45 @@ def main():
                 url = input("Enter the URL of the website: ")
                 forms = crawl_website(url)
                 if forms:
-                    print(f"Detected {len(forms)} forms on the website.")
+                    print(f"Found {len(forms)} forms on the website.")
+                else:
+                    print("No forms found.")
             elif choice == 2:
-                print("Brute Force Test (Optional) - Not yet implemented.")
+                url = input("Enter the URL for brute force test: ")
+                brute_force_test(url)
             elif choice == 3:
-                sql_injection_sub_menu("http://example.com")  # Replace with actual URL
+                url = input("Enter the URL for SQL Injection Test: ")
+                sql_injection_test(url)
             elif choice == 4:
-                print("XSS Test - Not yet implemented.")
+                url = input("Enter the URL for XSS Test: ")
+                xss_test(url)
             elif choice == 5:
-                url = input("Enter the URL of the website for SSRF Test: ")
+                url = input("Enter the URL for SSRF Test: ")
                 ssrf_test(url)
             elif choice == 6:
-                url = input("Enter the URL of the website for Cookie Tampering Test: ")
-                cookie_tampering(url)
+                url = input("Enter the URL for Cookie Tampering Test: ")
+                cookie_tampering_test(url)
             elif choice == 7:
-                url = input("Enter the URL of the website for Header and Parameter Manipulation Test: ")
+                url = input("Enter the URL for Header and Parameter Manipulation Test: ")
                 header_param_manipulation(url)
             elif choice == 8:
-                url = input("Enter the URL of the website for Directory Traversal Test: ")
-                directory_traversal(url)
+                url = input("Enter the URL for Directory Traversal Test: ")
+                directory_traversal_test(url)
             elif choice == 9:
-                print("CSRF Test - Not yet implemented.")
+                url = input("Enter the URL for CSRF Test: ")
+                csrf_test(url)
             elif choice == 10:
-                print("Advanced Recon - Not yet implemented.")
+                url = input("Enter the URL for Advanced Recon: ")
+                advanced_recon(url)
             elif choice == 11:
-                print("Exiting the application.")
+                print("Exiting the script.")
                 break
             else:
-                print("Invalid choice, please choose again.")
-        except KeyboardInterrupt:
-            print("\nOperation interrupted. Returning to the main menu...")
-            continue  # Return to the main menu after interruption
+                print("Invalid choice, please select an option between 1 and 11.")
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            break
 
 if __name__ == "__main__":
+    print_banner()
     main()
