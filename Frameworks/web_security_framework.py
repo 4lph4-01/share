@@ -154,7 +154,7 @@ def print_main_menu():
     print("=" * 30)
     print("Advanced Penetration Testing Framework")
     print("=" * 30)
-    print("[1] Crawl Website and Extract Forms       [2] Brute Force Test (Optional)")
+    print("[1] Crawl Website and Extract Forms      [2] Brute Force Test (Optional)")
     print("[3] SQL Injection Test                   [4] XSS Test")
     print("[5] SSRF Test                            [6] Cookie Tampering Test")
     print("[7] Header Manipulation Test             [8] Directory Traversal Test")
