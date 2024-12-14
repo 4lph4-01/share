@@ -121,9 +121,9 @@ def header_param_manipulation(url):
 # Function to print the main menu
 def print_main_menu():
     print("=" * 30)
-    print("Advanced Penetration Testing Framework")
+    print("Advanced Web Penetration Testing Framework")
     print("=" * 30)
-    print("[1] Crawl Website and Extract Forms       [2] Brute Force Test (Optional)")
+    print("[1] Crawl Website and Extract Forms      [2] Brute Force Test (Optional)")
     print("[3] SQL Injection Test                   [4] XSS Test")
     print("[5] SSRF Test                            [6] Cookie Tampering Test")
     print("[7] Header and Parameter Manipulation    [8] Directory Traversal Test")
