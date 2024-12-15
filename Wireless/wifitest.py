@@ -52,11 +52,6 @@ def display_splash_screen():
     print(splash)
     print("Wifi Attack Tool 41PH4-01\n")
 
-
-import subprocess
-import sys
-import os
-
 # Function to check if a tool is installed and install it if not
 def check_and_install_tool(tool_name, install_command):
     try:
