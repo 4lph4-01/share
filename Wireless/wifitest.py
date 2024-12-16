@@ -1,5 +1,5 @@
 ###########################################################################################################################################################################################################
-# Run using sudo python3 wifitest.py. Note: Script currently set to 15 deauth packets if this diesn't trigger the client to reconnect, you can increase the number further to improve the chances of success.
+# Run using sudo python3 wifitest.py. Note: Script currently set to 15 deauth packets if this doesn't trigger the client to reconnect, you can increase the number further to improve the chances of success.
 # scanning for networks, capturing handshakes, and cracking the handshake using a wordlist, deauthenticate_clients function. Requires installation of aircrack-ng suit. 
 # This script includes necessary error handling and guides users through the process with clear feedback. It provides an interactive menu for network scanning, handshake capturing, and password cracking, 
 # making it more user-friendly and functional for real-world use. You will also require a wireless USB/network card that supports monitor mode & frame injection.
