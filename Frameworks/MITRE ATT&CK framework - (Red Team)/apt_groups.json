@@ -304,5 +304,149 @@
         "description": "Lists files and directories on a system to gather information."
       }
     ]
+  },
+  "APT1": {
+    "name": "APT1",
+    "description": "APT1 is a China-based cyber espionage group known for targeting a wide range of industries.",
+    "techniques": [
+      {
+        "id": "T1105",
+        "name": "Remote File Copy",
+        "tactic": "Lateral Movement",
+        "description": "Copies files from one system to another to facilitate lateral movement."
+      },
+      {
+        "id": "T1071",
+        "name": "Application Layer Protocol",
+        "tactic": "Command and Control",
+        "description": "Uses application layer protocols to communicate with command and control servers."
+      }
+    ]
+  },
+  "APT3": {
+    "name": "APT3",
+    "description": "APT3 is a China-based cyber espionage group known for targeting various sectors, including aerospace and defense.",
+    "techniques": [
+      {
+        "id": "T1105",
+        "name": "Remote File Copy",
+        "tactic": "Lateral Movement",
+        "description": "Copies files from one system to another to facilitate lateral movement."
+      },
+      {
+        "id": "T1071",
+        "name": "Application Layer Protocol",
+        "tactic": "Command and Control",
+        "description": "Uses application layer protocols to communicate with command and control servers."
+      }
+    ]
+  },
+  "APT10": {
+    "name": "APT10",
+    "description": "APT10 is a China-based cyber espionage group known for targeting managed IT service providers and their clients.",
+    "techniques": [
+      {
+        "id": "T1105",
+        "name": "Remote File Copy",
+        "tactic": "Lateral Movement",
+        "description": "Copies files from one system to another to facilitate lateral movement."
+      },
+      {
+        "id": "T1071",
+        "name": "Application Layer Protocol",
+        "tactic": "Command and Control",
+        "description": "Uses application layer protocols to communicate with command and control servers."
+      }
+    ]
+  },
+  "APT29": {
+    "name": "APT29",
+    "description": "APT29 is a Russian cyber espionage group known for targeting government and political organizations.",
+    "techniques": [
+      {
+        "id": "T1105",
+        "name": "Remote File Copy",
+        "tactic": "Lateral Movement",
+        "description": "Copies files from one system to another to facilitate lateral movement."
+      },
+      {
+        "id": "T1071",
+        "name": "Application Layer Protocol",
+        "tactic": "Command and Control",
+        "description": "Uses application layer protocols to communicate with command and control servers."
+      }
+    ]
+  },
+  "APT32": {
+    "name": "APT32",
+    "description": "APT32 is a Vietnam-based cyber espionage group known for targeting private sector industries and foreign governments.",
+    "techniques": [
+      {
+        "id": "T1105",
+        "name": "Remote File Copy",
+        "tactic": "Lateral Movement",
+        "description": "Copies files from one system to another to facilitate lateral movement."
+      },
+      {
+        "id": "T1071",
+        "name": "Application Layer Protocol",
+        "tactic": "Command and Control",
+        "description": "Uses application layer protocols to communicate with command and control servers."
+      }
+    ]
+  },
+  "APT33": {
+    "name": "APT33",
+    "description": "APT33 is an Iranian cyber espionage group known for targeting aerospace and energy sectors.",
+    "techniques": [
+      {
+        "id": "T1105",
+        "name": "Remote File Copy",
+        "tactic": "Lateral Movement",
+        "description": "Copies files from one system to another to facilitate lateral movement."
+      },
+      {
+        "id": "T1071",
+        "name": "Application Layer Protocol",
+        "tactic": "Command and Control",
+        "description": "Uses application layer protocols to communicate with command and control servers."
+      }
+    ]
+  },
+  "APT37": {
+    "name": "APT37",
+    "description": "APT37 is a North Korean cyber espionage group known for targeting South Korean government and financial organizations.",
+    "techniques": [
+      {
+        "id": "T1105",
+        "name": "Remote File Copy",
+        "tactic": "Lateral Movement",
+        "description": "Copies files from one system to another to facilitate lateral movement."
+      },
+      {
+        "id": "T1071",
+        "name": "Application Layer Protocol",
+        "tactic": "Command and Control",
+        "description": "Uses application layer protocols to communicate with command and control servers."
+      }
+    ]
+  },
+  "APT38": {
+    "name": "APT38",
+    "description": "APT38 is a North Korean cyber espionage group known for targeting financial institutions for monetary gain.",
+    "techniques": [
+      {
+        "id": "T1105",
+        "name": "Remote File Copy",
+        "tactic": "Lateral Movement",
+        "description": "Copies files from one system to another to facilitate lateral movement."
+      },
+      {
+        "id": "T1071",
+        "name": "Application Layer Protocol",
+        "tactic": "Command and Control",
+        "description": "Uses application layer protocols to communicate with command and control servers."
+      }
+    ]
   }
 }
