@@ -59,7 +59,6 @@ def print_banner():
 
     """
 
-
     print(splash)
     print("MITRE ATT&CK Framerwork 41PH4-01\n")
 
