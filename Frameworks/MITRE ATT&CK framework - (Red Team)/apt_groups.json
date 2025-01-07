@@ -1,268 +1,308 @@
 {
   "APT40": {
     "name": "APT40",
+    "description": "APT40 is a China-based cyber espionage group known for targeting maritime industries and government organizations.",
     "techniques": [
       {
         "id": "T1071",
         "name": "Application Layer Protocol",
-        "tactic": "Command and Control"
+        "tactic": "Command and Control",
+        "description": "Uses application layer protocols to communicate with command and control servers."
       },
       {
         "id": "T1059",
         "name": "Command-Line Interface",
-        "tactic": "Execution"
+        "tactic": "Execution",
+        "description": "Executes commands and scripts via the command-line interface."
       }
     ]
   },
   "APT12": {
     "name": "APT12",
+    "description": "APT12 is a China-based threat group known for conducting cyber espionage campaigns.",
     "techniques": [
       {
         "id": "T1071",
         "name": "Application Layer Protocol",
-        "tactic": "Command and Control"
+        "tactic": "Command and Control",
+        "description": "Uses application layer protocols to communicate with command and control servers."
       },
       {
         "id": "T1086",
         "name": "PowerShell",
-        "tactic": "Execution"
+        "tactic": "Execution",
+        "description": "Uses PowerShell commands and scripts to execute malicious activities."
       }
     ]
   },
   "MuddyWater": {
     "name": "MuddyWater",
+    "description": "MuddyWater is a threat group that has conducted broad campaigns targeting Middle Eastern nations.",
     "techniques": [
       {
         "id": "T1071",
         "name": "Application Layer Protocol",
-        "tactic": "Command and Control"
+        "tactic": "Command and Control",
+        "description": "Uses application layer protocols to communicate with command and control servers."
       },
       {
         "id": "T1059",
         "name": "Command-Line Interface",
-        "tactic": "Execution"
+        "tactic": "Execution",
+        "description": "Executes commands and scripts via the command-line interface."
       }
     ]
   },
   "Sandworm": {
     "name": "Sandworm Team",
+    "description": "Sandworm Team is a Russian cyber espionage group known for targeting various sectors, including energy and government.",
     "techniques": [
       {
         "id": "T1086",
         "name": "PowerShell",
-        "tactic": "Execution"
+        "tactic": "Execution",
+        "description": "Uses PowerShell commands and scripts to execute malicious activities."
       },
       {
         "id": "T1213",
         "name": "Data from Information Repositories",
-        "tactic": "Collection"
+        "tactic": "Collection",
+        "description": "Accesses data from information repositories to gather sensitive information."
       }
     ]
   },
   "GALLIUM": {
     "name": "GALLIUM",
+    "description": "GALLIUM is a Chinese cyber espionage group known for targeting telecommunications companies.",
     "techniques": [
       {
         "id": "T1071",
         "name": "Application Layer Protocol",
-        "tactic": "Command and Control"
+        "tactic": "Command and Control",
+        "description": "Uses application layer protocols to communicate with command and control servers."
       },
       {
         "id": "T1083",
         "name": "File and Directory Discovery",
-        "tactic": "Discovery"
+        "tactic": "Discovery",
+        "description": "Lists files and directories on a system to gather information."
       }
     ]
   },
   "CobaltGroup": {
     "name": "Cobalt Group",
+    "description": "Cobalt Group is a cybercrime group known for targeting financial institutions.",
     "techniques": [
       {
         "id": "T1071",
         "name": "Application Layer Protocol",
-        "tactic": "Command and Control"
+        "tactic": "Command and Control",
+        "description": "Uses application layer protocols to communicate with command and control servers."
       },
       {
         "id": "T1070",
         "name": "Indicator Removal on Host",
-        "tactic": "Defense Evasion"
+        "tactic": "Defense Evasion",
+        "description": "Removes indicators of compromise from the host to evade detection."
       }
     ]
   },
   "Turla": {
     "name": "Turla",
+    "description": "Turla is a Russian cyber espionage group known for targeting government and military organizations.",
     "techniques": [
       {
         "id": "T1071",
         "name": "Application Layer Protocol",
-        "tactic": "Command and Control"
+        "tactic": "Command and Control",
+        "description": "Uses application layer protocols to communicate with command and control servers."
       },
       {
         "id": "T1003",
         "name": "Credential Dumping",
-        "tactic": "Credential Access"
+        "tactic": "Credential Access",
+        "description": "Extracts credentials from operating systems to gain access to accounts."
       }
     ]
   },
   "FIN6": {
     "name": "FIN6",
+    "description": "FIN6 is a cybercrime group known for targeting retail and hospitality sectors to steal payment card information.",
     "techniques": [
       {
         "id": "T1071",
         "name": "Application Layer Protocol",
-        "tactic": "Command and Control"
+        "tactic": "Command and Control",
+        "description": "Uses application layer protocols to communicate with command and control servers."
       },
       {
         "id": "T1086",
         "name": "PowerShell",
-        "tactic": "Execution"
+        "tactic": "Execution",
+        "description": "Uses PowerShell commands and scripts to execute malicious activities."
       }
     ]
   },
   "Dragonfly": {
     "name": "Dragonfly",
+    "description": "Dragonfly is a cyber espionage group known for targeting the energy sector.",
     "techniques": [
       {
         "id": "T1071",
         "name": "Application Layer Protocol",
-        "tactic": "Command and Control"
-      },
-      {
-        {
-  "Dragonfly": {
-    "name": "Dragonfly",
-    "techniques": [
-      {
-        "id": "T1071",
-        "name": "Application Layer Protocol",
-        "tactic": "Command and Control"
+        "tactic": "Command and Control",
+        "description": "Uses application layer protocols to communicate with command and control servers."
       },
       {
         "id": "T1070",
         "name": "Indicator Removal on Host",
-        "tactic": "Defense Evasion"
+        "tactic": "Defense Evasion",
+        "description": "Removes indicators of compromise from the host to evade detection."
       }
     ]
   },
   "APT34": {
     "name": "APT34",
+    "description": "APT34 is an Iranian cyber espionage group known for targeting financial, energy, and telecommunications sectors.",
     "techniques": [
       {
         "id": "T1071",
         "name": "Application Layer Protocol",
-        "tactic": "Command and Control"
+        "tactic": "Command and Control",
+        "description": "Uses application layer protocols to communicate with command and control servers."
       },
       {
         "id": "T1083",
         "name": "File and Directory Discovery",
-        "tactic": "Discovery"
+        "tactic": "Discovery",
+        "description": "Lists files and directories on a system to gather information."
       }
     ]
   },
   "RedCurl": {
     "name": "RedCurl",
+    "description": "RedCurl is a cybercrime group known for targeting various sectors, including construction, finance, and retail.",
     "techniques": [
       {
         "id": "T1071",
         "name": "Application Layer Protocol",
-        "tactic": "Command and Control"
+        "tactic": "Command and Control",
+        "description": "Uses application layer protocols to communicate with command and control servers."
       },
       {
         "id": "T1105",
         "name": "Remote File Copy",
-        "tactic": "Lateral Movement"
+        "tactic": "Lateral Movement",
+        "description": "Copies files from one system to another to facilitate lateral movement."
       }
     ]
   },
   "OilRig": {
     "name": "OilRig",
+    "description": "OilRig is an Iranian cyber espionage group known for targeting financial, energy, and telecommunications sectors.",
     "techniques": [
       {
         "id": "T1071",
         "name": "Application Layer Protocol",
-        "tactic": "Command and Control"
+        "tactic": "Command and Control",
+        "description": "Uses application layer protocols to communicate with command and control servers."
       },
       {
         "id": "T1105",
         "name": "Remote File Copy",
-        "tactic": "Lateral Movement"
+        "tactic": "Lateral Movement",
+        "description": "Copies files from one system to another to facilitate lateral movement."
       }
     ]
   },
-  "Fin7": {
+  "FIN7": {
     "name": "FIN7",
+    "description": "FIN7 is a cybercrime group known for targeting the hospitality and retail sectors to steal payment card information.",
     "techniques": [
       {
         "id": "T1071",
         "name": "Application Layer Protocol",
-        "tactic": "Command and Control"
+        "tactic": "Command and Control",
+        "description": "Uses application layer protocols to communicate with command and control servers."
       },
       {
         "id": "T1086",
         "name": "PowerShell",
-        "tactic": "Execution"
+        "tactic": "Execution",
+        "description": "Uses PowerShell commands and scripts to execute malicious activities."
       }
     ]
   },
   "Ke3chang": {
     "name": "Ke3chang",
+    "description": "Ke3chang is a China-based cyber espionage group known for targeting diplomatic and government entities.",
     "techniques": [
       {
         "id": "T1059",
         "name": "Command-Line Interface",
-        "tactic": "Execution"
+        "tactic": "Execution",
+        "description": "Executes commands and scripts via the command-line interface."
       },
       {
         "id": "T1070",
         "name": "Indicator Removal on Host",
-        "tactic": "Defense Evasion"
+        "tactic": "Defense Evasion",
+        "description": "Removes indicators of compromise from the host to evade detection."
       }
     ]
   },
   "Patchwork": {
     "name": "Patchwork",
+    "description": "Patchwork is an Indian cyber espionage group known for targeting government and diplomatic entities.",
     "techniques": [
       {
         "id": "T1071",
         "name": "Application Layer Protocol",
-        "tactic": "Command and Control"
+        "tactic": "Command and Control",
+        "description": "Uses application layer protocols to communicate with command and control servers."
       },
       {
         "id": "T1070",
         "name": "Indicator Removal on Host",
-        "tactic": "Defense Evasion"
+        "tactic": "Defense Evasion",
+        "description": "Removes indicators of compromise from the host to evade detection."
       }
     ]
   },
   "BlackTech": {
     "name": "BlackTech",
+    "description": "BlackTech is a cyber espionage group known for targeting East Asian countries, particularly those in the technology and government sectors.",
     "techniques": [
       {
         "id": "T1105",
         "name": "Remote File Copy",
-        "tactic": "Lateral Movement"
+        "tactic": "Lateral Movement",
+        "description": "Copies files from one system to another to facilitate lateral movement."
       },
       {
         "id": "T1071",
         "name": "Application Layer Protocol",
-        "tactic": "Command and Control"
+        "tactic": "Command and Control",
+        "description": "Uses application layer protocols to communicate with command and control servers."
       }
     ]
   },
   "Machete": {
     "name": "Machete",
+    "description": "Machete is a cyber espionage group known for targeting Latin American countries, particularly government and military organizations.",
     "techniques": [
       {
         "id": "T1059",
         "name": "Command-Line Interface",
-        "tactic": "Execution"
+        "tactic": "Execution",
+        "description": "Executes commands and scripts via the command-line interface."
       },
       {
         "id": "T1083",
         "name": "File and Directory Discovery",
-        "tactic": "Discovery"
+        "tactic": "Discovery",
+        "description": "Lists files and directories on a system to gather information."
       }
     ]
   }
 }
-
