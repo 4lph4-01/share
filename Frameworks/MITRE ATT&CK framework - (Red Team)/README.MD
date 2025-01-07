@@ -43,7 +43,7 @@ This tool is designed to simulate techniques used by Advanced Persistent Threat 
 
 2. Run the simulation script:
     ```sh
-    python simulation.py
+    python3 mitre_att&ck.py
     ```
 
 3. Follow the on-screen instructions to select an APT group and techniques to simulate.
