@@ -1,0 +1,48 @@
+{
+    "APT Groups": [
+        {
+            "name": "APT29",
+            "description": "APT29 is a threat group attributed to the Russian government known for targeting various sectors.",
+            "techniques": [
+                {
+                    "id": "T1071",
+                    "name": "Application Layer Protocol",
+                    "tactics": [
+                        "Command and Control"
+                    ],
+                    "description": "Use of common application layer protocols to communicate with a command and control server."
+                },
+                {
+                    "id": "T1566",
+                    "name": "Phishing",
+                    "tactics": [
+                        "Initial Access"
+                    ],
+                    "description": "Spearphishing campaign using tailored messages to gain access to targeted systems."
+                }
+            ]
+        },
+        {
+            "name": "APT41",
+            "description": "APT41 is a Chinese cyber espionage group that also conducts financially motivated operations.",
+            "techniques": [
+                {
+                    "id": "T1059",
+                    "name": "Command and Scripting Interpreter",
+                    "tactics": [
+                        "Execution"
+                    ],
+                    "description": "Use of command-line interpreters to execute arbitrary commands."
+                },
+                {
+                    "id": "T1105",
+                    "name": "Ingress Tool Transfer",
+                    "tactics": [
+                        "Command and Control"
+                    ],
+                    "description": "Transferring tools or payloads from an external system to a target environment."
+                }
+            ]
+        }
+    ]
+}
