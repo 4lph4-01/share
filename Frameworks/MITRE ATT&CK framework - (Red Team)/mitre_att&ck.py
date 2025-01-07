@@ -61,93 +61,84 @@ def print_banner():
     print("MITRE ATT&CK Framerwork 41PH4-01\n")
 
 
-# Load APT group data from the JSON file
-def load_apt_groups(filename="apt_groups.json"):
+# Load APT group data from JSON file
+def load_apt_groups(filename="apt_groups_with_descriptions.json"):
     with open(filename, "r") as file:
         return json.load(file)
 
+# Function to display APT group details
+def display_apt_details(apt_name, apt_details):
+    print(f"\n[INFO] {apt_name}: {apt_details['description']}\n")
+
+# Function to display technique details
+def display_technique_details(technique):
+    print(f"\n[INFO] Technique: {technique['name']} ({technique['id']})")
+    print(f"Tactic: {technique['tactic']}")
+    print(f"Description: {technique['description']}\n")
+
 # Function to simulate an attack technique
 def simulate_technique(apt_name, technique):
-    print(f"[INFO] Simulating technique {technique['name']} (ID: {technique['id']}, Tactic: {technique['tactic']}) for {apt_name}...")
-    time.sleep(2)  # Placeholder for simulation logic
+    print(f"[INFO] Simulating technique {technique['name']} ({technique['id']}) for {apt_name}...")
+    time.sleep(2)  # Simulating the attack technique (placeholder)
     print(f"[INFO] {technique['name']} simulation complete.\n")
-
-# Generate text report
-def generate_report_text(apt_name, techniques):
-    filename = f"{apt_name}_simulation_report.txt"
-    with open(filename, "w") as file:
-        file.write(f"Simulation Report for {apt_name}\n")
-        file.write("=" * 40 + "\n")
-        for technique in techniques:
-            file.write(f"- Technique: {technique['name']} (ID: {technique['id']}, Tactic: {technique['tactic']})\n")
-    print(f"[INFO] Text report generated: {filename}")
-
-# Generate HTML report
-def generate_report_html(apt_name, techniques):
-    filename = f"{apt_name}_simulation_report.html"
-    with open(filename, "w") as file:
-        file.write(f"<html><body><h1>Simulation Report for {apt_name}</h1><ul>")
-        for technique in techniques:
-            file.write(f"<li>Technique: {technique['name']} (ID: {technique['id']}, Tactic: {technique['tactic']})</li>")
-        file.write("</ul></body></html>")
-    print(f"[INFO] HTML report generated: {filename}")
 
 # Main function to run the simulation
 def run_simulation():
     apt_groups = load_apt_groups()  # Load APT group data
     print("[INFO] APT Groups loaded.")
 
-    # Show menu for selecting an APT group
+    # Show menu for selecting APT group
     print("\nSelect an APT group to simulate:")
     for i, apt_name in enumerate(apt_groups.keys(), 1):
         print(f"{i}. {apt_name}")
 
-    while True:
-        try:
-            selection = int(input(f"Enter your selection (1-{len(apt_groups)}): "))
-            if 1 <= selection <= len(apt_groups):
-                break
-            else:
-                print("[ERROR] Invalid selection. Please try again.")
-        except ValueError:
-            print("[ERROR] Invalid input. Please enter a number.")
-
+    selection = int(input(f"Enter your selection (1-{len(apt_groups)}): "))
     selected_group = list(apt_groups.keys())[selection - 1]
     print(f"[INFO] You selected: {selected_group}")
 
-    # Show techniques for the selected APT group
-    print(f"\nTechniques for {selected_group}:")
-    for i, technique in enumerate(apt_groups[selected_group]["techniques"], 1):
-        print(f"{i}. {technique['name']} (ID: {technique['id']}, Tactic: {technique['tactic']})")
+    # Display APT group details
+    display_apt_details(selected_group, apt_groups[selected_group])
 
-    # Select techniques to simulate
+    # Show menu for selecting techniques
     selected_techniques = []
     for technique in apt_groups[selected_group]["techniques"]:
+        display_technique_details(technique)
         simulate = input(f"Simulate technique {technique['name']}? (y/n): ").lower()
         if simulate == 'y':
             selected_techniques.append(technique)
 
     # Run simulations for selected techniques
-    if not selected_techniques:
-        print("[INFO] No techniques selected for simulation. Exiting...")
-        return
-
-    print("\n[INFO] Starting simulations...\n")
     for technique in selected_techniques:
         simulate_technique(selected_group, technique)
 
     # Generate reports
-    while True:
-        report_format = input("\nGenerate report in text or HTML format? (text/html): ").lower()
-        if report_format in ["text", "html"]:
-            break
-        else:
-            print("[ERROR] Invalid input. Please choose 'text' or 'html'.")
-
+    report_format = input("Generate report in text or HTML format? (text/html): ").lower()
     if report_format == "text":
         generate_report_text(selected_group, selected_techniques)
     elif report_format == "html":
         generate_report_html(selected_group, selected_techniques)
+    else:
+        print("[ERROR] Invalid report format selected.")
+
+def generate_report_text(apt_group, techniques):
+    with open(f"{apt_group}_simulation_report.txt", "w") as file:
+        file.write(f"Simulation Report for {apt_group}\n")
+        file.write("=" * 50 + "\n")
+        for technique in techniques:
+            file.write(f"- {technique['name']} ({technique['id']})\n")
+            file.write(f"  Tactic: {technique['tactic']}\n")
+            file.write(f"  Description: {technique['description']}\n")
+        print(f"[INFO] Report saved as {apt_group}_simulation_report.txt")
+
+def generate_report_html(apt_group, techniques):
+    with open(f"{apt_group}_simulation_report.html", "w") as file:
+        file.write(f"<h1>Simulation Report for {apt_group}</h1>\n")
+        file.write("<hr>\n")
+        for technique in techniques:
+            file.write(f"<h2>{technique['name']} ({technique['id']})</h2>\n")
+            file.write(f"<p><strong>Tactic:</strong> {technique['tactic']}</p>\n")
+            file.write(f"<p><strong>Description:</strong> {technique['description']}</p>\n")
+        print(f"[INFO] Report saved as {apt_group}_simulation_report.html")
 
 if __name__ == "__main__":
     run_simulation()
