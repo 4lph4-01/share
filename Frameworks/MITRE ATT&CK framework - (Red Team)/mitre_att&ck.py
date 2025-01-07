@@ -62,7 +62,7 @@ def print_banner():
 
 
 # Load APT group data from JSON file
-def load_apt_groups(filename="apt_groups_with_descriptions.json"):
+def load_apt_groups(filename="apt_groups.json"):
     with open(filename, "r") as file:
         return json.load(file)
 
