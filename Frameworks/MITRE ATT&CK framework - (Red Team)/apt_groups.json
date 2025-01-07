@@ -1,7 +1,7 @@
 {
   "APT40": {
     "name": "APT40",
-    "description": "APT40 is a China-based cyber espionage group known for targeting maritime industries and government organizations.",
+    "description": "APT40 is a China-based cyber espionage group known for targeting maritime industries and government organisations.",
     "techniques": [
       {
         "id": "T1071",
@@ -109,7 +109,7 @@
   },
   "Turla": {
     "name": "Turla",
-    "description": "Turla is a Russian cyber espionage group known for targeting government and military organizations.",
+    "description": "Turla is a Russian cyber espionage group known for targeting government and military organisations.",
     "techniques": [
       {
         "id": "T1071",
@@ -289,7 +289,7 @@
   },
   "Machete": {
     "name": "Machete",
-    "description": "Machete is a cyber espionage group known for targeting Latin American countries, particularly government and military organizations.",
+    "description": "Machete is a cyber espionage group known for targeting Latin American countries, particularly government and military organisations.",
     "techniques": [
       {
         "id": "T1059",
@@ -361,7 +361,7 @@
   },
   "APT29": {
     "name": "APT29",
-    "description": "APT29 is a Russian cyber espionage group known for targeting government and political organizations.",
+    "description": "APT29 is a Russian cyber espionage group known for targeting government and political organisations.",
     "techniques": [
       {
         "id": "T1105",
@@ -415,7 +415,7 @@
   },
   "APT37": {
     "name": "APT37",
-    "description": "APT37 is a North Korean cyber espionage group known for targeting South Korean government and financial organizations.",
+    "description": "APT37 is a North Korean cyber espionage group known for targeting South Korean government and financial organisations.",
     "techniques": [
       {
         "id": "T1105",
