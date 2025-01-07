@@ -39,7 +39,7 @@ This tool is designed to simulate techniques used by Advanced Persistent Threat 
 
 ### Running the Simulation
 
-1. Ensure the `apt_groups_with_descriptions.json` file is present in the project directory. This JSON file should contain the detailed information of APT groups and their techniques.
+1. Ensure the `apt_groups.json` file is present in the project directory. This JSON file should contain the detailed information of APT groups and their techniques.
 
 2. Run the simulation script:
     ```sh
