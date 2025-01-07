@@ -19,7 +19,13 @@ from termcolor import colored
 
 # Disclaimer and Ethical Guidelines
 def display_disclaimer():
-    print r"""
+    print("""
+    DISCLAIMER:
+    This script is intended for educational purposes only. It is not intended to cause any harm or damage.
+    You must have explicit permission from the owner of any system you target with this script.
+    Unauthorized testing and exploitation of systems is illegal and unethical.
+    Always ensure you have written consent before conducting any security testing.
+    """)
 
    _____  .___________________________________    _______________________________  _________   ____  __. ___________                                                  __                  _____  ____.____   __________  ___ ___    _____           _______  ____ 
   /     \ |   \__    ___/\______   \_   _____/   /  _  \__    ___/\__    ___/  _ \ \_   ___ \ |    |/ _| \_   _____/____________     _____   ______  _  _____________|  | __             /  |  |/_   |    |  \______   \/   |   \  /  |  |          \   _  \/_   |
