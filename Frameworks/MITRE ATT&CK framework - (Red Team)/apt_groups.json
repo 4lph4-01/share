@@ -1,48 +1,268 @@
 {
-    "APT Groups": [
-        {
-            "name": "APT29",
-            "description": "APT29 is a threat group attributed to the Russian government known for targeting various sectors.",
-            "techniques": [
-                {
-                    "id": "T1071",
-                    "name": "Application Layer Protocol",
-                    "tactics": [
-                        "Command and Control"
-                    ],
-                    "description": "Use of common application layer protocols to communicate with a command and control server."
-                },
-                {
-                    "id": "T1566",
-                    "name": "Phishing",
-                    "tactics": [
-                        "Initial Access"
-                    ],
-                    "description": "Spearphishing campaign using tailored messages to gain access to targeted systems."
-                }
-            ]
-        },
-        {
-            "name": "APT41",
-            "description": "APT41 is a Chinese cyber espionage group that also conducts financially motivated operations.",
-            "techniques": [
-                {
-                    "id": "T1059",
-                    "name": "Command and Scripting Interpreter",
-                    "tactics": [
-                        "Execution"
-                    ],
-                    "description": "Use of command-line interpreters to execute arbitrary commands."
-                },
-                {
-                    "id": "T1105",
-                    "name": "Ingress Tool Transfer",
-                    "tactics": [
-                        "Command and Control"
-                    ],
-                    "description": "Transferring tools or payloads from an external system to a target environment."
-                }
-            ]
-        }
+  "APT40": {
+    "name": "APT40",
+    "techniques": [
+      {
+        "id": "T1071",
+        "name": "Application Layer Protocol",
+        "tactic": "Command and Control"
+      },
+      {
+        "id": "T1059",
+        "name": "Command-Line Interface",
+        "tactic": "Execution"
+      }
     ]
+  },
+  "APT12": {
+    "name": "APT12",
+    "techniques": [
+      {
+        "id": "T1071",
+        "name": "Application Layer Protocol",
+        "tactic": "Command and Control"
+      },
+      {
+        "id": "T1086",
+        "name": "PowerShell",
+        "tactic": "Execution"
+      }
+    ]
+  },
+  "MuddyWater": {
+    "name": "MuddyWater",
+    "techniques": [
+      {
+        "id": "T1071",
+        "name": "Application Layer Protocol",
+        "tactic": "Command and Control"
+      },
+      {
+        "id": "T1059",
+        "name": "Command-Line Interface",
+        "tactic": "Execution"
+      }
+    ]
+  },
+  "Sandworm": {
+    "name": "Sandworm Team",
+    "techniques": [
+      {
+        "id": "T1086",
+        "name": "PowerShell",
+        "tactic": "Execution"
+      },
+      {
+        "id": "T1213",
+        "name": "Data from Information Repositories",
+        "tactic": "Collection"
+      }
+    ]
+  },
+  "GALLIUM": {
+    "name": "GALLIUM",
+    "techniques": [
+      {
+        "id": "T1071",
+        "name": "Application Layer Protocol",
+        "tactic": "Command and Control"
+      },
+      {
+        "id": "T1083",
+        "name": "File and Directory Discovery",
+        "tactic": "Discovery"
+      }
+    ]
+  },
+  "CobaltGroup": {
+    "name": "Cobalt Group",
+    "techniques": [
+      {
+        "id": "T1071",
+        "name": "Application Layer Protocol",
+        "tactic": "Command and Control"
+      },
+      {
+        "id": "T1070",
+        "name": "Indicator Removal on Host",
+        "tactic": "Defense Evasion"
+      }
+    ]
+  },
+  "Turla": {
+    "name": "Turla",
+    "techniques": [
+      {
+        "id": "T1071",
+        "name": "Application Layer Protocol",
+        "tactic": "Command and Control"
+      },
+      {
+        "id": "T1003",
+        "name": "Credential Dumping",
+        "tactic": "Credential Access"
+      }
+    ]
+  },
+  "FIN6": {
+    "name": "FIN6",
+    "techniques": [
+      {
+        "id": "T1071",
+        "name": "Application Layer Protocol",
+        "tactic": "Command and Control"
+      },
+      {
+        "id": "T1086",
+        "name": "PowerShell",
+        "tactic": "Execution"
+      }
+    ]
+  },
+  "Dragonfly": {
+    "name": "Dragonfly",
+    "techniques": [
+      {
+        "id": "T1071",
+        "name": "Application Layer Protocol",
+        "tactic": "Command and Control"
+      },
+      {
+        {
+  "Dragonfly": {
+    "name": "Dragonfly",
+    "techniques": [
+      {
+        "id": "T1071",
+        "name": "Application Layer Protocol",
+        "tactic": "Command and Control"
+      },
+      {
+        "id": "T1070",
+        "name": "Indicator Removal on Host",
+        "tactic": "Defense Evasion"
+      }
+    ]
+  },
+  "APT34": {
+    "name": "APT34",
+    "techniques": [
+      {
+        "id": "T1071",
+        "name": "Application Layer Protocol",
+        "tactic": "Command and Control"
+      },
+      {
+        "id": "T1083",
+        "name": "File and Directory Discovery",
+        "tactic": "Discovery"
+      }
+    ]
+  },
+  "RedCurl": {
+    "name": "RedCurl",
+    "techniques": [
+      {
+        "id": "T1071",
+        "name": "Application Layer Protocol",
+        "tactic": "Command and Control"
+      },
+      {
+        "id": "T1105",
+        "name": "Remote File Copy",
+        "tactic": "Lateral Movement"
+      }
+    ]
+  },
+  "OilRig": {
+    "name": "OilRig",
+    "techniques": [
+      {
+        "id": "T1071",
+        "name": "Application Layer Protocol",
+        "tactic": "Command and Control"
+      },
+      {
+        "id": "T1105",
+        "name": "Remote File Copy",
+        "tactic": "Lateral Movement"
+      }
+    ]
+  },
+  "Fin7": {
+    "name": "FIN7",
+    "techniques": [
+      {
+        "id": "T1071",
+        "name": "Application Layer Protocol",
+        "tactic": "Command and Control"
+      },
+      {
+        "id": "T1086",
+        "name": "PowerShell",
+        "tactic": "Execution"
+      }
+    ]
+  },
+  "Ke3chang": {
+    "name": "Ke3chang",
+    "techniques": [
+      {
+        "id": "T1059",
+        "name": "Command-Line Interface",
+        "tactic": "Execution"
+      },
+      {
+        "id": "T1070",
+        "name": "Indicator Removal on Host",
+        "tactic": "Defense Evasion"
+      }
+    ]
+  },
+  "Patchwork": {
+    "name": "Patchwork",
+    "techniques": [
+      {
+        "id": "T1071",
+        "name": "Application Layer Protocol",
+        "tactic": "Command and Control"
+      },
+      {
+        "id": "T1070",
+        "name": "Indicator Removal on Host",
+        "tactic": "Defense Evasion"
+      }
+    ]
+  },
+  "BlackTech": {
+    "name": "BlackTech",
+    "techniques": [
+      {
+        "id": "T1105",
+        "name": "Remote File Copy",
+        "tactic": "Lateral Movement"
+      },
+      {
+        "id": "T1071",
+        "name": "Application Layer Protocol",
+        "tactic": "Command and Control"
+      }
+    ]
+  },
+  "Machete": {
+    "name": "Machete",
+    "techniques": [
+      {
+        "id": "T1059",
+        "name": "Command-Line Interface",
+        "tactic": "Execution"
+      },
+      {
+        "id": "T1083",
+        "name": "File and Directory Discovery",
+        "tactic": "Discovery"
+      }
+    ]
+  }
 }
+
