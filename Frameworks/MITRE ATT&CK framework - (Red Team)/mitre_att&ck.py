@@ -53,6 +53,10 @@ def display_disclaimer():
     Always ensure you have written consent before conducting any security testing.
     """)
 
+
+    print(splash)
+    print("MITRE ATT&CK Framerwork 41PH4-01\n")
+
 # MITRE ATT&CK data URL
 ATTACK_DATA_URL = "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json"
 
