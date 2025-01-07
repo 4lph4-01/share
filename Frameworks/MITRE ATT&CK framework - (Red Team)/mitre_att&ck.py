@@ -25,7 +25,7 @@ def display_disclaimer():
     DISCLAIMER:
     This script is intended for educational purposes only. It is not intended to cause any harm or damage.
     You must have explicit permission from the owner of any system you target with this script.
-    Unauthorized testing and exploitation of systems is illegal and unethical.
+    Unauthorised testing and exploitation of systems is illegal and unethical.
     Always ensure you have written consent before conducting any security testing.
     """)
 
@@ -134,19 +134,19 @@ def run_attack():
     # Display disclaimer
     display_disclaimer()
 
-    # Step 1: Check if ATT&CK data exists or download it
+    # Check if ATT&CK data exists or download it
     if not os.path.exists('attack_data.json'):
         print("[INFO] ATT&CK data not found. Downloading...")
         download_attack_data()
     data = load_attack_data()  # Load the ATT&CK dataset
 
-    # Step 2: Display available APT groups and let user select
+    # Display available APT groups and let user select
     apt_groups = display_apt_groups(data)
     apt_group_selection = int(input(f"\nEnter selection (1-{len(apt_groups)}): "))
     selected_group = apt_groups[apt_group_selection - 1]
     print(f"[INFO] You selected: {selected_group}")
 
-    # Step 3: Display techniques for the selected APT group
+    # Display techniques for the selected APT group
     techniques = display_techniques(data, selected_group)
     selected_techniques = []
     while True:
@@ -156,7 +156,7 @@ def run_attack():
         selected_technique = techniques[technique_selection - 1]
         selected_techniques.append(selected_technique)
 
-    # Step 4: Ask for simulation or real attack mode
+    # Ask for simulation or real attack mode
     mode = input("Select mode (simulation/real): ").strip().lower()
     if mode == 'simulation':
         # Simulate techniques and generate reports
