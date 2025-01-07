@@ -24,23 +24,17 @@ This tool is designed to simulate techniques used by Advanced Persistent Threat 
     sudo apt install python3 python3-venv python3-pip
     ```
 
-2. **Clone the repository:**
-    ```sh
-    git clone https://github.com/yourusername/apt-simulation-tool.git
-    cd apt-simulation-tool
-    ```
-
-3. **Create a virtual environment:**
+2. **Create a virtual environment:**
     ```sh
     python3 -m venv venv
     ```
 
-4. **Activate the virtual environment:**
+3. **Activate the virtual environment:**
     ```sh
     source venv/bin/activate
     ```
 
-5. **Install required Python packages:**
+4. **Install required Python packages:**
     - For this script, there are no additional packages to install since `json` and `time` are part of the standard library.
 
 ### Running the Simulation
