@@ -12,6 +12,8 @@
 
 import json
 import time
+import datetime
+import subprocess
 
 # Disclaimer and Ethical Guidelines
 def display_disclaimer():
@@ -76,69 +78,88 @@ def display_technique_details(technique):
     print(f"Tactic: {technique['tactic']}")
     print(f"Description: {technique['description']}\n")
 
-# Function to simulate an attack technique
+# Function to log alerts
+def log_alert(apt_name, technique):
+    alert = {
+        "timestamp": datetime.datetime.now().isoformat(),
+        "apt_name": apt_name,
+        "technique_id": technique["id"],
+        "technique_name": technique["name"],
+        "tactic": technique["tactic"],
+        "description": technique["description"]
+    }
+    with open("alerts_log.json", "a") as log_file:
+        log_file.write(json.dumps(alert) + "\n")
+    print(f"[ALERT] Generated alert for {technique['name']} ({technique['id']})")
+
+# Function to simulate a wide range of attack techniques
 def simulate_technique(apt_name, technique):
     print(f"[INFO] Simulating technique {technique['name']} ({technique['id']}) for {apt_name}...")
-    time.sleep(2)  # Simulating the attack technique (placeholder)
+
+    # Map technique IDs to simulation functions
+    technique_simulation_map = {
+        "T1071": simulate_http_requests,
+        "T1059": simulate_command_execution,
+        "T1089": simulate_disable_security_tools,
+        # Add more mappings here as needed
+    }
+
+    # Call the corresponding simulation function if it exists
+    simulate_func = technique_simulation_map.get(technique["id"], simulate_generic_activity)
+    simulate_func()
+
     print(f"[INFO] {technique['name']} simulation complete.\n")
+    # Generate an alert for the simulated technique
+    log_alert(apt_name, technique)
+
+def simulate_http_requests():
+    # Simulate HTTP requests using PowerShell
+    endpoints = ["http://example.com", "http://example.org", "http://example.net"]
+    for endpoint in endpoints:
+        subprocess.run(["powershell", "-Command", f"Invoke-WebRequest -Uri {endpoint} -UseBasicParsing"])
+        time.sleep(1)
+
+def simulate_command_execution():
+    # Simulate command execution using PowerShell
+    commands = [
+        "Get-Process",
+        "Get-Service",
+        "Write-Output 'Simulating APT activity' > C:\\Temp\\apt_simulation.log"
+    ]
+    for command in commands:
+        subprocess.run(["powershell", "-Command", command])
+        time.sleep(1)
+
+def simulate_disable_security_tools():
+    # Simulate disabling security tools using PowerShell
+    security_commands = [
+        "Stop-Service -Name 'WinDefend' -Force",  # Stop Windows Defender
+        "Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False"  # Disable Windows Firewall
+    ]
+    for command in security_commands:
+        subprocess.run(["powershell", "-Command", command])
+        time.sleep(1)
+
+def simulate_generic_activity():
+    # Simulate generic activity for techniques not specifically mapped
+    subprocess.run(["powershell", "-Command", "Write-Output 'Simulating generic APT activity' > C:\\Temp\\generic_apt_simulation.log"])
+    time.sleep(1)
 
 # Main function to run the simulation
 def run_simulation():
     apt_groups = load_apt_groups()  # Load APT group data
     print("[INFO] APT Groups loaded.")
 
-    # Show menu for selecting APT group
-    print("\nSelect an APT group to simulate:")
-    for i, apt_name in enumerate(apt_groups.keys(), 1):
-        print(f"{i}. {apt_name}")
+    # Loop through each APT group
+    for apt_name, apt_details in apt_groups.items():
+        display_apt_details(apt_name, apt_details)
 
-    selection = int(input(f"Enter your selection (1-{len(apt_groups)}): "))
-    selected_group = list(apt_groups.keys())[selection - 1]
-    print(f"[INFO] You selected: {selected_group}")
+        # Loop through each technique in the APT group
+        for technique in apt_details["techniques"]:
+            display_technique_details(technique)
+            simulate_technique(apt_name, technique)
 
-    # Display APT group details
-    display_apt_details(selected_group, apt_groups[selected_group])
-
-    # Show menu for selecting techniques
-    selected_techniques = []
-    for technique in apt_groups[selected_group]["techniques"]:
-        display_technique_details(technique)
-        simulate = input(f"Simulate technique {technique['name']}? (y/n): ").lower()
-        if simulate == 'y':
-            selected_techniques.append(technique)
-
-    # Run simulations for selected techniques
-    for technique in selected_techniques:
-        simulate_technique(selected_group, technique)
-
-    # Generate reports
-    report_format = input("Generate report in text or HTML format? (text/html): ").lower()
-    if report_format == "text":
-        generate_report_text(selected_group, selected_techniques)
-    elif report_format == "html":
-        generate_report_html(selected_group, selected_techniques)
-    else:
-        print("[ERROR] Invalid report format selected.")
-
-def generate_report_text(apt_group, techniques):
-    with open(f"{apt_group}_simulation_report.txt", "w") as file:
-        file.write(f"Simulation Report for {apt_group}\n")
-        file.write("=" * 50 + "\n")
-        for technique in techniques:
-            file.write(f"- {technique['name']} ({technique['id']})\n")
-            file.write(f"  Tactic: {technique['tactic']}\n")
-            file.write(f"  Description: {technique['description']}\n")
-        print(f"[INFO] Report saved as {apt_group}_simulation_report.txt")
-
-def generate_report_html(apt_group, techniques):
-    with open(f"{apt_group}_simulation_report.html", "w") as file:
-        file.write(f"<h1>Simulation Report for {apt_group}</h1>\n")
-        file.write("<hr>\n")
-        for technique in techniques:
-            file.write(f"<h2>{technique['name']} ({technique['id']})</h2>\n")
-            file.write(f"<p><strong>Tactic:</strong> {technique['tactic']}</p>\n")
-            file.write(f"<p><strong>Description:</strong> {technique['description']}</p>\n")
-        print(f"[INFO] Report saved as {apt_group}_simulation_report.html")
+    print("[INFO] Simulation complete. Check alerts_log.json for generated alerts.")
 
 if __name__ == "__main__":
     run_simulation()
