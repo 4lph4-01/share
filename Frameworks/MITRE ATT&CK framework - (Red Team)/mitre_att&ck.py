@@ -1,6 +1,6 @@
 ######################################################################################################################################################################################################################
 # Python adversary emulator script, in line with the MITRE ATT&CK Framerwork. Ensuring apt_groups.json and more_mass,py are in the same directory as the script. sudo python3 mitre_att&ck.py. Requires a linux virtual environment. 
-# Performs simulations or real world attacks based on selections. Note: Will be adding options for real world penatration test attack selection, that will attempt to exploit discovered vulnerabilities based on logic. 
+# Performs simulations or real world attacks based on selections. Note: Real world penatration test attack selection has been added. 
 # Shodan API Key required. Use the real world penetration testing as your own risk. 
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software 
 # without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons 
