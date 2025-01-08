@@ -63,7 +63,6 @@ def print_banner():
     """
     print(banner)
 
-
 # Check and install dependencies
 def install_dependencies():
     dependencies = ["whois", "requests", "dnspython", "shodan", "linkedin-scraper"]
@@ -278,6 +277,7 @@ def run_nmap():
     print(f"[INFO] Running Nmap scan on {target}...")
     subprocess.run(["nmap", "-A", target, "-oN", output_file])
     print(f"[INFO] Nmap scan completed. Results saved to {output_file}.")
+    return output_file
 
 # Passive Recon (Whois)
 def passive_recon():
@@ -311,6 +311,22 @@ def generate_report(recon_results):
         json.dump(report, json_file, indent=4)
     print("[INFO] Report saved to report.json.")
 
+    # Generate a human-readable text report
+    with open("report.txt", "w") as txt_file:
+        txt_file.write(f"Penetration Testing Report\n")
+        txt_file.write(f"Generated on: {report['timestamp']}\n\n")
+        txt_file.write("Reconnaissance Results:\n")
+        txt_file.write("========================\n")
+        txt_file.write(f"Subdomains:\n{', '.join(report['reconnaissance']['subdomains'])}\n\n")
+        txt_file.write(f"Nmap Scan:\n{report['reconnaissance']['nmap_scan']}\n\n")
+        txt_file.write("Vulnerability Assessment:\n")
+        txt_file.write("=========================\n")
+        txt_file.write(f"Assessment: {report['vulnerabilities']['assessment']}\n\n")
+        txt_file.write("Exploitation Results:\n")
+        txt_file.write("====================\n")
+        txt_file.write(f"Results: {report['exploitation']['results']}\n\n")
+    print("[INFO] Human-readable report saved to report.txt.")
+
 # Reconnaissance menu
 def reconnaissance_menu():
     print("\n[Reconnaissance Menu]")
@@ -325,7 +341,8 @@ def reconnaissance_menu():
         subdomains_file = run_more_mass()
         recon_results["subdomains"] = parse_more_mass_output(subdomains_file)
     elif choice == "2":
-        run_nmap()
+        nmap_file = run_nmap()
+        recon_results["nmap_scan"] = nmap_file
     elif choice == "3":
         passive_recon()
     elif choice == "4":
@@ -467,12 +484,14 @@ def generate_report_text(apt_group, techniques):
 
 def generate_report_html(apt_group, techniques):
     with open(f"{apt_group}_simulation_report.html", "w") as file:
+        file.write(f"<html><head><title>Simulation Report for {apt_group}</title></head><body>")
         file.write(f"<h1>Simulation Report for {apt_group}</h1>\n")
         file.write("<hr>\n")
         for technique in techniques:
             file.write(f"<h2>{technique['name']} ({technique['id']})</h2>\n")
             file.write(f"<p><strong>Tactic:</strong> {technique['tactic']}</p>\n")
             file.write(f"<p><strong>Description:</strong> {technique['description']}</p>\n")
+        file.write("</body></html>")
         print(f"[INFO] Report saved as {apt_group}_simulation_report.html")
 
 # Simulation menu
@@ -527,7 +546,7 @@ def main_menu():
 # Global dictionary to store results
 recon_results = {}
 
-# Initialize and start framework
+# Initialise and start framework
 if __name__ == "__main__":
     display_disclaimer()
     initialize()
