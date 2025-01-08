@@ -24,11 +24,13 @@ import time
 # Disclaimer and Ethical Guidelines
 def display_disclaimer():
     print("""
+    
     DISCLAIMER:
     This script is intended for educational purposes only. It is not intended to cause any harm or damage.
     You must have explicit permission from the owner of any system you target with this script.
     Unauthorized testing and exploitation of systems is illegal and unethical.
     Always ensure you have written consent before conducting any security testing.
+    
     """)
 
 # Banner
