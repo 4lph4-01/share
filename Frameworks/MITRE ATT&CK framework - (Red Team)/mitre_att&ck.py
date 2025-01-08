@@ -24,13 +24,11 @@ import time
 # Disclaimer and Ethical Guidelines
 def display_disclaimer():
     print("""
-    
     DISCLAIMER:
     This script is intended for educational purposes only. It is not intended to cause any harm or damage.
     You must have explicit permission from the owner of any system you target with this script.
     Unauthorized testing and exploitation of systems is illegal and unethical.
     Always ensure you have written consent before conducting any security testing.
-    
     """)
 
 # Banner
@@ -65,17 +63,36 @@ def print_banner():
     """
     print(banner)
 
+
 # Check and install dependencies
 def install_dependencies():
     dependencies = ["whois", "requests", "dnspython", "shodan", "linkedin-scraper"]
+    external_tools = ["nmap", "nikto"]
     print("[INFO] Checking dependencies...")
+
     for dep in dependencies:
         try:
             __import__(dep)
         except ImportError:
             print(f"[INFO] Installing {dep}...")
             subprocess.run(["pip3", "install", dep])
+
+    for tool in external_tools:
+        if subprocess.run(["which", tool], stdout=subprocess.PIPE, stderr=subprocess.PIPE).returncode != 0:
+            print(f"[INFO] Installing {tool}...")
+            if tool == "nmap":
+                subprocess.run(["sudo", "apt-get", "install", "-y", tool])
+            elif tool == "nikto":
+                subprocess.run(["sudo", "apt-get", "install", "-y", tool])
+
     print("[INFO] Dependencies are installed.")
+
+    # Uncomment the following lines to install OpenVAS (GVM)
+    # print("[INFO] Installing OpenVAS (GVM)...")
+    # subprocess.run(["sudo", "apt-get", "install", "-y", "openvas"])
+    # subprocess.run(["sudo", "gvm-setup"])
+    # subprocess.run(["sudo", "gvm-check-setup"])
+    # print("[INFO] OpenVAS (GVM) installation completed.")
 
 # Check and clone more_mass.py if not found
 def check_more_mass():
@@ -287,10 +304,46 @@ def passive_recon():
     print(f"[INFO] Performing WHOIS lookup on {target}...")
     subprocess.run(["whois", target])
 
-# Vulnerability assessment placeholder
+# Function to run Nmap and Nikto for vulnerability scanning
 def run_vulnerability_scan():
-    print("[INFO] Running vulnerability scan...")
-    print("[WARNING] Vulnerability scanning functionality is under development!")
+    target = input("[INPUT] Enter the target IP or domain for vulnerability scanning: ")
+    
+    # Run Nmap scan
+    nmap_output_file = f"{target}_nmap_vuln_scan.txt"
+    print(f"[INFO] Running Nmap vulnerability scan on {target}...")
+    subprocess.run(["nmap", "-sV", "--script=vuln", target, "-oN", nmap_output_file])
+    print(f"[INFO] Nmap vulnerability scan completed. Results saved to {nmap_output_file}.")
+
+    # Run Nikto scan
+    nikto_output_file = f"{target}_nikto_scan.txt"
+    print(f"[INFO] Running Nikto web vulnerability scan on {target}...")
+    subprocess.run(["nikto", "-h", target, "-output", nikto_output_file])
+    print(f"[INFO] Nikto web vulnerability scan completed. Results saved to {nikto_output_file}.")
+
+    # Combine results
+    with open("vulnerability_scan_report.txt", "w") as report_file:
+        report_file.write(f"Vulnerability Scan Report for {target}\n")
+        report_file.write("=" * 50 + "\n\n")
+        
+        report_file.write("Nmap Vulnerability Scan Results:\n")
+        report_file.write("-" * 50 + "\n")
+        with open(nmap_output_file, "r") as nmap_file:
+            report_file.write(nmap_file.read())
+        
+        report_file.write("\n\nNikto Vulnerability Scan Results:\n")
+        report_file.write("-" * 50 + "\n")
+        with open(nikto_output_file, "r") as nikto_file:
+            report_file.write(nikto_file.read())
+    
+    print("[INFO] Combined vulnerability scan report saved to vulnerability_scan_report.txt.")
+    
+    # Uncomment the following lines to run OpenVAS (GVM) scan
+    # gvm_target_name = f"{target}_openvas_target"
+    # gvm_task_name = f"{target}_openvas_task"
+    # print("[INFO] Running OpenVAS (GVM) scan on {target}...")
+    # subprocess.run(["gvm-cli", "socket", "--xml", f"<create_target><name>{gvm_target_name}</name><hosts>{target}</hosts></create_target>"])
+    # subprocess.run(["gvm-cli", "socket", "--xml", f"<create_task><name>{gvm_task_name}</name><comment>Vulnerability scan on {target}</comment><config id='d21f6c81-2b88-4ac1-b7b4-a2a9f2ad4663'/><target id='{gvm_target_name}'/></create_task>"])
+    # print("[INFO] OpenVAS (GVM) scan initiated. Check the GVM interface for results.")
 
 # Generate final report
 def generate_report(recon_results):
@@ -548,7 +601,7 @@ def main_menu():
 # Global dictionary to store results
 recon_results = {}
 
-# Initialise and start framework
+# Initialize and start framework
 if __name__ == "__main__":
     display_disclaimer()
     initialize()
