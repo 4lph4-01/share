@@ -131,7 +131,7 @@ def check_more_mass():
         subprocess.run(["rm", "-rf", "share"])
         print("[INFO] more_mass.py is now available.")
 
-# Initialise framework
+# Initialize framework
 def initialize():
     print("[INFO] Initializing framework...")
     install_dependencies()
@@ -189,8 +189,8 @@ def send_phishing_email():
     Please review the recent security update by clicking the link below:
     <a href="http://fake-tracking-link.com">Security Update</a>
 
-    Regards,
-    IT Security Team
+    Thanks,
+    Information Security Team
     """
 
     # Create the email
