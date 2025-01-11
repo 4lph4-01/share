@@ -226,7 +226,7 @@ def generate_payload():
 
 # Empire interaction
 def interact_with_empire():
-    empire_url = input("[INPUT] Enter the Empire API URL (e.g., http://localhost:1337): ")
+    empire_url = input("[INPUT] Enter the Empire API URL (e.g., https://localhost:1337): ")
     empire_username = input("[INPUT] Enter your Empire username: ")
     empire_password = input("[INPUT] Enter your Empire password: ")
 
