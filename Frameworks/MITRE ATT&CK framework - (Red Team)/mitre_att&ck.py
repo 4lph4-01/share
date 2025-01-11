@@ -257,7 +257,7 @@ def interact_with_empire():
 
 # Covenant interaction
 def interact_with_covenant():
-    covenant_url = input("[INPUT] Enter the Covenant API URL (e.g., http://localhost:7443): ")
+    covenant_url = input("[INPUT] Enter the Covenant API URL (e.g., https://localhost:7443): ")
     covenant_username = input("[INPUT] Enter your Covenant username: ")
     covenant_password = input("[INPUT] Enter your Covenant password: ")
 
