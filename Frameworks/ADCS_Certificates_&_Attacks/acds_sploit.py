@@ -49,15 +49,14 @@ def display_splash_screen():
    (______)(_______)(_______)(________)(________)(_________)     | |
 
 """
-    print(f"{Fore.CYAN}{splash}{Style.RESET_ALL}")
-
+    print(f"{splash}")
 
 # Function to install missing packages
 def install_package(package):
     subprocess.check_call([sys.executable, "-m", "pip", "install", package])
 
 # Check and install required packages
-required_packages = ["ldap3", "smtplib", "python-dotenv"]
+required_packages = ["ldap3", "smtplib", "python-dotenv", "impacket"]
 for package in required_packages:
     try:
         __import__(package)
@@ -117,6 +116,31 @@ def enumerate_certificate_templates(conn):
         return templates
     except Exception as e:
         logger.error(f"Error enumerating certificate templates: {e}")
+        return []
+
+# Detect Vulnerable Templates
+def detect_vulnerable_templates(conn):
+    """
+    Detects vulnerable certificate templates.
+    """
+    try:
+        templates = enumerate_certificate_templates(conn)
+        vulnerable_templates = []
+        for template in templates:
+            # Add logic to detect vulnerable templates
+            # Example: if certain attributes or settings are found in the template
+            if "desired-condition" in template:
+                vulnerable_templates.append(template)
+        logger.info("Vulnerable templates detected:")
+        logger.info(vulnerable_templates)
+
+        # Save output to JSON file
+        with open("vulnerable_templates.json", "w") as file:
+            json.dump(vulnerable_templates, file, indent=4)
+
+        return vulnerable_templates
+    except Exception as e:
+        logger.error(f"Error detecting vulnerable certificate templates: {e}")
         return []
 
 # Request Certificate
@@ -220,6 +244,9 @@ def monitor_adcs_requests():
 def main():
     global DRY_RUN
 
+    # Display splash screen
+    display_splash_screen()
+
     # Get user inputs securely
     ldap_server = input("Enter LDAP server address: ").strip()
     if not validate_server_address(ldap_server):
@@ -249,29 +276,32 @@ def main():
     # Enumerate certificate templates
     templates = enumerate_certificate_templates(ldap_conn)
 
+    # Detect vulnerable templates
+    vulnerable_templates = detect_vulnerable_templates(ldap_conn)
+    
+    if vulnerable_templates:
+        for template in vulnerable_templates:
+            template_name = template.get("Name")
+            if template_name:
+                # Exploit the detected vulnerable template
+                request_certificate(template_name)
+
     # Prompt user for next action
     logger.info("Select an action:")
-    logger.info("1. Request Certificate")
-    logger.info("2. Perform NTLM Relay Attack")
-    logger.info("3. Simulate Golden Ticket")
-    logger.info("4. Monitor ADCS Requests")
+    logger.info("1. Perform NTLM Relay Attack")
+    logger.info("2. Simulate Golden Ticket")
+    logger.info("3. Monitor ADCS Requests")
     choice = input("Enter your choice: ").strip()
 
     if choice == "1":
-        template_name = input("Enter the template name: ").strip()
-        if not validate_template_name(template_name):
-            logger.error("Invalid template name. Exiting.")
-            return
-        request_certificate(template_name)
-    elif choice == "2":
         target_server = input("Enter target server for NTLM relay: ").strip()
         if not validate_server_address(target_server):
             logger.error("Invalid target server address. Exiting.")
             return
         ntlm_relay_attack(target_server, domain, username, password)
-    elif choice == "3":
+    elif choice == "2":
         simulate_kerberos_golden_ticket()
-    elif choice == "4":
+    elif choice == "3":
         monitor_adcs_requests()
     else:
         logger.error("Invalid choice. Exiting.")
