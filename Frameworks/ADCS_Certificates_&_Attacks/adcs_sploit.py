@@ -53,7 +53,7 @@ def display_splash_screen():
 """
     print(f"{splash}")
 
-# Setup for better logging
+# Setup for logging
 def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
