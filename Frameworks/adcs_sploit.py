@@ -9,6 +9,7 @@
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ######################################################################################################################################################################################################################
 
+
 import logging
 from impacket.smb import SMBConnection
 from impacket.krb5 import kerberos, types
@@ -16,8 +17,7 @@ from impacket.ldap import ldap
 from impacket.ntlm import compute_response
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
-from impacket.dcerpc.v5 import transport
-from impacket.dcerpc.v5 import lsad
+from impacket.dcerpc.v5 import transport, lsad
 from impacket.krb5.keytab import Keytab
 from impacket.krb5.ccache import CCache
 from impacket.krb5 import crypto
@@ -72,7 +72,10 @@ class CertificateExploit:
         try:
             conn = self.connect_ldap()
             if conn:
-                templates = conn.search("CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration", "(objectClass=pkiCertificateTemplate)")
+                templates = conn.search(
+                    "CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration",
+                    "(objectClass=pkiCertificateTemplate)"
+                )
                 for template in templates:
                     logging.debug(f"Template found: {template}")
                 logging.info("Misconfigured templates found, proceeding with exploit.")
@@ -81,6 +84,7 @@ class CertificateExploit:
 
     def generate_csr(self, custom_data=None):
         logging.debug("Generating CSR (Certificate Signing Request)...")
+        # Placeholder for CSR generation logic
         pass
 
     def auto_enrollment(self):
