@@ -70,7 +70,7 @@ logger = logging.getLogger(__name__)
 def load_environment():
     load_dotenv()
 
-# Improved input validation using argparse
+#  Input validation using argparse
 def parse_arguments():
     parser = argparse.ArgumentParser(description="LDAP Certificate Request and Attack Simulation Tool")
     parser.add_argument("--ldap-server", required=True, help="Enter LDAP server address")
