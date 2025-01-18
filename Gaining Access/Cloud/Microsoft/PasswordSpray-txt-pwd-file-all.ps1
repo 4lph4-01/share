@@ -26,7 +26,7 @@ $maxAttemptsPerUser = 2
 # Specify the email address to forward messages to
 $forwardTo = "forwarding@example.com"
 
-# Define the base OAuth 2.0 authorization URL
+# Define the base OAuth 2.0 authorisation URL
 $baseAuthUrl = "https://login.microsoftonline.com/common/oauth2/v2.0/authorize"
 
 # Define the client ID and redirect URI
