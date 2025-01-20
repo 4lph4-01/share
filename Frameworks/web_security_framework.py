@@ -11,7 +11,6 @@
 # Replace teaget_url with the specific endpoints you want to test for each vulnerability. Replace "http://your_base_url" with the base URL of the application you're testing
 ######################################################################################################################################################################################################################
 
-
 import requests
 from bs4 import BeautifulSoup
 import os
@@ -342,3 +341,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
