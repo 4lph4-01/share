@@ -13,51 +13,9 @@
 
 import requests
 from bs4 import BeautifulSoup
-import os
-import matplotlib.pyplot as plt
 from urllib.parse import urlparse, urljoin, quote, urlencode
 import base64
 import html
-
-# Banner
-def print_banner():
-    banner = r"""
-    
-  __      __        ___.                _____                  .__   .__                  __  .__                       _________                           .__   __           
-/  \    /  \  ____ \_ |__             /  _  \ ______  ______  |  |  |__|  ____  _____  _/  |_|__| ____   ____         /   _____/ ____   ____   __ _________|__|_/  |_  ___.__.
-\   \/\/   /_/ __ \ | __ \   ______  /  /_\  \\____ \ \____ \ |  |  |  |_/ ___\ \__  \ \   __\  |/  _ \ /    \        \_____  \_/ __ \_/ ___\ |  |  \_  __ \  |\   __\<   |  |
- \        / \  ___/ | \_\ \ /_____/ /    |    \  |_> >|  |_> >|  |__|  |\  \___  / __ \_|  | |  (  <_> )   |  \       /        \  ___/\  \___ |  |  /|  | \/  | |  |   \___  |
-  \__/\  /   \___  >|___  /         \____|__  /   __/ |   __/ |____/|__| \___  >(____  /|__| |__|\____/|___|  /______/_______  /\___  >\___  >|____/ |__|  |__| |__|   / ____|
-       \/        \/     \/                  \/|__|    |__|                   \/      \/                     \//_____/        \/     \/     \/                          \/     
-
-___________                                                  __                  _____  ______________  ___ ___    _____           _______  ____ 
-\_   _____/____________     _____   ______  _  _____________|  | __             /  |  |/_   \______   \/   |   \  /  |  |          \   _  \/_   |
- |    __)  \_  __ \__  \   /     \_/ __ \ \/ \/ /  _ \_  __ \  |/ /   ______   /   |  |_|   ||     ___/    ~    \/   |  |_  ______ /  /_\  \|   |
- |     \    |  | \// __ \_|  Y Y  \  ___/\     (  <_> )  | \/    <   /_____/  /    ^   /|   ||    |   \    Y    /    ^   / /_____/ \  \_/   \   |
- \___  /    |__|  (____  /|__|_|  /\___  >\/\_/ \____/|__|  |__|_ \           \____   | |___||____|    \___|_  /\____   |           \_____  /___|
-     \/                \/       \/     \/                        \/                |__|                      \/      |__|                 \/     
-
-                                                     _:_
-                                                    '-.-'
-                                           ()      __.'.__
-                                        .-:--:-.  |_______|
-                                 ()      \____/    \=====/      (_ _)
-                                 /\      {====}     )___(        | |____....----....____         _
-                      (\=,      //\\      )__(     /_____\       | |\                . .~~~~---~~ |
-      __    |'-'-'|  //  .\    (    )    /____\     |   |        | | |         __\\ /(/(  .       |
-     /  \   |_____| (( \_  \    )__(      |  |      |   |        | | |      <--= '|/_/_( /|       |
-     \__/    |===|   ))  `\_)  /____\     |  |      |   |        | | |       }\~) | / _(./      ..|
-    /____\   |   |  (/     \    |  |      |  |      |   |        | | |.:::::::\\/      --...::::::|
-     |  |    |   |   | _.-'|    |  |      |  |      |   |        | | |:::::::::\//::\\__\:::::::::|
-     |__|    )___(    )___(    /____\    /____\    /_____\       | | |::::::::_//_:_//__\\_:::::::| 
-    (====)  (=====)  (=====)  (======)  (======)  (=======)      | | |::::::::::::::::::::::::::::|
-    }===={  }====={  }====={  }======{  }======{  }======={      | |/:::''''~~~~'''':::::::::::::'~
-   (______)(_______)(_______)(________)(________)(_________)     | |
-    
-        
-       Web Application Security Framework Framework
-    """
-    print(banner)
 
 # Log function to keep track of test results
 def log_result(test_type, result, message, url, field=None):
@@ -77,7 +35,7 @@ def crawl_for_forms(url, visited=None):
     if visited is None:
         visited = set()
     if url in visited:
-        return visited
+        return []
     visited.add(url)
     print(f"Crawling URL for forms: {url}")
     try:
@@ -489,6 +447,13 @@ def idor_test(url, payloads):
             return True
         return False
 
+   # Insecure Direct Object Reference Testing
+def idor_test(url, payloads):
+    def check_response(response):
+        if "Unauthorized" not in response.text:
+            return True
+        return False
+
     # Test URL parameters for IDOR
     parsed_url = urlparse(url)
     query_params = parsed_url.query.split('&')
@@ -553,7 +518,7 @@ def cryptography_test(url):
             return
     log_result("Cryptography Test", "Not Vulnerable", "No weak cryptography detected", url)
 
-# Unvalidated Redirect & Forwards Testing
+# Unvalidated Redirects and Forwards Testing
 def unvalidated_redirect_test(url, payloads):
     def check_response(response):
         if response.status_code == 302:
@@ -766,7 +731,6 @@ def handle_menu_choice(choice):
 
 # Main function to run the menu-driven program
 def main():
-    print_banner()
     while True:
         display_menu()
         try:
