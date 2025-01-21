@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash From our community!
 
 # Kernel and distribution release details
 echo "Kernel and Distribution Release Details:"
