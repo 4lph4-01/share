@@ -22,31 +22,7 @@ import html
 # Banner
 def print_banner():
     banner = r"""
-    
- __      __        ___.             _____                  .__   .__                  __  .__                       _________                           .__   __                ___________                                                  __                  _____  ______________  ___ ___    _____           _______  ____ 
-/  \    /  \  ____ \_ |__          /  _  \ ______  ______  |  |  |__|  ____  _____  _/  |_|__| ____   ____         /   _____/ ____   ____   __ _________|__|_/  |_  ___.__.     \_   _____/____________     _____   ______  _  _____________|  | __             /  |  |/_   \______   \/   |   \  /  |  |          \   _  \/_   |
-\   \/\/   /_/ __ \ | __ \        /  /_\  \\____ \ \____ \ |  |  |  |_/ ___\ \__  \ \   __\  |/  _ \ /    \        \_____  \_/ __ \_/ ___\ |  |  \_  __ \  |\   __\<   |  |      |    __)  \_  __ \__  \   /     \_/ __ \ \/ \/ /  _ \_  __ \  |/ /   ______   /   |  |_|   ||     ___/    ~    \/   |  |_  ______ /  /_\  \|   |
- \        / \  ___/ | \_\ \      /    |    \  |_> >|  |_> >|  |__|  |\  \___  / __ \_|  | |  (  <_> )   |  \       /        \  ___/\  \___ |  |  /|  | \/  | |  |   \___  |      |     \    |  | \// __ \_|  Y Y  \  ___/\     (  <_> )  | \/    <   /_____/  /    ^   /|   ||    |   \    Y    /    ^   / /_____/ \  \_/   \   |
-  \__/\  /   \___  >|___  /______\____|__  /   __/ |   __/ |____/|__| \___  >(____  /|__| |__|\____/|___|  /______/_______  /\___  >\___  >|____/ |__|  |__| |__|   / ____|______\___  /    |__|  (____  /|__|_|  /\___  >\/\_/ \____/|__|  |__|_ \           \____   | |___||____|    \___|_  /\____   |           \_____  /___|
-       \/        \/     \//_____/        \/|__|    |__|                   \/      \/                     \//_____/        \/     \/     \/                          \/    /_____/    \/                \/       \/     \/                        \/                |__|                      \/      |__|                 \/  
-
-                                                     _:_
-                                                    '-.-'
-                                           ()      __.'.__
-                                        .-:--:-.  |_______|
-                                 ()      \____/    \=====/      (_ _)
-                                 /\      {====}     )___(        | |____....----....____         _
-                      (\=,      //\\      )__(     /_____\       | |\                . .~~~~---~~ |
-      __    |'-'-'|  //  .\    (    )    /____\     |   |        | | |         __\\ /(/(  .       |
-     /  \   |_____| (( \_  \    )__(      |  |      |   |        | | |      <--= '|/_/_( /|       |
-     \__/    |===|   ))  `\_)  /____\     |  |      |   |        | | |       }\~) | / _(./      ..|
-    /____\   |   |  (/     \    |  |      |  |      |   |        | | |.:::::::\\/      --...::::::|
-     |  |    |   |   | _.-'|    |  |      |  |      |   |        | | |:::::::::\//::\\__\:::::::::|
-     |__|    )___(    )___(    /____\    /____\    /_____\       | | |::::::::_//_:_//__\\_:::::::| 
-    (====)  (=====)  (=====)  (======)  (======)  (=======)      | | |::::::::::::::::::::::::::::|
-    }===={  }====={  }====={  }======{  }======{  }======={      | |/:::''''~~~~'''':::::::::::::'~
-   (______)(_______)(_______)(________)(________)(_________)     | |
-    
+                                     
     """
     print(banner)
 
@@ -144,7 +120,7 @@ def xss_test(url, payloads):
                     response = requests.get(urljoin(url, action), params=data)
                 
                 if check_response(response, payload):
-                    log_result("XSS Test", "Vulnerable", f"XSS vulnerability detected with payload {payload}", url, action)
+                    log_result("XSS Test", "Vulnerable", f"XSS vulnerability detected with payload {payload}", url, list(inputs.keys()))
                     return
     log_result("XSS Test", "Not Vulnerable", f"No XSS vulnerability detected", url)
 
@@ -177,7 +153,7 @@ def sql_injection_test(url, payloads):
                     response = requests.get(urljoin(url, action), params=data)
                 
                 if "error" in response.text.lower() or "mysql" in response.text.lower():
-                    log_result("SQL Injection Test", "Vulnerable", f"SQL Injection vulnerability detected with payload {payload}", url, action)
+                    log_result("SQL Injection Test", "Vulnerable", f"SQL Injection vulnerability detected with payload {payload}", url, list(inputs.keys()))
                     # Test modulating payloads
                     for mod_payload in modulating_payloads:
                         mod_obfuscated_payloads = obfuscate_payload(mod_payload)
@@ -188,7 +164,7 @@ def sql_injection_test(url, payloads):
                             else:
                                 response = requests.get(urljoin(url, action), params=data)
                             if "database" in response.text.lower() or "version" in response.text.lower():
-                                log_result("SQL Injection Test", "Vulnerable", f"Modulating SQL Injection payload executed: {mod_payload}", url, action)
+                                log_result("SQL Injection Test", "Vulnerable", f"Modulating SQL Injection payload executed: {mod_payload}", url, list(inputs.keys()))
                                 return
     
     log_result("SQL Injection Test", "Not Vulnerable", f"No SQL Injection vulnerability detected", url)
@@ -216,18 +192,18 @@ def ssrf_test(url, payloads):
                     response = requests.get(urljoin(url, action), params=data)
                 
                 if "error" in response.text.lower():
-                    log_result("SSRF Test", "Vulnerable", f"SSRF vulnerability detected with payload {payload}", url, action)
+                    log_result("SSRF Test", "Vulnerable", f"SSRF vulnerability detected with payload {payload}", url, list(inputs.keys()))
                     # Test modulating payloads
                     for mod_payload in modulating_payloads:
                         mod_obfuscated_payloads = obfuscate_payload(mod_payload)
-                        for mod_obfuscated_payload in mod_obfuscated_payloads:
+                        for mod_obfuscated_payload in obfuscated_payloads:
                             data = {key: mod_obfuscated_payload if value == 'text' else '' for key, value in inputs.items()}
                             if method == 'post':
                                 response = requests.post(urljoin(url, action), data=data)
                             else:
                                 response = requests.get(urljoin(url, action), params=data)
                             if any(keyword in response.text.lower() for keyword in ["meta-data", "admin"]):
-                                log_result("SSRF Test", "Vulnerable", f"Modulating SSRF payload executed: {mod_payload}", url, action)
+                                log_result("SSRF Test", "Vulnerable", f"Modulating SSRF payload executed: {mod_payload}", url, list(inputs.keys()))
                                 return
     log_result("SSRF Test", "Not Vulnerable", f"No SSRF vulnerability detected", url)
 
@@ -250,7 +226,7 @@ def rfi_test(url, payloads):
                     response = requests.get(urljoin(url, action), params=data)
                 
                 if "error" in response.text.lower():
-                    log_result("RFI Test", "Vulnerable", f"RFI vulnerability detected with payload {payload}", url, action)
+                    log_result("RFI Test", "Vulnerable", f"RFI vulnerability detected with payload {payload}", url, list(inputs.keys()))
                     return
     log_result("RFI Test", "Not Vulnerable", f"No RFI vulnerability detected", url)
 
@@ -273,7 +249,7 @@ def lfi_test(url, payloads):
                     response = requests.get(urljoin(url, action), params=data)
                 
                 if "root" in response.text:
-                    log_result("LFI Test", "Vulnerable", f"LFI vulnerability detected with payload {payload}", url, action)
+                    log_result("LFI Test", "Vulnerable", f"LFI vulnerability detected with payload {payload}", url, list(inputs.keys()))
                     return
     log_result("LFI Test", "Not Vulnerable", f"No LFI vulnerability detected", url)
 
@@ -303,34 +279,28 @@ def command_injection_test(url, payloads):
                     response = requests.get(urljoin(url, action), params=data)
                 
                 if check_response(response):
-                    log_result("Command Injection Test", "Vulnerable", f"Command injection detected with payload {payload}", url, action)
+                    log_result("Command Injection Test", "Vulnerable", f"Command injection detected with payload {payload}", url, list(inputs.keys()))
                     return
     log_result("Command Injection Test", "Not Vulnerable", f"No command injection detected", url)
 
 # Header Injection Testing
 def header_injection_test(url, payloads):
-    forms = crawl_for_forms(url)
     headers = {
         "User-Agent": "Mozilla/5.0",
         "Referer": "http://example.com",
         "X-Forwarded-For": "127.0.0.1"
     }
     
-    for form in forms:
-        action = form['action']
-        method = form['method']
-        inputs = form['inputs']
-        
-        for field in headers:
-            for payload in payloads:
-                obfuscated_payloads = obfuscate_payload(payload)
-                for obfuscated_payload in obfuscated_payloads:
-                    modified_headers = headers.copy()
-                    modified_headers[field] += obfuscated_payload
-                    response = requests.get(urljoin(url, action), headers=modified_headers)
-                    if "X-Test: injected-header" in response.text:
-                        log_result("Header Injection Test", "Vulnerable", f"Header injection detected with payload {payload}", url, action)
-                        return
+    for field in headers:
+        for payload in payloads:
+            obfuscated_payloads = obfuscate_payload(payload)
+            for obfuscated_payload in obfuscated_payloads:
+                modified_headers = headers.copy()
+                modified_headers[field] += obfuscated_payload
+                response = requests.get(url, headers=modified_headers)
+                if "X-Test: injected-header" in response.text:
+                    log_result("Header Injection Test", "Vulnerable", f"Header injection detected with payload {payload}", url, field)
+                    return
     log_result("Header Injection Test", "Not Vulnerable", f"No header injection detected", url)
 
 # Brute Force Testing for Login Forms
@@ -340,14 +310,14 @@ def brute_force_test(url, username, wordlist, payloads):
         for password in f.readlines():
             password = password.strip()
             obfuscated_passwords = obfuscate_payload(password)
-            for obfuscated_password in obfuscated_payloads:
+            for obfuscated_password in obfuscated_passwords:
                 for form in forms:
                     action = form['action']
                     method = form['method']
                     data = {key: obfuscated_password if key == 'password' else username for key in form['inputs'].keys()}
                     response = requests.post(urljoin(url, action), data=data)
                     if "login successful" in response.text:
-                        log_result("Brute Force Test", "Vulnerable", f"Found valid credentials: {username}/{password}", url, action)
+                        log_result("Brute Force Test", "Vulnerable", f"Found valid credentials: {username}/{password}", url, list(form['inputs'].keys()))
                         return
 
 # Session Handling for Login Automation
@@ -368,14 +338,15 @@ def login(url, username, password):
 
 # API Testing (e.g., POST or GET requests)
 def api_test(url, method="GET", data=None):
-    if method == "GET":
-        response = requests.get(url, params=data)
-    elif method == "POST":
-        response = requests.post(url, json=data)
-    if response.status_code != 200:
-        log_result("API Test", "Vulnerable", f"API issue found. Status: {response.status_code}", url)
-    else:
+    try:
+        if method == "GET":
+            response = requests.get(url, params=data)
+        elif method == "POST":
+            response = requests.post(url, json=data)
+        response.raise_for_status()
         log_result("API Test", "Not Vulnerable", f"API test passed", url)
+    except requests.exceptions.RequestException as e:
+        log_result("API Test", "Vulnerable", f"API issue found. Status: {response.status_code}", url)
 
 # Generate a Summary Chart of Results
 def generate_report_chart():
@@ -510,7 +481,10 @@ def handle_menu_choice(choice):
         if session:
             log_result("Session Handling", "Info", f"Logged in with {username}", target_url, "password")
     elif choice == 11:
-        api_test(target_url)
+        method = input("Enter the HTTP method (GET or POST): ").upper()
+        data_input = input("Enter the data to send (key=value pairs, separated by commas): ")
+        data = dict(item.split('=') for item in data_input.split(','))
+        api_test(target_url, method, data)
     elif choice == 12:
         generate_report_chart()
     elif choice == 13:
