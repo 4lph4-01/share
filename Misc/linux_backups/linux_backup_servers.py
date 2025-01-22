@@ -1,5 +1,5 @@
 ######################################################################################################################################################################################################################
-# Python script and json configuration files to back-up remote Linux servers. EDit the json to the assets that are the targer for backup, and run using sudo python backup_servers.py. 
+# Python script and json configuration files to back-up remote Linux servers. Edit the json to the assets that are the targer for backup, and run using sudo python backup_servers.py. By 41ph4-01 23/04/2024 & our community. 
 # The script uses key-based authentication for enhanced security.
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software 
 # without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons 
