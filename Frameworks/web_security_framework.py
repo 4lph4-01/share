@@ -374,8 +374,8 @@ def php_object_injection_test(url, payloads):
                     return
     log_result("PHP Object Injection Test", "Not Vulnerable", "No PHP Object Injection vulnerability detected", url)
 
-# Unrestricted File Upload Testing
-def unrestricted_file_upload_test(url):
+# File Uploads Testing (renamed from Unrestricted File Upload)
+def file_uploads_test(url):
     forms = crawl_for_forms(url)
 
     # Example malicious file content
@@ -386,7 +386,7 @@ def unrestricted_file_upload_test(url):
             return True
         return False
 
-    # Test form parameters for Unrestricted File Upload
+    # Test form parameters for File Uploads
     for form in forms:
         action = form['action']
         method = form['method']
@@ -396,9 +396,9 @@ def unrestricted_file_upload_test(url):
         if method == 'post' and files:
             response = requests.post(urljoin(url, action), files=files)
             if check_response(response):
-                log_result("Unrestricted File Upload Test", "Vulnerable", "Unrestricted File Upload vulnerability detected", url, list(files.keys()))
+                log_result("File Uploads Test", "Vulnerable", "File Uploads vulnerability detected", url, list(files.keys()))
                 return
-    log_result("Unrestricted File Upload Test", "Not Vulnerable", "No Unrestricted File Upload vulnerability detected", url)
+    log_result("File Uploads Test", "Not Vulnerable", "No File Uploads vulnerability detected", url)
 
 # DOM Based XSS Testing
 def dom_xss_test(url, payloads):
@@ -441,13 +441,6 @@ def session_issues_test(url):
         log_result("Session Issues Test", "Not Vulnerable", "No session fixation vulnerability detected", url)
 
 # Insecure Direct Object Reference Testing
-def idor_test(url, payloads):
-    def check_response(response):
-        if "Unauthorized" not in response.text:
-            return True
-        return False
-
-   # Insecure Direct Object Reference Testing
 def idor_test(url, payloads):
     def check_response(response):
         if "Unauthorized" not in response.text:
@@ -587,6 +580,48 @@ def ssti_test(url, payloads):
                     return
     log_result("SSTI Test", "Not Vulnerable", "No SSTI vulnerability detected", url)
 
+# Server-Side Request Forgery (SSRF) Testing
+def ssrf_test(url, payloads):
+    forms = crawl_for_forms(url)
+
+    def check_response(response, payload):
+        if payload in response.text:
+            return True
+        return False
+
+    # Test URL parameters for SSRF
+    parsed_url = urlparse(url)
+    query_params = parsed_url.query.split('&')
+    param_names = [param.split('=')[0] for param in query_params if '=' in param]
+
+    for param in param_names:
+        for payload in payloads:
+            new_query_params = {param: payload for param in param_names}
+            new_url = urljoin(url, f"{parsed_url.path}?{urlencode(new_query_params)}")
+            response = requests.get(new_url)
+
+            if check_response(response, payload):
+                log_result("SSRF Test", "Vulnerable", f"SSRF vulnerability detected with payload {payload} in URL parameter {param}", url)
+                return
+
+    # Test form parameters for SSRF
+    for form in forms:
+        action = form['action']
+        method = form['method']
+        inputs = form['inputs']
+
+        for payload in payloads:
+            data = {key: payload if value == 'text' else '' for key, value in inputs.items()}
+            if method == 'post':
+                response = requests.post(urljoin(url, action), data=data)
+            else:
+                response = requests.get(urljoin(url, action), params=data)
+
+            if check_response(response, payload):
+                log_result("SSRF Test", "Vulnerable", f"SSRF vulnerability detected with payload {payload}", url, list(inputs.keys()))
+                return
+    log_result("SSRF Test", "Not Vulnerable", "No SSRF vulnerability detected", url)
+
 # Menu and Submenu system
 def display_menu():
     print("\nPenetration Testing Menu:")
@@ -595,7 +630,7 @@ def display_menu():
     print("7. Command Injection 8. Header Injection   9. Brute Force Testing")
     print("10. Session Handling 11. API Testing       12. Generate Report")
     print("13. Blind SQL Injection 14. XPATH Injection 15. Formula Injection")
-    print("16. PHP Object Injection 17. Unrestricted File Upload 18. DOM XSS")
+    print("16. PHP Object Injection 17. File Uploads   18. DOM XSS")
     print("19. Session Issues 20. IDOR Test 21. Missing Functional Access Control")
     print("22. CSRF Test 23. Cryptography Test 24. Unvalidated Redirect Test")
     print("25. SSTI Test 26. Exit")
@@ -708,7 +743,7 @@ def handle_menu_choice(choice):
     elif choice == 16:
         php_object_injection_test(target_url, payloads)
     elif choice == 17:
-        unrestricted_file_upload_test(target_url)
+        file_uploads_test(target_url)
     elif choice == 18:
         dom_xss_test(target_url, payloads)
     elif choice == 19:
