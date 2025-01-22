@@ -1,5 +1,5 @@
 #########################################################################################################################################################################################################################
-# Azure Identity Access Management Script (IAM) PS Script (Included examples, IAM 1, IAM 2, IAM 3, and IAM 4  Controls only)
+# Azure Identity Access Management Script (IAM) PS Script (Included examples, IAM 1, IAM 2, IAM 3, and IAM 4  Controls only) By 41ph4-01 23/04/2024 & our community. 
 # Expand and add additional controls as required. It's getting late - Apologies for any fat finger mistakes! 21/04/2024
 # https://github.com/microsoft/configmgr-hub/blob/master/samples/CommonFunctions.ps1
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software 
