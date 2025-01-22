@@ -1,5 +1,5 @@
 ######################################################################################################################################################################################################################
-# Basic Python script for possible vulnerabilities in a web application, and define the scope of allowed domains. The script is an intial test, and does not constitute or replace a robust vulnerability scanner "Yet"
+# Basic Python script for possible vulnerabilities in a web application, and define the scope of allowed domains. The script is an intial test, and does not constitute or replace a robust vulnerability scanner. By 41ph4-01 23/04/2024 & our community. 
 # python vulnerability_tester.py. Note, script require BeautifulSoup Ref:https://beautiful-soup-4.readthedocs.io/en/latest/. 
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software 
 # without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons 
