@@ -43,7 +43,7 @@ def display_splash_screen():
 """
 
     print(splash)
-    print("Linux Remote Backup Tool 41PH4-01\n")
+    print("Linux Remote Backup Tool - 41PH4-01 & Our Community\n")
 
 
 import paramiko
