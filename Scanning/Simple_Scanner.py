@@ -45,7 +45,7 @@ def display_splash_screen():
 """
 
     print(splash)
-    print("Simple Python Scanner 41PH4-01\n")
+    print("Simple Python Scanner - 41PH4-01 & Our Community\n")
 
 def scan_network(target_ip):
     # Create ARP request packet
