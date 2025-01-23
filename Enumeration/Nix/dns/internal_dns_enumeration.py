@@ -45,7 +45,7 @@ def display_splash_screen():
 """
 
     print(splash)
-    print(" Internal Dns Enumeration 41PH4-01\n")
+    print("Internal Dns Enumeration - 41PH4-01 & Our Community\n")
 
 def enumerate_dns_records(domain, dns_server):
     record_types = ["A", "AAAA", "MX", "NS", "CNAME", "TXT", "SRV"]
