@@ -55,7 +55,7 @@ _________   _____________   ____  _________                                     
 """
 
     print(splash)
-    print("CSV Comparison 41PH4-01\n")
+    print("CSV Comparison print - 41PH4-01 & Our Community\n")
 
 # Step 1: Import Data
 cves1 = pd.read_csv("cves1.csv")
