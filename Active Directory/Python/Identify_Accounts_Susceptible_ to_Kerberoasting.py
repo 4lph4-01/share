@@ -44,7 +44,7 @@ def display_splash_screen():
 """
 
     print(splash)
-    print("Accounts Suceptible to Kerbroasting 41PH4-01\n")
+    print("Accounts Suceptible to Kerbroasting 41PH4-01 & Our Community\n")
 
 def audit_kerberoasting(domain):
     # Connect to Active Directory
