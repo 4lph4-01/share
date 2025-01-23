@@ -47,7 +47,7 @@ def display_splash_screen():
 """
 
     print(splash)
-    print("More_Mass for advanced network mapping and external asset discovery 41PH4-01\n")
+    print("More_Mass for advanced network mapping and external asset discovery 41PH4-01 & Our Community\n")
 
 
 def fetch_whois(domain):
