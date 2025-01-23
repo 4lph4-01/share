@@ -64,6 +64,7 @@ def print_banner():
        MITRE ATT&CK Simulation & Penetration Testing Framework
     """
     print(banner)
+    print("MITRE ATT&CK Framework - 41PH4-01 & Our Community\n")
 
 
 # Check and install dependencies
