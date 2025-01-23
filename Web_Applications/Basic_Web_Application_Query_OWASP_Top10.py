@@ -47,7 +47,7 @@ __________                .__           __      __        ___.        _____     
 """
 
     print(splash)
-    print("Basic Web Application Query- OWASP 41PH4-01\n")
+    print("Basic Web Application Query OWASP - 41PH4-01 & Our Community\n")
 
 # Function to crawl the website and discover URLs and forms within the scope
 def crawl_website(base_url, scope):
