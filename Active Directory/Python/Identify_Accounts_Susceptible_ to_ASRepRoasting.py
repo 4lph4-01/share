@@ -43,7 +43,7 @@ def display_splash_screen():
 """
 
     print(splash)
-    print("Accounts Suceptible to ASReproasting 41PH4-01\n")
+    print("Accounts Suceptible to ASReproasting 41PH4-01 & Our Community\n")
 
 def audit_asreproast(domain):
     # Connect to Active Directory
