@@ -52,7 +52,7 @@ def display_splash_screen():
 
 """
     print(f"{splash}")
-    print("ACDSSploit 41PH4-01 & Our Community\n")
+    print("ACDSSploit - 41PH4-01 & Our Community\n")
 
 # Setup for logging
 def setup_logging():
