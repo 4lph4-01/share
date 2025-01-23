@@ -10,6 +10,35 @@
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #########################################################################################################################################################################################
 
+# Function to calculate the IP range from a CIDR notation
+function Get-IPRangeFromCIDR {
+    param (
+        [string]$CIDR
+    )
+
+    $parts = $CIDR.Split('/')
+    $ip = $parts[0]
+    $prefix = [int]$parts[1]
+
+    # Convert the IP address to a 32-bit integer
+    $ipBytes = [System.Net.IPAddress]::Parse($ip).GetAddressBytes()
+    [Array]::Reverse($ipBytes)
+    $ipInt = [BitConverter]::ToUInt32($ipBytes, 0)
+
+    # Calculate the subnet mask
+    $mask = [math]::Pow(2, 32) - [math]::Pow(2, 32 - $prefix)
+
+    # Calculate the start and end IPs
+    $networkAddress = $ipInt -band $mask
+    $broadcastAddress = $networkAddress + [math]::Pow(2, 32 - $prefix) - 1
+
+    return @(
+        [System.Net.IPAddress]($networkAddress),
+        [System.Net.IPAddress]($broadcastAddress)
+    )
+}
+
+# Function to test if a port is open and grab the banner if possible
 function Test-Port {
     param(
         [string]$target,
@@ -24,17 +53,21 @@ function Test-Port {
         $writer = New-Object System.IO.StreamWriter($stream)
         $reader = New-Object System.IO.StreamReader($stream)
 
-        # Send a newline character to trigger a response from the server
+        # Send an empty line or newline to trigger a banner response
         $writer.WriteLine()
+        $writer.Flush()
 
-        # Read the response from the server
-        $response = $reader.ReadLine()
-        
+        # Read response from the server
+        Start-Sleep -Milliseconds 200 # Allow time for the server to respond
+        $response = $reader.ReadToEnd()
+
         $tcpClient.Close()
 
         Write-Host "Port $port on $target is open"
         if ($response) {
             Write-Host "Banner: $response"
+        } else {
+            Write-Host "No banner received from port $port on $target"
         }
         return $true
     } catch {
@@ -43,12 +76,31 @@ function Test-Port {
     }
 }
 
-# Define the target host and port range
-$target = "192.168.1.100"
+# Define the CIDR range and port range
+$CIDR = "192.168.1.0/24"
 $startPort = 1
 $endPort = 100
 
-# Loop through each port in the range and test if it's open
-for ($port = $startPort; $port -le $endPort; $port++) {
-    Test-Port -target $target -port $port
+# Get the start and end IPs from the CIDR range
+$range = Get-IPRangeFromCIDR -CIDR $CIDR
+$startIP = [System.Net.IPAddress]::Parse($range[0].ToString())
+$endIP = [System.Net.IPAddress]::Parse($range[1].ToString())
+
+# Convert start and end IPs to integers for looping
+$startInt = [BitConverter]::ToUInt32(([System.Net.IPAddress]::Parse($startIP.ToString()).GetAddressBytes()))
+$endInt = [BitConverter]::ToUInt32(([System.Net.IPAddress]::Parse($endIP.ToString()).GetAddressBytes()))
+
+# Loop through each IP in the range
+for ($ipInt = $startInt; $ipInt -le $endInt; $ipInt++) {
+    # Convert the integer back to an IP address
+    $ipBytes = [BitConverter]::GetBytes($ipInt)
+    [Array]::Reverse($ipBytes)
+    $currentIP = [System.Net.IPAddress]::New($ipBytes)
+
+    Write-Host "Scanning IP: $currentIP"
+
+    # Loop through each port in the range and test if it's open
+    for ($port = $startPort; $port -le $endPort; $port++) {
+        Test-Port -target $currentIP.ToString() -port $port
+    }
 }
