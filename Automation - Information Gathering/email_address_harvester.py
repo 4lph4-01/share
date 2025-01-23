@@ -78,7 +78,7 @@ ___________               .__.__          ___ ___                               
 """
 
     print(splash)
-    print("Email Address Harvesting Tool\n")
+    print("Email Address Harvesting Tool - 41PH4-01 & Our Community\n")
 
 display_splash_screen()
 
