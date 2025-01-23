@@ -47,7 +47,7 @@ def display_splash_screen():
 """
 
     print(splash)
-    print("Wifi Attack Tool 41PH4-01\n")
+    print("Wifi Attack Tool  - 41PH4-01 & Our Community\n")
 
 
 # Function to check if a tool is installed and install it if not
