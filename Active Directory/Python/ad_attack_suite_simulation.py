@@ -44,7 +44,7 @@ def display_splash_screen():
 """
 
     print(splash)
-    print("AD Attack Simulation 41PH4-01\n")
+    print("AD Attack Simulation 41PH4-01 & Our Community\n")
 
 # Define seasons, years, and services for Kerberoasting
 seasons = ["Spring", "Summer", "Autumn", "Winter"]
