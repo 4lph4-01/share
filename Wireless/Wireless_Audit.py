@@ -43,7 +43,7 @@ __      __.__                 .__                                    _____      
 """
 
     print(splash)
-    print("Wireless Audit Tool 41PH4-01\n")
+    print("Wireless Audit Tool - 41PH4-01 & Our Community\n")
 
 
 # Function to discover wireless access points with encryption type and encryption level
