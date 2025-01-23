@@ -48,6 +48,7 @@ def print_banner():
     
     """
     print(banner)
+    print("Web Application Security Framework - 41PH4-01 & Our Community\n")
 
 # Log function to keep track of test results
 def log_result(test_type, result, message, url, field=None):
