@@ -45,7 +45,7 @@ _/ ___\ /  _ \ /     \\____ \\_  __ \_/ __ \ |  |  \_/ __ \  /    \ /  ___/|  |\
 """
 
     print(splash)
-    print("Comprehensive Dns Test 41PH4-01\n")
+    print("Comprehensive Dns Test - 41PH4-01 & Our Community\n")
 
 
 def enumerate_dns_records(domain, dns_server):
