@@ -51,7 +51,7 @@ _________                  __                           ____    ________________
 """
 
     print(splash)
-    print("Capture & PTH 41PH4-01\n")
+    print("Capture & PTH 41PH4-01 & Our Community\n")
 
 
 def is_tool_installed(tool_name):
