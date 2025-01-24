@@ -453,7 +453,7 @@ def php_object_injection_test(url, payloads):
                     return
     log_result("PHP Object Injection Test", "Not Vulnerable", "No PHP Object Injection vulnerability detected", url)
 
-# File Uploads Testing (renamed from Unrestricted File Upload)
+# File Uploads Testing
 def file_uploads_test(url):
     forms = crawl_for_forms(url)
 
