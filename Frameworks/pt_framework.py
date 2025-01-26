@@ -1,5 +1,5 @@
 ######################################################################################################################################################################################################################
-# Python script Penetration Testing & Ethical Hacking Framework By 41ph4-01, and our community. Note: Be mindful of the scope of work, & rules of engagement. Ensure more_mass.py is in the same working directory or absolutepath for integration.
+# Python script Penetration Testing & Ethical Hacking Framework. By 41ph4-01, and our community. Note: Be mindful of the scope of work, & rules of engagement. Ensure more_mass.py is in the same working directory or absolutepath for integration.
 # https://github.com/4lph4-01/share/blob/main/Automation%20-%20Information%20Gathering/more_mass.py 
 # sudo python3 pt_framework.py. Optional API's, and subdomain bruteforce. 
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software 
