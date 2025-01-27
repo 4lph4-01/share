@@ -1,4 +1,4 @@
-# Sovereign-C2 Post-Exploitation Framework
+# Sovereign-c2 Post-Exploitation Framework
 
 This framework provides advanced post-exploitation capabilities with a focus on evasion and automation.
 
