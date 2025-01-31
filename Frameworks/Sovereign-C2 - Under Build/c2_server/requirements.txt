@@ -2,3 +2,5 @@ fastapi
 uvicorn
 typer
 pycryptodome
+requests
+paramiko
