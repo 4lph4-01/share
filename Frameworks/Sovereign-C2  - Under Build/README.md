@@ -30,26 +30,7 @@ This framework provides advanced post-exploitation capabilities with a focus on 
 
 ## Running the Server
 
-1. **Start the Server**
-   python c2_server.py
-
-## Deploying Payloads
-
-### macOS
-
-1. **Ensure the script is executable**
-   chmod +x payloads/macos_payload.sh
-
-2. **Execute the script on the target macOS machine**
-   ./payloads/macos_payload.sh
-
-### Linux
-
-1. **Ensure the script is executable**
-   chmod +x *.sh
-
-2. **Execute the script on the target Linux machine**
-   ./payloads/linux_payload.sh
+Ensure all scripts are permissioned form root. /  chmod +x *.* in the sovereingn-c2
 
 ### Windows
 
