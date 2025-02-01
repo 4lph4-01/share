@@ -30,7 +30,7 @@ This framework provides advanced post-exploitation capabilities with a focus on 
 
 ## Running the Server
 
-Ensure all scripts are permissioned from root. /  chmod +x *.* in the sovereingn-c2
+Ensure all scripts are permissioned from root. /  chmod +x *.* in the root of sovereingn-c2
 
 ### Windows
 
