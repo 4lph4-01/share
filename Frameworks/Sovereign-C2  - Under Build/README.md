@@ -10,17 +10,6 @@ This framework provides advanced post-exploitation capabilities with a focus on 
 - **Modular Design**: Easily add new modules and functionalities.
 - **Logging and Reporting**: Detailed logging and report generation.
 
-# Sovereign-C2
-
-## Overview
-Sovereign-C2 is a command and control (C2) server for managing agents across different platforms. This repository includes payloads for macOS, Linux, and Windows, allowing for remote command execution and data collection.
-
-## Features
-- Multi-platform support (macOS, Linux, Windows)
-- Remote command execution
-- Data collection and reporting
-- Persistence mechanisms
-- Encryption for secure communication
 
 ## Prerequisites
 - Python 3.x
