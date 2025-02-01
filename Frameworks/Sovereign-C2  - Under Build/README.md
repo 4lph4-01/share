@@ -31,7 +31,7 @@ This framework provides advanced post-exploitation capabilities with a focus on 
 ## Running the Server
 
 1. **Start the Server**
-   python server.py
+   python c2_server.py
 
 ## Deploying Payloads
 
