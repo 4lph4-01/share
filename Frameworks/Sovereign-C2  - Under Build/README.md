@@ -46,7 +46,7 @@ This framework provides advanced post-exploitation capabilities with a focus on 
 ### Linux
 
 1. **Ensure the script is executable**
-   chmod +x payloads/linux_payload.sh
+   chmod +x *.sh
 
 2. **Execute the script on the target Linux machine**
    ./payloads/linux_payload.sh
