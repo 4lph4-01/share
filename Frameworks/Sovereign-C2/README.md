@@ -1,7 +1,7 @@
 ### Installation and Setup
 
 1. Clone the Repository
-   git clone https://your-repo-url.git
+   git clone https://github.com/4lph4-01
    cd your-repo-directory
 
 2. Create a Virtual Environment
