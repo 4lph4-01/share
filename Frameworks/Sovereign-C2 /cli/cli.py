@@ -1,7 +1,7 @@
 import typer
 import os
 import subprocess
-import requests  # Ensure this import statement is present
+import requests
 
 cli = typer.Typer()
 
