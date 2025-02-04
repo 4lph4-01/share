@@ -76,7 +76,7 @@ def result(request: ResultRequest):
         decrypted_result = decrypt_data(request.Result, key)
         message = f"Agent {agent_id} executed command with result: {decrypted_result}"
         logging.info(message)
-        print(message)  # Print to console for real-time monitoring
+        print(message, flush=True)  # Print to console for real-time monitoring
     except Exception as e:
         logging.error(f"Failed to process result from agent {agent_id}: {str(e)}")
         raise HTTPException(status_code=400, detail="Decryption failed")
