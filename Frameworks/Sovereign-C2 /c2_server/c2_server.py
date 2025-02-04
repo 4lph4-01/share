@@ -46,12 +46,12 @@ class CommandRequest(BaseModel):
     AgentID: str
     Command: str
 
-# Load AES Key (Ensure it is 16 bytes for AES-128)
-key_b64 = "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4"  # Replace with your actual 16-byte key
+# Load AES Key (Ensure it is 32 bytes for AES-256)
+key_b64 = "ywD3S70cYF56DLw3GHYA9MzCflWAMcljQKXbanqc="  # Replace with your actual 32-byte key
 key = base64.b64decode(key_b64)
 
 def check_key_length(key: bytes) -> bytes:
-    if len(key) != 16:
+    if len(key) not in [16, 24, 32]:
         raise ValueError(f"Incorrect AES key length ({len(key)} bytes)")
     return key
 
