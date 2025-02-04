@@ -47,7 +47,7 @@ class CommandRequest(BaseModel):
     Command: str
 
 # Load AES Key (Ensure it is 32 bytes for AES-256)
-key_b64 = "ywD3S70cYF56DLw3GHYA9MzCflWAMcljQKXbanqc="  # Replace with your actual key
+key_b64 = ""  # Replace with your actual key
 key = base64.b64decode(key_b64)
 
 def check_key_length(key: bytes) -> bytes:
@@ -155,4 +155,3 @@ def run_server():
 
 if __name__ == "__main__":
     run_server()
-
