@@ -19,7 +19,7 @@ Prepare Payloads (If necessary) Ensure your payload scripts are in the payloads 
 
 Running the C2 Server
 
-python c2_server.py CLI Usage
+python c2_server/c2_server.py CLI Usage
 
 List Agents python cli/cli.py list-agents
 
