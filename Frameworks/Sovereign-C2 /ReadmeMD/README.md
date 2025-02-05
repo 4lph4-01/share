@@ -6,7 +6,7 @@ This is the start of a c2 server and client (currently windows) deployment. It's
 
 #Create a Virtual Environment python -m venv venv within the sovereign-c2 directory
 
-#source venv/bin/activate (in a new terminal #source venv/bin/activate). Results of the initial supported powershell commands will out put to the check-in terminal window. 
+#source venv/bin/activate (in a new terminal #source venv/bin/activate). Results of the initial supported powershell commands sent will output to the check-in terminal window. 
 
 # On Windows, use venv\Scripts\activate
 
