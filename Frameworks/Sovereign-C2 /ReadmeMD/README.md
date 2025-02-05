@@ -8,9 +8,9 @@ Create a Virtual Environment python -m venv venv source venv/bin/activate
 Install Dependencies pip install -r requirements.txt
 
 Prepare Payloads (If necessary) Ensure your payload scripts are in the payloads directory:
-    payloads/macos_payload.sh
-    payloads/linux_payload.sh
-    payloads/windows_payload.ps1
+    payloads/macos_payload.sh (Work in progress)
+    payloads/linux_payload.sh (Work in progress)
+    payloads/windows_payload.ps1 (Work in progress)
 
 Running the C2 Server
 
