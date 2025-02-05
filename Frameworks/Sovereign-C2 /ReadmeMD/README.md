@@ -2,7 +2,8 @@ Installation and Setup
 
 Clone the Repository git clone https://github.com/4lph4-01/share
 
-Create a Virtual Environment python -m venv venv source venv/bin/activate # On Windows, use venv\Scripts\activate
+Create a Virtual Environment python -m venv venv source venv/bin/activate 
+# On Windows, use venv\Scripts\activate
 
 Install Dependencies pip install -r requirements.txt
 
