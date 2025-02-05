@@ -16,9 +16,9 @@ Running the C2 Server
 
 python c2_server.py CLI Usage
 
-List Agents python cli.py list-agents
+List Agents python cli/cli.py list-agents
 
-Deploy Payload python cli.py deploy-payload <agent_type> Replace <agent_type> with macos, linux, or windows.
+Deploy Payload python cli/cli.py deploy-payload <agent_type> Replace <agent_type> with macos, linux, or windows.
 
 Select and Send Commands to an Agent python cli/cli.py select-agent You can specify the agent ID directly or choose from a list of available agents.
 
