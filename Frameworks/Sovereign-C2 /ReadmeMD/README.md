@@ -1,4 +1,4 @@
-This is the start of a c2_server and client (currently windows) deployment. It's from our community as a whole. More functionality to follow in due course. 
+This is the start of a c2 server and client (currently windows) deployment. It's from our community as a whole. More functionality to follow in due course. 
 
 #Installation and Setup
 
