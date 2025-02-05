@@ -1,3 +1,5 @@
+This is the start of a c2_server and client (currently windows) deployment. It's from our community as a whole. 
+
 #Installation and Setup
 
 #Clone the Repository git clone https://github.com/4lph4-01/share
