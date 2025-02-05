@@ -6,7 +6,7 @@ Clone the Repository git clone https://github.com/4lph4-01/share
 
 Create a Virtual Environment python -m venv venv within the sovereign-c2 directory
 
-source venv/bin/activate (in a new terminal #source venv/bin/activate in the same directory, but separate terminal window). Results of the initial supported powershell commands sent will output to the check-in terminal window. 
+source venv/bin/activate (in a new terminal e.g. source venv/bin/activate in the same directory, but separate terminal window). Results of the initial supported powershell commands sent will output to the check-in terminal window. 
 
 On Windows, use venv\Scripts\activate
 
