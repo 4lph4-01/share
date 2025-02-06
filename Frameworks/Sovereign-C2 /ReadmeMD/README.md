@@ -2,7 +2,7 @@ This is the start of a c2 server and client (currently windows) deployment. It's
 
 # Installation and Setup
 
-Clone the Repository git clone https://github.com/4lph4-01/share
+Clone the repository git clone https://github.com/4lph4-01/share
 
 Create a Virtual Environment python -m venv venv within the sovereign-c2 directory
 
