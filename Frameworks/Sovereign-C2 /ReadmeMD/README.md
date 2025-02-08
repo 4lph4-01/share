@@ -17,7 +17,7 @@ Prepare Payloads (If necessary) Ensure your payload scripts are in the payloads 
     payloads/linux_payload.sh (Work in progress)
     payloads/windows_payload.ps1 (Work in progress)
 
-Running the C2 Server
+# Running the C2 Server
 
 python c2_server/c2_server.py CLI Usage
 
