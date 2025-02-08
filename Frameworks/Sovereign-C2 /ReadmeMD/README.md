@@ -31,7 +31,7 @@ Generate Report python cli/cli.py generate-report
 
 Send a Specific Command python cli/cli.py send-command <agent_id>
 
-Supported Commands
+# Supported Commands
 
 Credential Harvesting python cli/cli.py send-command <agent_id> cred_harvest
 
