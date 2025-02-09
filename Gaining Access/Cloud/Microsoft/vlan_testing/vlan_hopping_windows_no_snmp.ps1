@@ -19,7 +19,7 @@ arp -a
 Write-Host "Double Tagging Test:"
 Test-Connection -Source "192.168.10.1" -Count 4
 
-# Example Exploitation (with permission)
+# Exploitation (with permission)
 Write-Host "Exploitation Example:"
 Add-Type -TypeDefinition @"
 using System;
