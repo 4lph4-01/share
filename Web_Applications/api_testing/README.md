@@ -1,6 +1,6 @@
 # API Testing Framework
 
-This framework automates the testing of OWASP API Top 10 vulnerabilities.
+This framework automates the testing of OWASP API Top 10 vulnerabilities. By 41lph4-01 and out Community
 
 ## Setup
 
