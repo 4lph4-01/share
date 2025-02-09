@@ -1,5 +1,13 @@
 This is the start of a c2 server and client (currently windows) deployment. It's from our community as a whole. More functionality to follow in due course. 
 
+
+    Enhanced Evasion Techniques: Polymorphic code, sandbox detection, time-based evasion.
+    Advanced Post-Exploitation Modules: Credential harvesting, persistence, privilege escalation, reconnaissance, data exfiltration, keylogging, lateral movement.
+    Secure Communication: Encrypted communication between agent and C2 server.
+    Modular Design: Easily add new modules and functionalities.
+    Logging and Reporting: Detailed logging and report generation.
+
+
 # Installation and Setup
 
 Clone the repository git clone https://github.com/4lph4-01/share
