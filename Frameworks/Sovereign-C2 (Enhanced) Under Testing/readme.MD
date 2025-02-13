@@ -123,33 +123,6 @@ To generate an AES key, you can use OpenSSL as well:
 #### Conversion to XML
 For certain applications, you may need to convert these keys into XML format. Below are examples of how you might format the keys in XML.
 
-##### Example RSA Private Key in XML
-<RSAKeyValue>
-  <Modulus>...</Modulus>
-  <Exponent>...</Exponent>
-  <P>...</P>
-  <Q>...</Q>
-  <DP>...</DP>
-  <DQ>...</DQ>
-  <InverseQ>...</InverseQ>
-  <D>...</D>
-</RSAKeyValue>
-
-##### Example RSA Public Key in XML
-<RSAKeyValue>
-  <Modulus>...</Modulus>
-  <Exponent>...</Exponent>
-</RSAKeyValue>
-
-##### Example AES Key in XML
-<KeyValue>
-  <Key>
-    <Algorithm>AES</Algorithm>
-    <Size>256</Size>
-    <Value>Base64EncodedKeyHere</Value>
-  </Key>
-</KeyValue>
-
 ### Secure Management of Keys
 Ensure that keys are not stored in the repository. Instead, load them from secure storage at runtime. Below is an example of how you can load keys in a Python script:
 
