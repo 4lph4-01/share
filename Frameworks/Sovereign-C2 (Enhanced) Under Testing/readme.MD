@@ -6,7 +6,7 @@ This framework provides advanced post-exploitation capabilities with a focus on 
 
 - **Enhanced Evasion Techniques**: Polymorphic code, sandbox detection, time-based evasion.
 - **Advanced Post-Exploitation Modules**: Credential harvesting, persistence, 
-- **privilege escalation, reconnaissance, data exfiltration, keylogging, lateral movement.
+-   privilege escalation, reconnaissance, data exfiltration, keylogging, lateral movement.
 - **Secure Communication**: Encrypted communication between agent and C2 server.
 - **Modular Design**: Easily add new modules and functionalities.
 - **Logging and Reporting**: Detailed logging and report generation.
