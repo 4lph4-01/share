@@ -11,9 +11,9 @@ This framework provides advanced post-exploitation capabilities with a focus on 
 - Modular Design: Easily add new modules and functionalities.
 - Logging and Reporting: Detailed logging and report generation.
 
-#Usage
+# Usage
 
-#Setting Up the C2 Server
+# Setting Up the C2 Server
 
 1. Create a Python virtual environment and activate it:
     python -m venv venv
