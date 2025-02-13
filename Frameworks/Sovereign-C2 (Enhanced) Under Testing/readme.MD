@@ -172,7 +172,7 @@ AES_KEY_PATH=/path/to/aes_key.xml
 To run the project, follow the instructions below:
 
 1. **Clone the repository:**
-   git clone https://github.com/your-repo/Sovereign-C2.git
+   git clone https://github.com/4lph4-01/share.git
    cd Sovereign-C2
 
 2. **Install dependencies:**
