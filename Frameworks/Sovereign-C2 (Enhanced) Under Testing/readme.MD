@@ -17,7 +17,8 @@ This framework provides advanced post-exploitation capabilities with a focus on 
 
 1. **Create a Python virtual environment and activate it**:
     python -m venv venv
-    source venv/bin/activate  # On Windows: venv\Scripts\activate
+    source venv/bin/activate 
+# On Windows: venv\Scripts\activate
 
 2. **Install the required dependencies**:
     pip install -r c2_server/requirements.txt
