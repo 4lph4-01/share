@@ -121,7 +121,7 @@ To generate an AES key, you can use OpenSSL as well:
    openssl rand -base64 32 > aes_key.txt
 
 #### Conversion to XML
-For certain applications, you may need to convert these keys into XML format. Below are examples of how you might format the keys in XML.
+For Sovereign-c2, you may need to convert these keys into XML format for MS Windows. Below are examples of how you might format the keys in XML.
 
 ### Secure Management of Keys
 Ensure that keys are not stored in the repository. Instead, load them from secure storage at runtime. Below is an example of how you can load keys in a Python script:
