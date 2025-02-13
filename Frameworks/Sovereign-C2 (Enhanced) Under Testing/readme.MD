@@ -60,7 +60,7 @@ The CLI provides various commands to interact with the framework.
 #### Move laterally:
     python cli/cli.py move_laterally --target_ip TARGET_IP --username USERNAME --password PASSWORD
 
-### Example Commands
+### Example Commands (Under Analysis)
 
 1. **Listing all registered agents**:
     python cli/cli.py list_agents
