@@ -187,3 +187,5 @@ To run the project, follow the instructions below:
 ### Contribution
 
 Contributions to the Sovereign framework are welcome. Please submit a pull request with a detailed description of your changes.
+
+### By the way, we pwn things.....
