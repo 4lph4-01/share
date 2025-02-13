@@ -95,15 +95,16 @@ Logging and Reporting
 
 Logs are stored in the c2_server.log file located in the c2_server directory. This file contains detailed information about agent activities and commands executed.
 
-# To generate a report from the logged data, run the following command:
+To generate a report from the logged data, run the following command:
     python c2_server/c2_server.py generate_report
+
 This will create a report.txt file containing the logs. The report provides a comprehensive view of all interactions and events logged by the C2 server.
 
-# Adding New Modules
+Adding New Modules
 
 To add new post-exploitation modules, create a new Python file in the c2_server/modules directory and implement the desired functionality. Update the CLI script to include commands for the new module.
 
-# Key Generation and Conversion
+Key Generation and Conversion
 
 RSA Key Generation
 To generate a pair of RSA keys, you can use the OpenSSL toolkit. Run the following commands to generate a private key and a public key:
@@ -123,7 +124,7 @@ Generate a 256-bit AES key:
 Conversion to XML
 For certain applications, you may need to convert these keys into XML format. Below are examples of how you might format the keys in XML.
 
-Example RSA Private Key in XML
+# Example RSA Private Key in XML
 <RSAKeyValue>
   <Modulus>...</Modulus>
   <Exponent>...</Exponent>
@@ -135,13 +136,13 @@ Example RSA Private Key in XML
   <D>...</D>
 </RSAKeyValue>
 
-Example RSA Public Key in XML
+# Example RSA Public Key in XML
 <RSAKeyValue>
   <Modulus>...</Modulus>
   <Exponent>...</Exponent>
 </RSAKeyValue>
 
-Example AES Key in XML
+# Example AES Key in XML
 <KeyValue>
   <Key>
     <Algorithm>AES</Algorithm>
@@ -153,7 +154,7 @@ Example AES Key in XML
 Secure Management of Keys
 Ensure that keys are not stored in the repository. Instead, load them from secure storage at runtime. Below is an example of how you can load keys in a Python script:
 
-# import os
+import os
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
