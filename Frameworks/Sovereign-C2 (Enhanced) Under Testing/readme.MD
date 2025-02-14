@@ -26,7 +26,7 @@ This framework provides advanced post-exploitation capabilities with a focus on 
 3. **Run the C2 server**:
     python c2_server/c2_server.py
 
-### Using the CLI
+### Using the CLI (Under analysis)
 
 The CLI provides various commands to interact with the framework.
 
