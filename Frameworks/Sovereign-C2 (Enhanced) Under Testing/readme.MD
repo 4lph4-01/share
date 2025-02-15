@@ -31,7 +31,7 @@ This framework provides advanced post-exploitation capabilities with a focus on 
 The CLI provides various commands to interact with the framework.
 
 #### List all registered agents:
-    python cli/cli.py list_agents
+    python cli/cli.py list-agents
 
 #### Send a command to a specific agent:
     python cli/cli.py send_command --agent_id AGENT_ID --command "Your command here"
@@ -63,7 +63,7 @@ The CLI provides various commands to interact with the framework.
 ### Example Commands (Under Analysis)
 
 1. **Listing all registered agents**:
-    python cli/cli.py list_agents
+    python cli/cli.py list-agents
 
 2. **Sending a command to a specific agent**:
     python cli/cli.py send_command --agent_id 1234-5678-9101-1121 --command "whoami"
