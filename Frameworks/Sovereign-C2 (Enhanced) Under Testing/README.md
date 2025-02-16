@@ -163,7 +163,7 @@ This will create a `report.txt` file containing the logs. The report provides a 
 
 ### Adding New Modules
 
-To add new post-exploitation modules, create a new Python file in the `c2_server/modules` directory and implement the desired functionality. Update the CLI script to include commands for the new module.
+To add new post-exploitation modules, create a new Python file in the `CLI/modules` directory and implement the desired functionality. Update the CLI script to include commands for the new module.
 
 ### Contribution
 
