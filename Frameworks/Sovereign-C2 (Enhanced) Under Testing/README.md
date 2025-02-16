@@ -88,7 +88,7 @@ python cli/cli.py move_laterally --target_ip TARGET_IP --username USERNAME --pas
 
 1. **Listing all registered agents**:
     ```bash
-    python cli/cli.py list_agents
+    python cli/cli.py list-agents
     ```
 
 2. **Sending a command to a specific agent**:
