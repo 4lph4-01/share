@@ -46,7 +46,7 @@ python cli/cli.py send-command --agent_id AGENT_ID --command "Your command here"
 
 #### Generate an obfuscated payload for a specific platform:
 ```bash
-python cli/cli.py generate_payload --platform PLATFORM
+python cli/cli.py generate-payload --platform PLATFORM
 ```
 
 #### Harvest credentials:
