@@ -36,7 +36,7 @@ The CLI provides various commands to interact with the framework.
 
 #### List all registered agents:
 ```bash
-python cli/cli.py list_agents
+python cli/cli.py list-agents
 ```
 
 #### Send a command to a specific agent:
