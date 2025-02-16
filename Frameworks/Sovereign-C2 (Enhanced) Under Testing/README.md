@@ -40,9 +40,9 @@ python cli/cli.py list-agents
 ```
 
 #### Interact with a specific agent:
-'''bash
+```bash
 python cli/cli.py select-agent AGENT_ID
-'''
+```
 
 #### Send a command to a specific agent:
 ```bash
