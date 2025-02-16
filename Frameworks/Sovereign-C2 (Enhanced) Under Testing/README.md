@@ -101,7 +101,7 @@ python cli/cli.py move-laterally --target_ip TARGET_IP --username USERNAME --pas
 python cli/cli.py select-agent AGENT_ID
 ```
 
-3.    #### Interact with a specific agent:
+3.    #### Interact with a selected agent:
 ```bash
 Get-ComputerInfo
 ```
