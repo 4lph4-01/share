@@ -1,7 +1,0 @@
-fastapi
-uvicorn
-typer
-pycryptodome
-pynput
-requests
-paramiko
