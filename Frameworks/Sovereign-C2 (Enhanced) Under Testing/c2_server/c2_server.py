@@ -66,19 +66,19 @@ def check_key_length(key: bytes) -> bytes:
 
 def encrypt_data(data: str, key: bytes) -> str:
     key = check_key_length(key)
-    cipher = AES.new(key, AES.MODE_CBC)
-    iv = cipher.iv
-    ct_bytes = cipher.encrypt(pad(data.encode(), AES.block_size))
-    encrypted_data = base64.b64encode(iv + ct_bytes).decode('utf-8')
+    cipher = AES.new(key, AES.MODE_GCM)
+    nonce = cipher.nonce
+    ct_bytes, tag = cipher.encrypt_and_digest(data.encode())
+    encrypted_data = base64.b64encode(nonce + ct_bytes + tag).decode('utf-8')
     return encrypted_data
 
 def decrypt_data(data: str, key: bytes) -> str:
     key = check_key_length(key)
     try:
         raw_data = base64.b64decode(data)
-        iv, ct = raw_data[:16], raw_data[16:]
-        cipher = AES.new(key, AES.MODE_CBC, iv)
-        pt = unpad(cipher.decrypt(ct), AES.block_size)
+        nonce, ct, tag = raw_data[:12], raw_data[12:-16], raw_data[-16:]
+        cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+        pt = cipher.decrypt_and_verify(ct, tag)
         return pt.decode('utf-8')
     except Exception as e:
         logging.error(f"Decryption failed: {str(e)}")
