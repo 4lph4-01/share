@@ -1,5 +1,0 @@
-whois
-requests
-dnspython
-shodan
-linkedin-scraper
