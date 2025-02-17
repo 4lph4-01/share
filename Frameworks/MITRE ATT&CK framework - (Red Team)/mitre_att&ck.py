@@ -90,13 +90,6 @@ def install_dependencies():
 
     print("[INFO] Dependencies are installed.")
 
-    # Uncomment the following lines to install OpenVAS (GVM)
-    # print("[INFO] Installing OpenVAS (GVM)...")
-    # subprocess.run(["sudo", "apt-get", "install", "-y", "openvas"])
-    # subprocess.run(["sudo", "gvm-setup"])
-    # subprocess.run(["sudo", "gvm-check-setup"])
-    # print("[INFO] OpenVAS (GVM) installation completed.")
-
 # Function to perform a UAC bypass
 def uac_bypass():
     payload_path = input("[INPUT] Enter the path to the payload executable (e.g., C:\\path\\to\\payload.exe): ").strip()
