@@ -35,7 +35,7 @@ This tool is designed to simulate techniques used by Advanced Persistent Threat 
     ```
 
 4. **Install required Python packages:**
-    - For this script, there are no additional packages to install since `json` and `time` are part of the standard library.
+    pip install -r /peth/to/requirements.txt. For this script, there are no additional packages to install since `json` and `time` are part of the standard library.
 
 ### Running the Simulation
 
