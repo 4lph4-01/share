@@ -18,8 +18,6 @@ def gather_system_info():
         result = os.popen(command).read()
         system_info["system_info"] = result
     elif os.name == 'posix':
-        # Add Linux/MacOS system information gathering logic
-        # Example: Gather system and hardware information on Linux
         command = "uname -a && lsb_release -a && df -h && free -m"
         result = os.popen(command).read()
         system_info["system_info"] = result
