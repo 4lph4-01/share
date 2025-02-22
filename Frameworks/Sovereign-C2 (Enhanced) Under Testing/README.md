@@ -46,6 +46,11 @@ The CLI provides various commands to interact with the framework.
 python cli/cli.py list-agents
 ```
 
+#### Select a registered agents:
+```bash
+python cli/cli.py select-agent AGENT_ID
+```
+
 #### Send a command to a specific agent:
 ```bash
 python cli/cli.py send-command --agent_id AGENT_ID --command "Your command here"
