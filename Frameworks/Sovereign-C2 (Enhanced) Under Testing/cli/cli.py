@@ -15,7 +15,7 @@ import os
 
 app = typer.Typer()
 
-C2_URL = "http://10.0.2.4:8080"
+C2_URL = "http://c2_IP_URL:8080"
 SELECTED_AGENT_FILE = "selected_agent.txt"
 
 def save_selected_agent(agent_id: str):
@@ -30,10 +30,13 @@ def load_selected_agent():
 
 @app.command()
 def list_agents():
-    response = requests.get(f"{C2_URL}/list_agents")
-    agents = response.json().get("agents", [])
-    for agent in agents:
-        print(agent["AgentID"])
+    response = requests.get(f"{C2_URL}/agents")  # Use /agents here
+    if response.status_code == 200:
+        agents = response.json().get("agents", [])
+        for agent in agents:
+            print(agent["AgentID"])
+    else:
+        print(f"Failed to list agents: {response.status_code} {response.text}")
 
 @app.command()
 def select_agent(agent_id: str):
