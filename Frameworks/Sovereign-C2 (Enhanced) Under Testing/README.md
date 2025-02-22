@@ -30,7 +30,7 @@ This framework provides advanced post-exploitation capabilities with a focus on 
 
 3. **Run the C2 server**:
     ```bash
-    python c2_server/c2_server.py
+    python3 c2_server/c2_server.py
     ```
 
 ---
@@ -78,7 +78,7 @@ python cli/cli.py gather-system-info --agent_id AGENT_ID
 
 #### Exfiltrate data:
 ```bash
-python cli/cli.py exfiltrate-data --file_path /path/to/file
+bashpython cli/cli.py exfiltrate-data --file_path /path/to/file
 ```
 
 #### Start keylogger:
@@ -173,7 +173,7 @@ This will create a `report.txt` file containing the logs. The report provides a 
 
 To add new post-exploitation modules:
 
-- **Python:** Create a new Python file in the `c2_server/modules` directory and implement the desired functionality.
+- **Python:** Create a new Python file in the `cli/modules` directory and implement the desired functionality.
 - **PowerShell:** Add a corresponding PowerShell script in `cli/modules/windows/` if needed.
 - Update the CLI scripts (`cli.py` and `cli.ps1`) to include commands for the new module.
 
