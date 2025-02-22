@@ -14,8 +14,8 @@ def gather_system_info():
     system_info = {}
 
     if os.name == 'nt':
-        command = "systeminfo"
-        result = os.popen(command).read()
+        script_path = os.path.join(os.path.dirname(__file__), 'windows', 'reconnaissance.ps1')
+        result = os.popen(f"powershell -ExecutionPolicy Bypass -File {script_path}").read()
         system_info["system_info"] = result
     elif os.name == 'posix':
         command = "uname -a && lsb_release -a && df -h && free -m"
