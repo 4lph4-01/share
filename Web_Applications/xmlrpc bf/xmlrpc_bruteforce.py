@@ -13,6 +13,7 @@
 #source venv/bin/activate
 #venv\Scripts\activate
 #pip install requests beautifulsoup4
+#wpscan -u <domain> --enumerate u (for list of users)
 
 def display_splash_screen():
     splash = r"""
