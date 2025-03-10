@@ -153,5 +153,5 @@ if __name__ == "__main__":
 
 ##############################################################
 #pip install requests beautifulsoup4
-#python xmlrpc_crawler_bruteforce.py
+#python xmlrpc_bruteforce.py
 ##############################################################
