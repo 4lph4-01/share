@@ -13,7 +13,7 @@
 #source venv/bin/activate
 #venv\Scripts\activate
 #pip install requests beautifulsoup4
-#wpscan -u <domain> --enumerate u ( The web domain for list of users)
+#wpscan -u <domain> --enumerate u (The web domain for list of users)
 #python xmlrpc_bruteforce.py
 
 def display_splash_screen():
