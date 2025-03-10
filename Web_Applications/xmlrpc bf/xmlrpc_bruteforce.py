@@ -14,6 +14,7 @@
 #venv\Scripts\activate
 #pip install requests beautifulsoup4
 #wpscan -u <domain> --enumerate u (for list of users)
+#python xmlrpc_bruteforce.py
 
 def display_splash_screen():
     splash = r"""
