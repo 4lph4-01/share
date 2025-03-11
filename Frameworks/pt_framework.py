@@ -30,8 +30,9 @@ def log_output(tool_name, output):
         log_file.write("\n\n")
 
 
-def display_splash_screen():
-    splash = r"""
+# Banner
+def print_banner():
+    banner = r"""
  _____________________  ___________                                                  __                  _____  ____.____   __________  ___ ___    _____           _______  ____ 
 \______   \__    ___/  \_   _____/____________     _____   ______  _  _____________|  | __             /  |  |/_   |    |  \______   \/   |   \  /  |  |          \   _  \/_   |
  |     ___/ |    |      |    __)  \_  __ \__  \   /     \_/ __ \ \/ \/ /  _ \_  __ \  |/ /   ______   /   |  |_|   |    |   |     ___/    ~    \/   |  |_  ______ /  /_\  \|   |
@@ -57,7 +58,8 @@ def display_splash_screen():
    (______)(_______)(_______)(________)(________)(_________)     | |
 
 """
-    print(f"{Fore.CYAN}{splash}{Style.RESET_ALL}")
+    print(banner)
+    print("xmlrpc_bf - 41PH4-01 & Our Community\n")
 
 
 # Tool Installation Check
