@@ -16,8 +16,9 @@
 #wpscan -u <domain> --enumerate u (The web domain for list of users)
 #python xmlrpc_bruteforce.py
 
-def display_splash_screen():
-    splash = r"""
+# Banner
+def print_banner():
+    banner = r"""
                .__                              ___.                 __            _____                                        _____  ____         .__       _____           _______  ____ 
 ___  ___ _____ |  | _____________    ____       \_ |_________ __ ___/  |_   ____ _/ ____\___________   ____   ____             /  |  |/_   |______  |  |__   /  |  |          \   _  \/_   |
 \  \/  //     \|  | \_  __ \____ \ _/ ___\       | __ \_  __ \  |  \   __\_/ __ \\   __\/  _ \_  __ \_/ ___\_/ __ \   ______  /   |  |_|   |\____ \ |  |  \ /   |  |_  ______ /  /_\  \|   |
@@ -42,8 +43,11 @@ ___  ___ _____ |  | _____________    ____       \_ |_________ __ ___/  |_   ____
     }===={  }====={  }====={  }======{  }======{  }======={      | |/:::''''~~~~'''':::::::::::::'~
    (______)(_______)(_______)(________)(________)(_________)     | |
 
-"""
-    print(f"{Fore.CYAN}{splash}{Style.RESET_ALL}")
+ Sovereign-C2 Framework
+    """
+    print(banner)
+    print("xmlrpc_bf - 41PH4-01 & Our Community\n")
+
 
 import requests
 import xmlrpc.client
