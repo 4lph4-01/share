@@ -59,7 +59,7 @@ def print_banner():
 
 """
     print(banner)
-    print("xmlrpc_bf - 41PH4-01 & Our Community\n")
+    print("PT_Framework - 41PH4-01 & Our Community\n")
 
 
 # Tool Installation Check
