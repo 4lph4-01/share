@@ -154,9 +154,3 @@ if __name__ == "__main__":
     else:
         print("[-] XML-RPC not found.")
 
-
-
-##############################################################
-#pip install requests beautifulsoup4
-#python xmlrpc_bruteforce.py
-##############################################################
