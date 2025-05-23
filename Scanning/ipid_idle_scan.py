@@ -1,5 +1,5 @@
 #########################################################################################################################################################################################
-# Python IPID Idle scan based on inputs. Uses the scapy library for packet crafting and analysis. NOTE: Scapy requires root access to craft raw packets. By 41ph4-01 23/04/2024 & our community. 
+# Python IPID Idle scan based on inputs. Uses the scapy library for packet crafting and analysis. NOTE: Scapy requires root access to craft raw packets. By 41ph4-01  & our community, 23/04/2024. 
 # sudo python3 ipid_idle_scan.py. 
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software 
 # without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons 
