@@ -44,7 +44,7 @@ def display_splash_screen():
 """
 
     print(splash)
-    print("MITM Proxy Attack Tool 41PH4-01 & Our Community\n")
+    print("IPID Idle scan by 41PH4-01 & Our Community\n")
 
 def is_valid_ip(ip):
     """Validate an IPv4 address."""
