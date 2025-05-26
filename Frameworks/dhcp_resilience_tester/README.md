@@ -1,8 +1,6 @@
-# DHCP Resilience Tester
+# DHCP Resilience Testing
 
 Fully functional resilience testing tool. This tool is for authorised use only. Performing unauthorised tests on networks is illegal and unethical.
-
-# DHCP Resilience Tester
 
 This tool simulates DHCP starvation attempts to evaluate DHCP server resilience. Use the live testing with caution.
 
