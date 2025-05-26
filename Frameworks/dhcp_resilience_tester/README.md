@@ -8,10 +8,10 @@ This tool simulates DHCP starvation attempts to evaluate DHCP server resilience.
 
 # Includes
 
-Simulation and live test modes
-MAC address spoofing and logging
-Offer response timing and evaluation
-Clear resilience grading (Resilient / Partially / Vulnerable)
+Simulation and live test modes,
+MAC address spoofing and logging,
+Offer response timing and evaluation,
+Clear resilience grading (Resilient / Partially / Vulnerable), and
 Human-readable reports with saved logs
 
 ## Usage
