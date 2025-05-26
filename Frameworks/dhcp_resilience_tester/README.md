@@ -4,7 +4,15 @@ Fully functional resilience testing tool. This tool is for authorised use only. 
 
 # DHCP Resilience Tester
 
-This tool simulates DHCP starvation attempts to evaluate DHCP server resilience.
+This tool simulates DHCP starvation attempts to evaluate DHCP server resilience. Use the live testing with caution.
+
+# Includes
+
+Simulation and live test modes
+MAC address spoofing and logging
+Offer response timing and evaluation
+Clear resilience grading (Resilient / Partially / Vulnerable)
+Human-readable reports with saved logs
 
 ## Usage
 ```bash
