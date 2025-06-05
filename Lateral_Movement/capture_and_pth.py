@@ -120,7 +120,7 @@ def crack_hash(net_ntlm_hash):
     with open(hash_file, "w") as file:
         file.write(net_ntlm_hash + "\n")
 
-    # Note: Adjust the paths to hashcat, wordlist, and rules file as needed
+    # Note: Adjust the paths to hashcat, wordlist, type of hash -m, workload -w, attack mode -a, and rules file as needed
     hashcat_command = [
         "hashcat",
         "-m", "5600",
