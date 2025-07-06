@@ -42,7 +42,6 @@ def print_banner():
     print(banner)
     print("Kerberoasting.py - 41PH4-01 & Our Community\n")
 
-#!/usr/bin/env python3
 
 import os
 import sys
