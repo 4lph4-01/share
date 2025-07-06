@@ -222,3 +222,4 @@ $VerbosePreference = "Continue"
 
 # Or specify domain and output file path
 #Invoke-DerKerberoast -Domain "corp.example.com" -OutputFile "C:\temp\hashes.txt"
+# hashcat -m 13100 kerberoast_hashes.txt your_wordlist.txt
