@@ -111,7 +111,7 @@ def get_ccache():
 
 
 def parse_ccache(ccfile):
-    # credit to impacket's ccache parser, simplified
+    # credit to impacket's ccache parser
     hashes = []
     with open(ccfile, 'rb') as f:
         data = f.read()
