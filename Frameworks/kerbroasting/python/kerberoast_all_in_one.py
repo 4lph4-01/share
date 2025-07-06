@@ -128,9 +128,9 @@ def parse_ccache(ccfile):
     for _ in range(count):
         # parse each credential
         start = pos
-        # this is extremely minimal parsing
-        # full parsing is in impacket if you want all fields
-        # we only need the ticket
+        #  Minimal parsing full parsing is in impacket for all fields
+        #  Only need the ticket
+        
         try:
             client_principal_len = struct.unpack('>I', data[pos+20:pos+24])[0]
             pos += 24 + client_principal_len
