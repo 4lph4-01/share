@@ -204,8 +204,8 @@ def main():
 
 # ------------------ Globals ------------------
 
-LDAP_SERVER = 'ldap://your.ad.domain'   # MODIFY this!
-LDAP_SEARCH_BASE = 'dc=your,dc=ad,dc=domain'  # MODIFY this!
+LDAP_SERVER = 'ldap://your.ad.domain'   # domain selection
+LDAP_SEARCH_BASE = 'dc=your,dc=ad,dc=domain'  # LDAP search base
 LDAP_USER = None
 LDAP_PASSWORD = None
 DOMAIN = None
