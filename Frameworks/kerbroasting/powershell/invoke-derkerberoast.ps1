@@ -1,5 +1,5 @@
 ########################################################################################################################################################################################
-# Powershell kerbroasting Script by: 41ph4-01 and our community
+# Powershell kerbroasting Script by: 41ph4-01 and our community (under testing)
 # Enumerates SPN accounts in the domain, then requests TGS tickets by forcing network connections to service hosts, reads the Kerberos ticket cache files, parses each ticket with a real recursive 
 # ASN.1 DER TLV parser in PowerShell, extracts username, realm, and encrypted ticket parts, outputs hashcat-compatible cracking lines.
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software 
