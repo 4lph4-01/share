@@ -1,5 +1,5 @@
 ######################################################################################################################################################################################################################
-# Python adversary emulator script, in line with the MITRE ATT&CK Framerwork by 41ph4-01 & our community!. Ensure apt_groups.json and more_mass,py are in the same directory as the script. sudo python3 mitre_att&ck.py. Requires a linux virtual environment. 
+# Python adversary emulator script, in line with the MITRE ATT&CK Framerwork by 41ph4-01 & our community!. Ensure apt_groups.json and more_mass,py are in the same directory as the script. sudo python3 mitre_attack.py. Requires a linux virtual environment. 
 # Performs simulations or real world attacks based on selections. Note: Real world penatration test attack selection has been added. 
 # Shodan API Key required. Use the real world penetration testing as your own risk. 
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software 
