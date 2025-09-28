@@ -95,7 +95,7 @@ Write-Host "   OU            : $UsersOU"
 # $InitialPassword → a password that satisfies your domain’s complexity requirements.
 # Run PowerShell as Administrator (or a user with the necessary AD permissions).
 # If you want the account in a different OU, change $UsersOU.
-#Open PowerShell as an administrator (or a user with delegated AD create rights).
-#Run the script, passing the full name:
+# Open PowerShell as an administrator (or a user with delegated AD create rights).
+# Run the script, passing the full name:
 # Execute the script, passing the full name as an argument, e.g.:
 
