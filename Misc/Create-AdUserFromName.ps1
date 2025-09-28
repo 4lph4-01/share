@@ -1,6 +1,6 @@
 #########################################################################################################################################################################################################################
-# Initial powershell script for Active Directoey user creation Takes the first two letters of the the name supplied, Append a random six‑digit number, Ensures the generated samAccountName does not 
-# already exist, Create the user in the Users container (or the OU you set).   
+# Initial powershell script for Active Directoey user creation Takes the first two letters of the the first name supplied (prefix), Append a random six‑digit number, Ensures the generated samAccountName does not 
+# already exist, Create the user in the Users container (or the OU you set). And Email address: <lastname><firstTwoLettersOfFirstName>@domain.com   
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software 
 # without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons 
 # to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice and this permission notice shall be included in all copies or substantial 
@@ -10,12 +10,6 @@
 # WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #########################################################################################################################################################################################################################
 
-
-
-<# --------------------------------------------------------------
-   AD User Creation – Prefix from First Two Letters of First Name
-   + Email address: <lastname><firstTwoLettersOfFirstName>@domain.com
-   -------------------------------------------------------------- #>
 
 # --------------------------- CONFIGURATION -----------------------
 $DomainDN        = 'DC=yourdomain,DC=com'          # <<< CHANGE TO YOUR AD DN
