@@ -14,7 +14,7 @@
 # --------------------------- CONFIGURATION -----------------------
 $DomainDN        = 'DC=yourdomain,DC=com'          # CHANGE TO YOUR AD DN
 $UsersOU         = "CN=Users,$DomainDN"            # Target OU (default Users container)
-$InitialPassword = 'P@ssw0rd123!'                  # Must meet your domain policy
+$InitialPassword = 'Barrette0-Botanist9-Sitcom7-Anger0-Encore8'                  # Change meet your domain policy
 $PasswordSecure  = ConvertTo-SecureString $InitialPassword -AsPlainText -Force
 $MailDomain      = 'yourdomain.com'                # DOMAIN part for the e‑mail address
 # -----------------------------------------------------------------
