@@ -12,11 +12,11 @@
 
 
 # --------------------------- CONFIGURATION -----------------------
-$DomainDN        = 'DC=yourdomain,DC=com'          # <<< CHANGE TO YOUR AD DN
+$DomainDN        = 'DC=yourdomain,DC=com'          # CHANGE TO YOUR AD DN
 $UsersOU         = "CN=Users,$DomainDN"            # Target OU (default Users container)
-$InitialPassword = 'P@ssw0rd123!'                 # Must meet your domain policy
+$InitialPassword = 'P@ssw0rd123!'                  # Must meet your domain policy
 $PasswordSecure  = ConvertTo-SecureString $InitialPassword -AsPlainText -Force
-$MailDomain      = 'yourdomain.com'                # <<< DOMAIN part for the e‑mail address
+$MailDomain      = 'yourdomain.com'                # DOMAIN part for the e‑mail address
 # -----------------------------------------------------------------
 
 Import-Module ActiveDirectory   # Load AD cmdlets
