@@ -97,5 +97,5 @@ Write-Host "   OU            : $UsersOU"
 # If you want the account in a different OU, change $UsersOU.
 # Open PowerShell as an administrator (or a user with delegated AD create rights).
 # Run the script, passing the full name:
-# Execute the script, passing the full name as an argument, e.g.:
+# Execute the script, passing the full name as an argument, e.g.:.\Create-AdUserFromName.ps1 -FullName "John Doe"
 
