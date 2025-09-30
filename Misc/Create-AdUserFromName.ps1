@@ -1,6 +1,6 @@
 #########################################################################################################################################################################################################################
-# Initial powershell script for Active Directoey user creation. Takes the first two letters of the the first name supplied (prefix), Append a random six‑digit number (suffix), ensures the generated samAccountName does not 
-# already exist. Create the user in the Users container (or the OU you set), and Email address: <lastname><firstTwoLettersOfFirstName>@domain.com. By 41PH4-01 and our community.   
+# Initial powershell script for Active Directory user creation. Takes the first two letters of the first name supplied (prefix), Appends a random six‑digit number (suffix), ensures the generated samAccountName does not 
+# already exist. Creates the user in the Users container (or the OU you set), and Email address: <lastname><firstTwoLettersOfFirstName>@domain.com. By 41PH4-01 and our community.   
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software 
 # without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons 
 # to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice and this permission notice shall be included in all copies or substantial 
