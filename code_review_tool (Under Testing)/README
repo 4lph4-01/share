@@ -1,4 +1,4 @@
-Separate environment for Kali to negate dependancy conflicts: By 4lph4-01 and our community.
+Separate environment for Kali to negate dependancy conflicts: By 41ph4-01 and our community.
 
 Update package list
 sudo apt-get update
