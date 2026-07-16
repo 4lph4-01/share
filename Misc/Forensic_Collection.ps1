@@ -230,8 +230,8 @@ Write-Host "  - Event Viewer (log review)" -ForegroundColor White
 # Privacy considerations - This collects sensitive system data; ensure proper authorisation
 # Storage space - Ensure sufficient disk space for log exports
 # Base64 decoding - Use https://www.base64decode.com or PowerShell: [Convert]::FromBase64String()
-
-#Focus Area's
+#
+# Focus Area's
 # Network: Unexpected outbound connections, listening ports
 # Processes: Unknown executables, suspicious parent-child relationships
 # Registry: Unauthorised persistence mechanisms
