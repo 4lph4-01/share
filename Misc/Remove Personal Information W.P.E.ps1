@@ -146,7 +146,7 @@ function RemoveModificationProtectionsandPersonalInfoExcel{
     $temp=$null
 }
 #------------------------------------------SETTINGS---------------------------------------------#
-$path = Select-FolderDialog # choose folder dialor
+$path = Select-FolderDialog # choose folder dialog
 #$path='C:\Temp'
 #$path=(Get-Item -Path ".\" -Verbose).FullName
 $errorlog = $('{0}\Errors_{1}.txt' -f $path, $('{0:yyyy-MM-dd_HH-mm-ss}' -f (Get-Date)))
