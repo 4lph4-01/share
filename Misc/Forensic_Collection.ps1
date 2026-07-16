@@ -269,7 +269,7 @@ Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-PowerShell/Operationa
     Select-Object TimeCreated, Id, Message |
     Export-Csv "$outDir\logs\powersShell_operational.csv" -NoTypeInformation 2>&1
 
-# Sysmon operational log if present (common in IR tooling)
+# Sysmon operational log if present
 Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-Sysmon/Operational'; MaxEvents=1000} -ErrorAction SilentlyContinue |
     Select-Object TimeCreated, Id, Message |
     Export-Csv "$outDir\logs\sysmon_operational.csv" -NoTypeInformation 2>&1
