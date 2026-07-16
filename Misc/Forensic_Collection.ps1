@@ -223,7 +223,7 @@ Write-Host "  - Process Explorer (process analysis)" -ForegroundColor White
 Write-Host "  - Event Viewer (log review)" -ForegroundColor White
 
 
-#Forensic Artifact Collection Script
+#########################################################################################################################################################################################################################
 # Notes:
 # Administrative privileges required - Some commands need elevated rights
 # Output location - Creates timestamped folder on C:\ drive
@@ -232,9 +232,9 @@ Write-Host "  - Event Viewer (log review)" -ForegroundColor White
 # Base64 decoding - Use https://www.base64decode.com or PowerShell: [Convert]::FromBase64String()
 
 #Focus Area's
-
 # Network: Unexpected outbound connections, listening ports
 # Processes: Unknown executables, suspicious parent-child relationships
 # Registry: Unauthorised persistence mechanisms
 # Accounts: New admin accounts, unexpected group memberships
 # Scheduled Tasks: Tasks running unknown scripts/executables
+########################################################################################################################################################################################################################
