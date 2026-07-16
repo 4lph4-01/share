@@ -11,9 +11,6 @@
 #########################################################################################################################################################################################################################
 
 
-# Run as Administrator for full coverage
-# Created: 2026-07-16
-
 $timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
 $outDir = "C:\Forensic_Collect_$timestamp"
 New-Item -ItemType Directory -Path $outDir -Force | Out-Null
