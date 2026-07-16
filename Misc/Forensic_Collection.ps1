@@ -37,7 +37,7 @@ nbtstat -S > "$outDir\network\nbtstat_S.txt" 2>&1
 netstat -na > "$outDir\network\netstat_na.txt" 2>&1
 netstat -b > "$outDir\network\netstat_b.txt" 2>&1
 
-# FIX #2: Bounded loop instead of indefinite `netstat -na 5` / `netstat -nao 5`
+# Bounded loop for`netstat -na 5` / `netstat -nao 5`
 $snapshotCount = 5
 $intervalSec  = 5
 for ($i = 1; $i -le $snapshotCount; $i++) {
@@ -49,7 +49,7 @@ for ($i = 1; $i -le $snapshotCount; $i++) {
     if ($i -lt $snapshotCount) { Start-Sleep -Seconds $intervalSec }
 }
 
-# FIX #6: Skip deprecated `netsh firewall show config`; use advfirewall only
+#  Advfirewall
 netsh advfirewall show currentprofile > "$outDir\network\netsh_advfirewall_profile.txt" 2>&1
 netsh advfirewall firewall show rule name=all > "$outDir\network\netsh_advfirewall_all_rules.txt" 2>&1
 
@@ -67,7 +67,7 @@ Write-Host "[2/8] Collecting process information..." -ForegroundColor Yellow
 tasklist > "$outDir\processes\tasklist.txt" 2>&1
 tasklist /v > "$outDir\processes\tasklist_verbose.txt" 2>&1
 
-# FIX #5: Replace deprecated wmic with Get-CimInstance
+# Unusual Processes Get-CimInstance
 Get-CimInstance Win32_Process | Select-Object * |
     Export-Csv "$outDir\processes\cim_process_full.csv" -NoTypeInformation 2>&1
 
@@ -100,7 +100,7 @@ Get-Service |
 
 net start > "$outDir\services\net_start.txt" 2>&1
 
-# FIX #4: Removed `| more` which hangs non-interactive sessions
+
 sc query > "$outDir\services\sc_query.txt" 2>&1
 tasklist /svc > "$outDir\services\tasklist_svc.txt" 2>&1
 
@@ -166,7 +166,7 @@ Get-ChildItem -Path "C:\" -File -ErrorAction SilentlyContinue |
     Select-Object FullName, Length, LastWriteTime, CreationTime |
     Export-Csv "$outDir\files\large_files_root.csv" -NoTypeInformation 2>&1
 
-# FIX #7: Scoped recursive scan — top-level user dirs only, max depth 3
+# Scoped recursive scan — top-level user dirs only, with max depth 3
 # Scans each user profile's Desktop, Downloads, Temp, and AppData\Local\Temp
 $userDirs = @(
     "$env:USERPROFILE\Desktop",
@@ -256,7 +256,7 @@ Get-WinEvent -FilterHashtable @{LogName='Application'; MaxEvents=500} -ErrorActi
     Select-Object TimeCreated, Id, LevelDisplayName, Message |
     Export-Csv "$outDir\logs\application_events.csv" -NoTypeInformation 2>&1
 
-# FIX #3: Query each log individually instead of wildcard in FilterHashtable
+# Query each log individually instead of wildcard in FilterHashtable
 $criticalLogs = @('Security', 'System', 'Application')
 foreach ($logName in $criticalLogs) {
     Get-WinEvent -FilterHashtable @{LogName=$logName; Level=1,2; MaxEvents=200} -ErrorAction SilentlyContinue |
@@ -264,7 +264,7 @@ foreach ($logName in $criticalLogs) {
         Export-Csv "$outDir\logs\critical_and_error_${logName}.csv" -NoTypeInformation 2>&1
 }
 
-# PowerShell operational log (often shows malicious script execution)
+# PowerShell operational log (potential malicious script execution)
 Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-PowerShell/Operational'; MaxEvents=500} -ErrorAction SilentlyContinue |
     Select-Object TimeCreated, Id, Message |
     Export-Csv "$outDir\logs\powersShell_operational.csv" -NoTypeInformation 2>&1
