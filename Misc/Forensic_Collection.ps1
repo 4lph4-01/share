@@ -18,7 +18,7 @@ New-Item -ItemType Directory -Path $outDir -Force | Out-Null
 Write-Host "Collecting forensic artifacts to: $outDir" -ForegroundColor Green
 Write-Host ""
 
-# Create subfolders for organisation
+# Create subfolders
 $subFolders = @("network", "processes", "services", "registry", "accounts", "files", "tasks", "logs", "misc")
 foreach ($folder in $subFolders) {
     New-Item -ItemType Directory -Path "$outDir\$folder" -Force | Out-Null
