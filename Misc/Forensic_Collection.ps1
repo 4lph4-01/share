@@ -1,4 +1,3 @@
-
 #########################################################################################################################################################################################################################
 # Initial powershell script for Forensic Artifact Collection Script Notes: Save as Forensic_Collection.ps1, Right-click PowerShell → Run as Administrator, Navigate to script location and run: .
 # \Forensic_Collection.ps1, Wait for completion (5-15 minutes depending on system size), Analyse the output folder structure. By 41PH4-01 and our community.      
@@ -12,8 +11,6 @@
 #########################################################################################################################################################################################################################
 
 
-
-# 
 # Run as Administrator for full coverage
 # Created: 2026-07-16
 
