@@ -1,5 +1,5 @@
 #########################################################################################################################################################################################################################
-# Initial powershell script for Forensic Artifact Collection. Note usage: Save as Forensic_Collection.ps1, Right-click PowerShell → Run as Administrator, Navigate to script location and run: .
+# Initial powershell script for Forensic Artifact Collection. Note usage: Save as Forensic_Collection.ps1, Right-click PowerShell, Run as Administrator, Navigate to script location and run: .
 # \Forensic_Collection.ps1, Wait for completion (5-15 minutes depending on system size), Analyse the output folder structure. By 41PH4-01 and our community.      
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software 
 # without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons 
