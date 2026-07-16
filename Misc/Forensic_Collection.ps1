@@ -122,7 +122,7 @@ reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" > "$outDir\regist
 reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce" > "$outDir\registry\HKCU_RunOnce.txt" 2>&1
 reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnceEx" > "$outDir\registry\HKCU_RunOnceEx.txt" 2>&1
 
-# FIX #5: Replace `wmic startup list full` with CIM equivalent
+# Startup artifacts with CIM
 Get-CimInstance Win32_StartupCommand |
     Select-Object Name, Command, Location, User |
     Export-Csv "$outDir\registry\cim_startup_commands.csv" -NoTypeInformation 2>&1
