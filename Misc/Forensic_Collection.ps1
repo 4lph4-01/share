@@ -341,7 +341,7 @@ Write-Host "=========================================" -ForegroundColor Green
 
 
 #########################################################################################################################################################################################################################
-# Notes:
+# More Notes:
 # Administrative privileges required - Some commands need elevated rights
 # Output location - Creates timestamped folder on C:\ drive
 # Privacy considerations - This collects sensitive system data; ensure proper authorisation
