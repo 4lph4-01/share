@@ -18,7 +18,7 @@ New-Item -ItemType Directory -Path $outDir -Force | Out-Null
 Write-Host "Collecting forensic artifacts to: $outDir" -ForegroundColor Green
 Write-Host ""
 
-# Create subfolders for organization
+# Create subfolders for organisation
 $subFolders = @("network", "processes", "services", "registry", "accounts", "files", "tasks", "logs", "misc")
 foreach ($folder in $subFolders) {
     New-Item -ItemType Directory -Path "$outDir\$folder" -Force | Out-Null
@@ -227,7 +227,7 @@ Write-Host "  - Event Viewer (log review)" -ForegroundColor White
 # Notes:
 # Administrative privileges required - Some commands need elevated rights
 # Output location - Creates timestamped folder on C:\ drive
-# Privacy considerations - This collects sensitive system data; ensure proper authorization
+# Privacy considerations - This collects sensitive system data; ensure proper authorisation
 # Storage space - Ensure sufficient disk space for log exports
 # Base64 decoding - Use https://www.base64decode.com or PowerShell: [Convert]::FromBase64String()
 
@@ -235,6 +235,6 @@ Write-Host "  - Event Viewer (log review)" -ForegroundColor White
 
 # Network: Unexpected outbound connections, listening ports
 # Processes: Unknown executables, suspicious parent-child relationships
-# Registry: Unauthorized persistence mechanisms
+# Registry: Unauthorised persistence mechanisms
 # Accounts: New admin accounts, unexpected group memberships
 # Scheduled Tasks: Tasks running unknown scripts/executables
