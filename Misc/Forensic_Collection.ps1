@@ -315,7 +315,7 @@ Total size:            $totalSize MB
 
 RECOMMENDED ANALYSIS TOOLS:
 ---------------------------
-  - TCPView        : Live TCP connection monitoring
+  - TCPView        : Live TCP/UDP connection monitoring
   - Process Explorer: Process tree and DLL analysis
   - Autoruns       : Comprehensive auto-start location scanner
   - Event Viewer   : GUI-based log review
