@@ -315,14 +315,14 @@ Total files collected: $totalFiles
 Total size:            $totalSize MB
 
 RECOMMENDED ANALYSIS TOOLS:
----------------------------
+----------------------------------------
   - TCPView        : Live TCP/UDP connection monitoring
   - Process Explorer: Process tree and DLL analysis
   - Autoruns       : Comprehensive auto-start location scanner
   - Event Viewer   : GUI-based log review
 
 NOTES:
-------
+----------------------------------------
   - Review network outputs for unexpected outbound connections.
   - Cross-reference suspicious PIDs in tasklist with netstat -ano output.
   - Check registry Run keys and Startup folders against known-good baseline.
