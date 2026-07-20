@@ -1,7 +1,7 @@
 #########################################################################################################################################################################################################################
 # Initial powershell script for Forensic Artifact Collection. Note usage: Save as Forensic_Collection.ps1, Right-click PowerShell, Run as Administrator, Navigate to script location and run: 
 # .\Forensic_Collection.ps1, Wait for completion (5-15 minutes depending on system size), Analyse the output folder structure. By 41PH4-01 and our community. Privacy considerations - This collects sensitive system data; ensure proper 
-# authorisation. Only to be run on a write protected binary created image.
+# authorisation. Only to be run on a write protected bit by bit binary created image.
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software 
 # without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons 
 # to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice and this permission notice shall be included in all copies or substantial 
