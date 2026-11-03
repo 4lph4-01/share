@@ -7,7 +7,7 @@ loguru==0.5.3
 PyYAML==6.0
 
 # Static analysis tools for Python
-pylint==2.14.5
+pylint==4.0.9
 flake8==5.0.4
 
 # Testing framework
